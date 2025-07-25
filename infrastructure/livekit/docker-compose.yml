@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    ports:
+      - "7880:7880"   # WebSocket + REST API
+      - "7881:7881"   # UDP
+      - "7882:7882"   # TCP (fallback for media)
+    env_file:
+      - .env
+    command: [
+      "--config", "/livekit.yaml"
+    ]
+    volumes:
+      - ./livekit.yaml:/livekit.yaml
