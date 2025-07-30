@@ -4,7 +4,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "node --loader ts-node/esm src/index.ts"
+    "start": "node --loader ts-node/esm src/index.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
