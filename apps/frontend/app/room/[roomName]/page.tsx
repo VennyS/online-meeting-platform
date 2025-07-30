@@ -74,6 +74,7 @@ const RoomContent = () => {
           camera: true,
           screenShare: false,
           settings: false,
+          leave: false,
         }}
       />
     </div>
