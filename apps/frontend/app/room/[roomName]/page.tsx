@@ -6,6 +6,7 @@ import {
   GridLayout,
   LiveKitRoom,
   ParticipantTile,
+  RoomAudioRenderer,
   useTracks,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
@@ -54,10 +55,7 @@ export default function Home() {
 
 const RoomContent = () => {
   const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: false },
-    ],
+    [{ source: Track.Source.Camera, withPlaceholder: true }],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
 
@@ -77,6 +75,7 @@ const RoomContent = () => {
           leave: false,
         }}
       />
+      <RoomAudioRenderer />
     </div>
   );
 };

@@ -21,9 +21,9 @@ services:
     image: livekit/livekit-server:latest
     restart: unless-stopped
     ports:
-      - "7880:7880"   # WebSocket + REST API
-      - "7881:7881/udp"   # UDP (media)
-      - "7882:7882"   # TCP (fallback media)
+      - "7880:7880/tcp"
+      - "7881-7885:7881-7885/udp"
+      - "7882:7882/tcp"
     env_file:
       - ./infrastructure/livekit/.env
     command: [
