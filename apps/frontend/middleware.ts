@@ -4,25 +4,41 @@ import {
   removeAccessToken,
   saveAccessToken,
 } from "./app/services/auth-token.service";
-import { authService } from "./app/services/auth.service";
+
+const REDIRECT_URL =
+  process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://ru.noimann.academy/";
 
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get(CookiesEnum.ACCESS_TOKEN)?.value;
 
-  const redirectUrl =
-    process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://ru.noimann.academy/";
-
   if (!token) {
-    const res = NextResponse.redirect(redirectUrl);
+    const res = NextResponse.redirect(REDIRECT_URL);
     removeAccessToken(true, res);
     return res;
   }
 
   try {
-    const data = await authService.checkToken();
+    const apiRes = await fetch(
+      `${process.env.NEXT_PUBLIC_PLATFORM_API_URL}/auth/check`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!apiRes.ok) {
+      const res = NextResponse.redirect(REDIRECT_URL);
+      removeAccessToken(true, res);
+      return res;
+    }
+
+    const data = await apiRes.json();
 
     if (!data.token) {
-      const res = NextResponse.redirect(redirectUrl);
+      const res = NextResponse.redirect(REDIRECT_URL);
       removeAccessToken(true, res);
       return res;
     }
@@ -32,7 +48,7 @@ export async function middleware(req: NextRequest) {
     return res;
   } catch (error) {
     console.error("Ошибка при проверке токена:", error);
-    const res = NextResponse.redirect(redirectUrl);
+    const res = NextResponse.redirect(REDIRECT_URL);
     removeAccessToken(true, res);
     return res;
   }
