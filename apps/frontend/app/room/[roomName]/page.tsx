@@ -13,29 +13,31 @@ import { useEffect, useState } from "react";
 import { RoomEvent, Track } from "livekit-client";
 import styles from "./page.module.css";
 import { useParams } from "next/navigation";
+import { useUser } from "@/app/hooks/useUser";
+import { axiosClassic } from "@/app/api/interceptors";
 
 export default function Home() {
   const { roomName } = useParams();
   const [token, setToken] = useState<string | null>(null);
+  const { user } = useUser();
+
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
   useEffect(() => {
     async function fetchToken() {
       try {
-        const res = await fetch(
-          `${
-            process.env.NEXT_PUBLIC_API_URL
-          }/token?room=${roomName}&name=User${Math.floor(Math.random() * 1000)}`
-        );
-        const data = await res.json();
-        setToken(data.token);
-        console.log("Token получен:", data.token);
+        const response = await axiosClassic.get("/token", {
+          params: { room: roomName, name: fullName },
+        });
+        setToken(response.data.token);
+        console.log("Token получен:", response.data.token);
       } catch (err) {
         console.error("Ошибка при получении токена:", err);
       }
     }
 
     fetchToken();
-  }, [roomName]);
+  }, [roomName, fullName]);
 
   if (!token) return <div>Loading...</div>;
 
