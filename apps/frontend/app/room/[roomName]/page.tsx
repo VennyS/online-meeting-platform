@@ -26,7 +26,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchToken() {
       try {
-        const response = await axiosClassic.get("/token", {
+        const response = await axiosClassic.get("auth/token", {
           params: { room: roomName, name: fullName },
         });
         setToken(response.data.token);

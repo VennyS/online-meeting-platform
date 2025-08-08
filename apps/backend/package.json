@@ -10,7 +10,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "livekit-server-sdk": "^2.13.1"
+    "livekit-server-sdk": "^2.13.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
