@@ -29,3 +29,9 @@
   min-height: 0;
   overflow: hidden;
 }
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
