@@ -8,6 +8,7 @@ import {
   removeAccessToken,
   saveAccessToken,
 } from "../services/auth-token.service";
+import { usePathname } from "next/navigation";
 
 interface AuthContextType {
   user: IUser | null;
@@ -23,6 +24,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = React.useState<IUser | null>(null);
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isRoomPage = pathname?.startsWith("/room/") ?? false;
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -32,16 +36,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         saveAccessToken(data.token);
         setUser(data.user);
       } catch (error) {
-        console.error("Ошибка при проверке токена:", error);
-        removeAccessToken();
-        router.replace("https://ru.noimann.academy/");
+        if (!isRoomPage) {
+          removeAccessToken();
+          router.replace("https://ru.noimann.academy/");
+        }
+        // Если это публичная комната, просто оставляем user = null
       } finally {
         setLoading(false);
       }
     };
 
     fetchUser();
-  }, [router]);
+  }, [router, pathname]);
 
   return (
     <AuthContext.Provider value={{ user, setUser, loading }}>

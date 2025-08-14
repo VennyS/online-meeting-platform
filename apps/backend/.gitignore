@@ -18,3 +18,4 @@ yarn-error.log*
 # macOS/Linux/Windows
 .DS_Store
 Thumbs.db
+/src/generated/prisma

@@ -1,73 +1,33 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
-import { AccessToken } from "livekit-server-sdk";
-import fetch from "node-fetch";
-
-dotenv.config();
+import { authRouter } from "./routes/auth/check.js";
+import { livekitRouter } from "./routes/auth/token.js";
+import { roomsRouter } from "./routes/room.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-const API_KEY = process.env.LIVEKIT_API_KEY!;
-const API_SECRET = process.env.LIVEKIT_API_SECRET!;
+const ORIGIN = process.env.ORIGIN!;
+console.log("🔧 Config:");
+console.log("  ORIGIN:", ORIGIN);
 
 app.use(
   cors({
-    origin: "https://meet.noimann.academy",
+    origin: ORIGIN,
     credentials: true,
   })
 );
 
-// 🔑 Token
-app.get("/auth/token", async (req, res) => {
-  const { room, name } = req.query;
+app.use(express.json());
 
-  if (!room || !name) {
-    return res.status(400).json({ error: "Missing room or name" });
-  }
+// Подключаем роуты
+app.use("/auth", authRouter); // /auth/check
+app.use("/auth", livekitRouter); // /auth/token
+app.use("/room", roomsRouter); // /room/*
 
-  try {
-    const at = new AccessToken(API_KEY, API_SECRET, {
-      identity: String(name),
-    });
-
-    at.addGrant({ roomJoin: true, room: String(room) });
-
-    const token = await at.toJwt();
-    res.json({ token });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to generate token" });
-  }
-});
-
-// 🔁 Proxy auth check
-app.get("/auth/check", async (req, res) => {
-  const cookieHeader = req.headers.cookie || "";
-
-  const token = cookieHeader
-    .split("; ")
-    .find((c) => c.startsWith("auth-token="))
-    ?.split("=")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "No auth token found" });
-  }
-
-  try {
-    const response = await fetch("https://ru.noimann.academy/api/auth/check", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to verify token" });
-  }
-});
-
+// Запуск
 app.listen(port, () => {
-  console.log(`✅ Token server running on http://localhost:${port}`);
+  console.log(`✅ Server running on http://localhost:${port}`);
 });

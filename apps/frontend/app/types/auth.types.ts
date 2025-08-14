@@ -8,9 +8,15 @@ export interface IUser {
   roleId: number;
   emailVerified: boolean;
   profileImage: string;
+  isGuest?: boolean;
 }
 
-export interface IAuthResponse {
+export interface ICheckTokenResponse {
   user: IUser;
   token: string;
+}
+
+export interface IGetTokenResponse {
+  token: string;
+  guestAllowed: boolean;
 }
