@@ -7,64 +7,51 @@ import {
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
+  useParticipants,
   useTracks,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { RoomEvent, Track } from "livekit-client";
-import styles from "./page.module.css";
 import { useParams } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
-import { axiosClassic } from "@/app/api/interceptors";
+import { roomService } from "@/app/services/room.service";
+import { authService } from "@/app/services/auth.service";
+import styles from "./page.module.css";
+import cn from "classnames";
 
-export default function Home() {
-  const { roomName } = useParams();
-  const [token, setToken] = useState<string | null>(null);
-  const { user } = useUser();
+// Guest Form Component
+const GuestForm = ({
+  guestName,
+  setGuestName,
+  onSubmit,
+}: {
+  guestName: string;
+  setGuestName: (name: string) => void;
+  onSubmit: () => void;
+}) => (
+  <div className={styles.guestForm}>
+    <h2>Введите имя для входа в комнату</h2>
+    <input
+      type="text"
+      value={guestName}
+      onChange={(e) => setGuestName(e.target.value)}
+      placeholder="Ваше имя"
+    />
+    <button onClick={onSubmit}>Войти как гость</button>
+  </div>
+);
 
-  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
-
-  useEffect(() => {
-    async function fetchToken() {
-      try {
-        const response = await axiosClassic.get("auth/token", {
-          params: { room: roomName, name: fullName },
-        });
-        setToken(response.data.token);
-      } catch (err) {
-        console.error("Ошибка при получении токена:", err);
-      }
-    }
-
-    fetchToken();
-  }, [roomName, fullName]);
-
-  if (!token) return <div>Loading...</div>;
-
-  return (
-    <main className={styles.main}>
-      <LiveKitRoom
-        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-        token={token}
-        connect
-        className={styles.roomContainer}
-      >
-        <RoomContent roomName={roomName as string} />
-      </LiveKitRoom>
-    </main>
-  );
-}
-
+// Room Content Component
 const RoomContent = ({ roomName }: { roomName: string }) => {
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
-
   const [copied, setCopied] = useState(false);
   const [manualText, setManualText] = useState<string | null>(null);
+  const [isOpenParticipantMenu, setIsOpenParticipantMenu] = useState(false);
 
-  const handleCopy = async () => {
-    const meetingName = roomName; // тут подставь реальное название
+  const generateMeetingInfo = () => {
     const meetingDate = new Date().toLocaleString("ru-RU", {
       timeZone: "Europe/Moscow",
       day: "2-digit",
@@ -75,28 +62,40 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
     });
     const meetingLink = `${window.location.origin}/meet/${roomName}`;
 
-    const text = `Встреча: ${meetingName}
+    return `Встреча: ${roomName}
 Дата: ${meetingDate} (Москва)
 Подключиться: ${meetingLink}`;
+  };
+
+  const handleChangeOpenParticipants = () => {
+    setIsOpenParticipantMenu((prev) => !prev);
+  };
+
+  const handleCopy = async () => {
+    const text = generateMeetingInfo();
 
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000); // через 2 сек убрать уведомление
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Не удалось скопировать:", err);
-      setManualText(text); // покажем текст для ручного копирования
+      setManualText(text);
     }
   };
 
   return (
-    <div className={styles.container}>
+    <div
+      className={cn(styles.container, { [styles.open]: isOpenParticipantMenu })}
+    >
       <div className={styles.gridContainer}>
         <GridLayout tracks={tracks}>
           <ParticipantTile />
         </GridLayout>
       </div>
-
+      <div className={styles.participants}>
+        <ParticipantsList />
+      </div>
       <div className={styles.controls}>
         <p>{roomName}</p>
         <ControlBar
@@ -109,54 +108,126 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
           }}
         />
         <button onClick={handleCopy}>Поделиться встречей</button>
+        <button onClick={handleChangeOpenParticipants}>
+          {isOpenParticipantMenu ? "Закрыть" : "Открыть"}
+        </button>
       </div>
 
       {copied && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#4caf50",
-            color: "white",
-            padding: "10px 20px",
-            borderRadius: "8px",
-          }}
-        >
-          Скопировано в буфер обмена
-        </div>
+        <div className={styles.copiedToast}>Скопировано в буфер обмена</div>
       )}
-
       {manualText && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "#f44336",
-            color: "white",
-            padding: "10px 20px",
-            borderRadius: "8px",
-            maxWidth: "90%",
-          }}
-        >
+        <div className={styles.manualCopy}>
           <div>Не удалось скопировать. Скопируйте вручную:</div>
           <textarea
             readOnly
             value={manualText}
-            style={{
-              width: "100%",
-              height: "100px",
-              marginTop: "5px",
-              resize: "none",
-            }}
+            className={styles.manualTextarea}
           />
         </div>
       )}
-
       <RoomAudioRenderer />
     </div>
   );
 };
+
+const ParticipantsList = () => {
+  const participants = useParticipants();
+
+  return (
+    <div className={styles.participantsList}>
+      <h2>Участники встречи</h2>
+      <div>
+        {participants.map((participant) => (
+          <div key={participant.sid}>
+            <p>Имя: {participant.name || participant.identity || "Аноним"}</p>
+            <p>
+              Статус:
+              {participant.metadata === "guest" ? "Гость" : "Пользователь"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+export default function MeetingRoom() {
+  const { roomName } = useParams();
+  const { user, setUser } = useUser();
+  const [token, setToken] = useState<string | null>(null);
+  const [guestAllowed, setGuestAllowed] = useState(false);
+  const [guestName, setGuestName] = useState("");
+
+  useEffect(() => {
+    if (!roomName) return;
+
+    const checkGuestAccess = async () => {
+      try {
+        const { guestAllowed } = await roomService.guestAllowed(
+          roomName as string
+        );
+        setGuestAllowed(guestAllowed);
+      } catch (err) {
+        console.error("Ошибка при проверке гостевого доступа:", err);
+      }
+    };
+
+    checkGuestAccess();
+  }, [roomName]);
+
+  const handleGuestSubmit = async () => {
+    if (!guestName) return;
+
+    setUser({
+      id: 0,
+      firstName: guestName,
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      role: "guest",
+      roleId: 0,
+      emailVerified: false,
+      profileImage: "",
+      isGuest: true,
+    });
+
+    try {
+      const response = await authService.getToken(
+        roomName as string,
+        guestName
+      );
+      setToken(response.token);
+    } catch (err) {
+      console.error("Ошибка при получении токена для гостя:", err);
+    }
+  };
+
+  if (guestAllowed && !user) {
+    return (
+      <GuestForm
+        guestName={guestName}
+        setGuestName={setGuestName}
+        onSubmit={handleGuestSubmit}
+      />
+    );
+  }
+
+  if (!token && user) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <main className={styles.main}>
+      <LiveKitRoom
+        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+        token={token!}
+        connect
+        className={styles.roomContainer}
+      >
+        <RoomContent roomName={roomName as string} />
+      </LiveKitRoom>
+    </main>
+  );
+}

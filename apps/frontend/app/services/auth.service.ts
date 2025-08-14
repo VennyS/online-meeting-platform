@@ -1,9 +1,27 @@
 import { axiosClassic } from "../api/interceptors";
-import { IAuthResponse } from "../types/auth.types";
+import { ICheckTokenResponse, IGetTokenResponse } from "../types/auth.types";
 
 export const authService = {
   async checkToken() {
-    const response = await axiosClassic.get<IAuthResponse>("/auth/check");
+    const response = await axiosClassic.get<ICheckTokenResponse>("/auth/check");
     return response.data;
+  },
+
+  async getToken(room: string, name: string) {
+    try {
+      const response = await axiosClassic.get<IGetTokenResponse>(
+        "/auth/token",
+        {
+          params: { room, name },
+        }
+      );
+      if (!response.data?.token) {
+        throw new Error("Token not found in response");
+      }
+      return response.data;
+    } catch (err) {
+      console.error("Error in authService.getToken:", err);
+      throw err;
+    }
   },
 };
