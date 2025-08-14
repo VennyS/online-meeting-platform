@@ -16,6 +16,8 @@ services:
       - "3001:3001"
     env_file:
       - ./apps/backend/.env
+    depends_on:
+      - postgres
 
   livekit:
     image: livekit/livekit-server:latest
@@ -31,3 +33,16 @@ services:
     ]
     volumes:
       - ./infrastructure/livekit:/infrastructure/livekit
+
+  postgres:
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./infrastructure/postgres/.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
