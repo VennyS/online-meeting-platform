@@ -3,8 +3,8 @@
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { roomService } from "../services/room.service";
-import { useUser } from "../hooks/useUser";
+import { roomService } from "../../services/room.service";
+import { useUser } from "../../hooks/useUser";
 
 export default function CreateCallButton() {
   const router = useRouter();
