@@ -27,7 +27,7 @@
   margin-left: 0;
 
   .identity {
-    justify-content: start;
+    justify-content: flex-start; /* заменил start на flex-start */
   }
 }
 
@@ -40,6 +40,6 @@
 .identity {
   display: flex;
   gap: 6px;
-  justify-content: end;
+  justify-content: flex-end; /* заменил end на flex-end */
   margin-bottom: 4px;
 }

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function RedirectPage() {
+function RedirectContent() {
   const searchParams = useSearchParams();
   const to = searchParams.get("to");
 
@@ -31,5 +32,13 @@ export default function RedirectPage() {
         Перейти
       </Link>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<p>Загрузка ссылки...</p>}>
+      <RedirectContent />
+    </Suspense>
   );
 }
