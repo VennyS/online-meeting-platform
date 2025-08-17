@@ -8,13 +8,12 @@ import {
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
-  useChat,
-  useLocalParticipant,
   useParticipants,
+  useRoomContext,
   useTracks,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import { RoomEvent, Track } from "livekit-client";
+import { RemoteParticipant, RoomEvent, Track } from "livekit-client";
 import { useParams } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
 import { roomService } from "@/app/services/room.service";
@@ -22,8 +21,7 @@ import { authService } from "@/app/services/auth.service";
 import styles from "./page.module.css";
 import cn from "classnames";
 import { Panel } from "./types";
-import SafeLink from "@/app/components/ui/atoms/SafeLink/SafeLink";
-import { parseMessage } from "@/app/lib/parseMessage";
+import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 
 // Guest Form Component
 const GuestForm = ({
@@ -47,72 +45,6 @@ const GuestForm = ({
   </div>
 );
 
-const Chat = () => {
-  const { chatMessages, send } = useChat();
-  const localParticipant = useLocalParticipant();
-  const [message, setMessage] = useState("");
-
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
-  };
-
-  const handleSend = () => {
-    if (message.trim() === "") return;
-    send(message.trim());
-    setMessage("");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  return (
-    <div className={styles.chatWrapper}>
-      <ul className={styles.messagesWrapper}>
-        {chatMessages.map((msg, index) => {
-          const isMine =
-            msg.from?.sid === localParticipant.localParticipant.sid;
-          const from = isMine ? "Вы" : msg.from?.identity;
-
-          return (
-            <li
-              key={index}
-              className={cn(styles.chatLi, { [styles.myMessage]: isMine })}
-            >
-              <div className={styles.identifyWrapper}>
-                <p>
-                  {from} <span>{formatTime(msg.timestamp)}</span>
-                </p>
-              </div>
-              <span>{parseMessage(msg.message)}</span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className={styles.inputWrapper}>
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Введите сообщение..."
-          className={styles.chatInput}
-        />
-        <button onClick={handleSend} className={styles.sendButton}>
-          Отправить
-        </button>
-      </div>
-    </div>
-  );
-};
-
 // Room Content Component
 const RoomContent = ({ roomName }: { roomName: string }) => {
   const tracks = useTracks(
@@ -122,6 +54,32 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
   const [copied, setCopied] = useState(false);
   const [manualText, setManualText] = useState<string | null>(null);
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
+  const user = useUser();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const room = useRoomContext();
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleMessage = (
+      payload: Uint8Array,
+      participant?: RemoteParticipant
+    ) => {
+      // если чат не открыт → увеличиваем счетчик
+      if (openedRightPanel !== "chat") {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleMessage);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleMessage);
+    };
+  }, [room, openedRightPanel]);
+
+  useEffect(() => {
+    if (openedRightPanel === "chat") setUnreadCount(0);
+  }, [openedRightPanel]);
 
   const generateMeetingInfo = () => {
     const meetingDate = new Date().toLocaleString("ru-RU", {
@@ -181,8 +139,18 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        <Chat />
+        {!!user.user && <Chat roomName={roomName} user={user.user} />}
       </div>
+
+      {openedRightPanel && (
+        <button
+          className={styles.closePanelButton}
+          onClick={() => setOpenedRightPanel(undefined)}
+        >
+          ✕
+        </button>
+      )}
+
       <div className={styles.controls}>
         <p>{roomName}</p>
         <ControlBar
@@ -197,8 +165,15 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
         <button onClick={() => handleChangeOpenPanel("participants")}>
           {openedRightPanel === "participants" ? "Закрыть" : "Открыть"}
         </button>
-        <button title="чат" onClick={() => handleChangeOpenPanel("chat")}>
+        <button
+          className={styles.chatButton}
+          title="чат"
+          onClick={() => handleChangeOpenPanel("chat")}
+        >
           <ChatIcon />
+          {unreadCount > 0 && (
+            <div className={styles.notificationDot}>{unreadCount}</div>
+          )}
         </button>
         <button onClick={handleCopy}>Поделиться встречей</button>
       </div>
@@ -267,8 +242,10 @@ export default function MeetingRoom() {
   const handleGuestSubmit = async () => {
     if (!guestName) return;
 
+    const guestId = Math.floor(Math.random() * 1_000_000); // уникальный временный ID
+
     setUser({
-      id: 0,
+      id: guestId,
       firstName: guestName,
       lastName: "",
       email: "",

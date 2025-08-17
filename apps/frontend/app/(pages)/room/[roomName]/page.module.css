@@ -125,6 +125,37 @@
   pointer-events: auto;
 }
 
+@media (max-width: 800px) {
+  .container.open {
+    grid-template-columns: 1fr 1fr; /* при открытии списка */
+  }
+}
+
+@media (max-width: 768px) {
+  .participants,
+  .chat {
+    position: fixed; /* всплывающие сверху */
+    top: 0;
+    right: 0;
+    width: 80%; /* или 100% для fullscreen */
+    height: 100%;
+    background: blueviolet;
+    z-index: 1000;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(100%); /* скрываем вправо */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+
+  .participants.active,
+  .chat.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0); /* выезжаем */
+  }
+}
+
 .participantWrapper {
   display: flex;
   flex-direction: column;
@@ -135,37 +166,42 @@
   }
 }
 
-.chatWrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.closePanelButton {
+  display: none; /* по умолчанию скрыта */
 }
 
-.messagesWrapper {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-  list-style: none;
+@media (max-width: 768px) {
+  .closePanelButton {
+    display: block;
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 1010;
+    font-size: 16px;
+  }
 }
 
-.chatLi {
-  --message-margin: 16px;
-  margin-bottom: 8px;
-  text-align: right;
-  margin-left: var(--message-margin);
-  margin-right: 0;
-  white-space: normal;
-  overflow-wrap: break-word;
-}
+.chatButton {
+  position: relative;
 
-.myMessage {
-  text-align: left;
-  margin-right: var(--message-margin);
-  margin-left: 0;
-}
-
-.inputWrapper {
-  display: flex;
-  padding: 8px;
-  border-top: 1px solid #ccc;
+  .notificationDot {
+    background: red;
+    border-radius: 100%;
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 11px;
+    color: whitesmoke;
+  }
 }
