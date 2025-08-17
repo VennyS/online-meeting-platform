@@ -12,6 +12,7 @@ model Room {
   id        Int      @id @default(autoincrement())
   shortId   String   @unique
   isPublic  Boolean  @default(false)
+  showHistoryToNewbies Boolean  @default(false)
   ownerId   Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
