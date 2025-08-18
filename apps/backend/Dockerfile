@@ -9,7 +9,8 @@ RUN npm ci
 RUN npx prisma generate
 
 COPY . .
+RUN npx tsc  # Компилируем TypeScript в JavaScript
 
 EXPOSE 3001
 
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/index.js"]
