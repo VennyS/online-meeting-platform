@@ -1,23 +1,22 @@
 import { useState, useEffect } from "react";
-import { useChat } from "@livekit/components-react";
-import { useLocalParticipant } from "@livekit/components-react";
+import { useChat, useLocalParticipant } from "@livekit/components-react";
 import { roomService } from "@/app/services/room.service";
 import styles from "./Chat.module.css";
 import cn from "classnames";
 import { ChatProps } from "./types";
 
 export const Chat = ({ roomName, user }: ChatProps) => {
-  const { send: sendLivekitMessage } = useChat();
+  const { send: sendLivekitMessage, chatMessages } = useChat();
   const localParticipant = useLocalParticipant();
   const [message, setMessage] = useState("");
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
 
-  // Подгружаем историю при монтировании
+  // Загружаем историю с бэка при монтировании
   useEffect(() => {
     const fetchHistory = async () => {
       try {
         const history = await roomService.getHistory(roomName);
-        setChatMessages(history);
+        setHistory(history);
       } catch (err) {
         console.error("Ошибка при получении истории:", err);
       }
@@ -28,25 +27,21 @@ export const Chat = ({ roomName, user }: ChatProps) => {
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-    return `${hours}:${minutes}`;
+    return `${date.getHours().toString().padStart(2, "0")}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   const handleSend = async () => {
     if (message.trim() === "") return;
 
-    // Отправка через LiveKit для всех участников в комнате
+    // Отправка в LiveKit
     sendLivekitMessage(message.trim());
 
-    // Сохраняем сообщение на бэке, если нужно
+    // Отправка на бэк
     try {
-      const savedMessage = await roomService.sendMessage(
-        roomName,
-        message.trim(),
-        user
-      );
-      setChatMessages((prev) => [...prev, savedMessage]);
+      await roomService.sendMessage(roomName, message.trim(), user);
     } catch (err) {
       console.error("Ошибка при отправке сообщения на бэкенд:", err);
     }
@@ -61,10 +56,20 @@ export const Chat = ({ roomName, user }: ChatProps) => {
     }
   };
 
+  // Соединяем историю + livekit сообщения
+  const allMessages = [
+    ...history,
+    ...chatMessages.map((msg) => ({
+      text: msg.message,
+      createdAt: msg.timestamp,
+      from: msg.from,
+    })),
+  ];
+
   return (
     <div className={styles.chatWrapper}>
       <ul className={styles.messagesWrapper}>
-        {chatMessages.map((msg, index) => {
+        {allMessages.map((msg, index) => {
           const isMine =
             msg.user?.id === user?.id ||
             msg.from?.sid === localParticipant.localParticipant.sid;
@@ -79,7 +84,7 @@ export const Chat = ({ roomName, user }: ChatProps) => {
             >
               <p className={styles.identity}>
                 {from}
-                <span>{formatTime(new Date(msg.createdAt).getTime())}</span>
+                <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
               </p>
               <span>{msg.text || msg.message}</span>
             </li>
