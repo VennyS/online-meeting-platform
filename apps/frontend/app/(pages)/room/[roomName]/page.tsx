@@ -239,6 +239,26 @@ export default function MeetingRoom() {
     checkGuestAccess();
   }, [roomName]);
 
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
+
+  useEffect(() => {
+    if (!roomName || !user || user.isGuest) return;
+
+    const fetchToken = async () => {
+      try {
+        const response = await authService.getToken(
+          roomName as string,
+          fullName
+        );
+        setToken(response.token);
+      } catch (err) {
+        console.error("Ошибка при получении токена для пользователя:", err);
+      }
+    };
+
+    fetchToken();
+  }, [roomName, user]);
+
   const handleGuestSubmit = async () => {
     if (!guestName) return;
 
