@@ -3,10 +3,15 @@ import { IUser } from "../types/auth.types";
 import { IRoom } from "../types/room.types";
 
 export const roomService = {
-  async createRoom(ownerId: number, isPublic: boolean) {
+  async createRoom(
+    ownerId: number,
+    isPublic: boolean,
+    showHistoryToNewbies: boolean
+  ) {
     const response = await axiosClassic.post<IRoom>("/room", {
       ownerId,
       isPublic,
+      showHistoryToNewbies,
     });
     return response.data;
   },
