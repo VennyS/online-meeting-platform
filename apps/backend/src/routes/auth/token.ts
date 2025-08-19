@@ -2,59 +2,56 @@ import { Router } from "express";
 import fetch from "node-fetch";
 import { db } from "../../db/client.js";
 import { createLivekitToken } from "../../services/livekit.js";
-
-const PROXY_ROUTE = process.env.PROXY_ROUTE!;
+import { LivekitTokenQuerySchema } from "../../schemas/auth.schema.js";
+import { extractAuthToken } from "../../utils/auth.js";
 
 export const livekitRouter = Router();
+const PROXY_ROUTE = process.env.PROXY_ROUTE!;
 
 livekitRouter.get("/token", async (req, res) => {
-  const { room: roomShortId, name } = req.query;
-
-  if (!roomShortId || !name) {
-    return res.status(400).json({ error: "Missing room or name" });
-  }
-
-  const room = await db.room.findUnique({
-    where: { shortId: String(roomShortId) },
-  });
-  if (!room) {
-    return res.status(404).json({ error: "Room not found" });
-  }
-
-  let isGuest = false;
-
-  if (!room.isPublic) {
-    const cookieHeader = req.headers.cookie || "";
-    const authToken = cookieHeader
-      .split("; ")
-      .find((c) => c.startsWith("auth-token="))
-      ?.split("=")[1];
-
-    if (!authToken) {
-      return res.status(401).json({ error: "No auth token found" });
+  try {
+    const parsed = LivekitTokenQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return res
+        .status(400)
+        .json({ error: "Invalid query params", details: parsed.error.issues });
     }
 
-    const proxyResponse = await fetch(PROXY_ROUTE, {
-      headers: { Authorization: `Bearer ${authToken}` },
+    const { room: roomShortId, name } = parsed.data;
+
+    const room = await db.room.findUnique({
+      where: { shortId: roomShortId },
     });
-
-    if (!proxyResponse.ok) {
-      return res.status(proxyResponse.status).json(await proxyResponse.json());
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
     }
-  } else {
-    // Если комната публичная и нет authToken, пользователь — гость
-    const cookieHeader = req.headers.cookie || "";
-    const authToken = cookieHeader
-      .split("; ")
-      .find((c) => c.startsWith("auth-token="))
-      ?.split("=")[1];
-    isGuest = !authToken;
-  }
 
-  const livekitToken = await createLivekitToken(
-    room.shortId,
-    String(name),
-    isGuest
-  );
-  res.json({ token: livekitToken });
+    let isGuest = false;
+    const authToken = extractAuthToken(req.headers.cookie);
+
+    if (!room.isPublic) {
+      if (!authToken) {
+        return res.status(401).json({ error: "No auth token found" });
+      }
+
+      const proxyResponse = await fetch(PROXY_ROUTE, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      if (!proxyResponse.ok) {
+        return res
+          .status(proxyResponse.status)
+          .json(await proxyResponse.json());
+      }
+    } else {
+      // Публичная комната → гость, если нет токена
+      isGuest = !authToken;
+    }
+
+    const livekitToken = await createLivekitToken(room.shortId, name, isGuest);
+    res.json({ token: livekitToken });
+  } catch (err) {
+    console.error("❌ Error generating LiveKit token:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });

@@ -13,7 +13,8 @@
     "express": "^5.1.0",
     "ioredis": "^5.7.0",
     "livekit-server-sdk": "^2.13.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
