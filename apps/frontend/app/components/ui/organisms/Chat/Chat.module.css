@@ -1,0 +1,45 @@
+.chatWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.messagesWrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  list-style: none;
+}
+
+.chatLi {
+  --message-margin: 16px;
+  margin-bottom: 8px;
+  text-align: right;
+  margin-left: var(--message-margin);
+  margin-right: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.myMessage {
+  text-align: left;
+  margin-right: var(--message-margin);
+  margin-left: 0;
+
+  .identity {
+    justify-content: flex-start; /* заменил start на flex-start */
+  }
+}
+
+.inputWrapper {
+  display: flex;
+  padding: 8px;
+  border-top: 1px solid #ccc;
+}
+
+.identity {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end; /* заменил end на flex-end */
+  margin-bottom: 4px;
+}

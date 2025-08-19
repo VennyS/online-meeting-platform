@@ -26,7 +26,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isRoomPage = pathname?.startsWith("/room/") ?? false;
+  const isRoomPage =
+    (pathname?.startsWith("/room/") || pathname.startsWith("/redirect")) ??
+    false;
 
   React.useEffect(() => {
     const fetchUser = async () => {
