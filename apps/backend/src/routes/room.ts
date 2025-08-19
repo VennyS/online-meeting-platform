@@ -6,7 +6,7 @@ export const roomsRouter = Router();
 const redis = new Redis(process.env.REDIS_URL!);
 
 roomsRouter.post("/", async (req, res) => {
-  const ownerId = parseInt(req.body.ownerId || "0"); // теперь берём из JSON
+  const ownerId = parseInt(req.body.ownerId || "0");
   if (!ownerId) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -18,18 +18,26 @@ roomsRouter.post("/", async (req, res) => {
     if (!exists) break;
   }
 
-  const { isPublic, showHistoryToNewbies } = req.body;
+  const { isPublic, showHistoryToNewbies, password, waitingRoomEnabled } =
+    req.body;
 
-  const room = await db.room.create({
-    data: {
-      shortId,
-      isPublic: !!isPublic,
-      ownerId,
-      showHistoryToNewbies: !!showHistoryToNewbies, // новое поле
-    },
-  });
+  try {
+    const room = await db.room.create({
+      data: {
+        shortId,
+        ownerId,
+        isPublic: !!isPublic,
+        showHistoryToNewbies: !!showHistoryToNewbies,
+        password: password || null,
+        waitingRoomEnabled: !!waitingRoomEnabled,
+      },
+    });
 
-  res.json(room);
+    res.json(room);
+  } catch (err) {
+    console.error("Ошибка при создании комнаты:", err);
+    res.status(500).json({ error: "Не удалось создать комнату" });
+  }
 });
 
 roomsRouter.get("/:shortId/guest-allowed", async (req, res) => {
