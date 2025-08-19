@@ -6,6 +6,7 @@ import {
   PostMessageSchema,
   ShortIdSchema,
 } from "../schemas/room.schema.js";
+import bcrypt from "bcrypt";
 
 export const roomsRouter = Router();
 const redis = new Redis(process.env.REDIS_URL!);
@@ -33,18 +34,22 @@ roomsRouter.post("/", async (req, res) => {
     if (!exists) break;
   }
 
+  const hashedPassword = password
+    ? await bcrypt.hash(password, 10) // 🔑 соль + хеш
+    : null;
+
   const room = await db.room.create({
     data: {
       shortId,
       isPublic: !!isPublic,
       ownerId,
       showHistoryToNewbies: !!showHistoryToNewbies,
-      password,
+      password: hashedPassword,
       waitingRoomEnabled: !!waitingRoomEnabled,
     },
   });
 
-  res.json(room);
+  res.json({ ...room, password: undefined }); // не отдаём хеш в ответе
 });
 
 roomsRouter.get("/:shortId/guest-allowed", async (req, res) => {
