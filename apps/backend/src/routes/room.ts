@@ -44,7 +44,7 @@ roomsRouter.post("/", async (req, res) => {
       isPublic: !!isPublic,
       ownerId,
       showHistoryToNewbies: !!showHistoryToNewbies,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       waitingRoomEnabled: !!waitingRoomEnabled,
     },
   });
@@ -52,7 +52,7 @@ roomsRouter.post("/", async (req, res) => {
   res.json({ ...room, password: undefined }); // не отдаём хеш в ответе
 });
 
-roomsRouter.get("/:shortId/guest-allowed", async (req, res) => {
+roomsRouter.get("/:shortId/prequisites", async (req, res) => {
   try {
     const parsed = ShortIdSchema.safeParse(req.params);
     if (!parsed.success) {
@@ -62,14 +62,18 @@ roomsRouter.get("/:shortId/guest-allowed", async (req, res) => {
     const { shortId } = parsed.data;
     const room = await db.room.findUnique({
       where: { shortId },
-      select: { isPublic: true },
+      select: { isPublic: true, passwordHash: true, waitingRoomEnabled: true },
     });
 
     if (!room) {
       return res.status(404).json({ error: "Room not found" });
     }
 
-    res.json({ guestAllowed: room.isPublic });
+    res.json({
+      guestAllowed: room.isPublic,
+      passwordRequired: !!room.passwordHash,
+      waitingRoomEnabled: room.waitingRoomEnabled,
+    });
   } catch (err) {
     console.error("Error checking guest access:", err);
     res.status(500).json({ error: "Internal server error" });
