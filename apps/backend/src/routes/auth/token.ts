@@ -4,6 +4,7 @@ import { db } from "../../db/client.js";
 import { createLivekitToken } from "../../services/livekit.js";
 import { LivekitTokenQuerySchema } from "../../schemas/auth.schema.js";
 import { extractAuthToken } from "../../utils/auth.js";
+import bcrypt from "bcrypt";
 
 export const livekitRouter = Router();
 const PROXY_ROUTE = process.env.PROXY_ROUTE!;
@@ -17,13 +18,24 @@ livekitRouter.get("/token", async (req, res) => {
         .json({ error: "Invalid query params", details: parsed.error.issues });
     }
 
-    const { room: roomShortId, name } = parsed.data;
+    const { room: roomShortId, name, password } = parsed.data;
 
     const room = await db.room.findUnique({
       where: { shortId: roomShortId },
     });
     if (!room) {
       return res.status(404).json({ error: "Room not found" });
+    }
+
+    if (room.passwordHash) {
+      if (!password) {
+        return res.status(401).json({ error: "Password required" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, room.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
     }
 
     let isGuest = false;
