@@ -5,6 +5,8 @@ import cors from "cors";
 import { authRouter } from "./routes/auth/check.js";
 import { livekitRouter } from "./routes/auth/token.js";
 import { roomsRouter } from "./routes/room.js";
+import { createServer } from "http";
+import { createWaitingWebSocketServer } from "./ws/server.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -27,7 +29,11 @@ app.use("/auth", authRouter); // /auth/check
 app.use("/auth", livekitRouter); // /auth/token
 app.use("/room", roomsRouter); // /room/*
 
+const server = createServer(app);
+
+createWaitingWebSocketServer(server);
+
 // Запуск
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`✅ Server running on http://localhost:${port}`);
 });
