@@ -27,7 +27,18 @@ livekitRouter.get("/token", async (req, res) => {
       return res.status(404).json({ error: "Room not found" });
     }
 
-    if (room.passwordHash) {
+    // Получаем информацию о пользователе из токена
+    const authToken = extractAuthToken(req.headers.cookie);
+    const tokenPayload = authToken
+      ? extractAuthToken(req.headers.cookie)
+      : null;
+    const userId = tokenPayload?.id;
+
+    // Проверяем, является ли пользователь владельцем комнаты
+    const isOwner = userId ? room.ownerId === userId : false;
+
+    // Если пользователь НЕ владелец, проверяем пароль
+    if (room.passwordHash && !isOwner) {
       if (!password) {
         return res.status(401).json({ error: "Password required" });
       }
@@ -39,7 +50,6 @@ livekitRouter.get("/token", async (req, res) => {
     }
 
     let isGuest = false;
-    const authToken = extractAuthToken(req.headers.cookie);
 
     if (!room.isPublic) {
       if (!authToken) {
@@ -60,8 +70,24 @@ livekitRouter.get("/token", async (req, res) => {
       isGuest = !authToken;
     }
 
-    const livekitToken = await createLivekitToken(room.shortId, name, isGuest);
-    res.json({ token: livekitToken });
+    // Для владельца устанавливаем роль owner
+    const role = isOwner ? "owner" : isGuest ? "guest" : "member";
+
+    const livekitToken = await createLivekitToken(
+      room.shortId,
+      name,
+      isGuest,
+      role
+    );
+
+    res.json({
+      token: livekitToken,
+      metadata: {
+        isOwner,
+        isGuest,
+        role,
+      },
+    });
   } catch (err) {
     console.error("❌ Error generating LiveKit token:", err);
     res.status(500).json({ error: "Internal server error" });

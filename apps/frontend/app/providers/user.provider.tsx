@@ -14,6 +14,8 @@ interface AuthContextType {
   user: IUser | null;
   setUser: React.Dispatch<React.SetStateAction<IUser | null>>;
   loading: boolean;
+  token: string | null;
+  setToken: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(
@@ -25,6 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
   const pathname = usePathname();
+  const [token, setToken] = React.useState<string | null>(null);
 
   const isRoomPage =
     (pathname?.startsWith("/room/") || pathname.startsWith("/redirect")) ??
@@ -52,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [router, pathname]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading }}>
+    <AuthContext.Provider value={{ user, setUser, loading, token, setToken }}>
       {children}
     </AuthContext.Provider>
   );

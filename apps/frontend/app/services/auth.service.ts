@@ -7,12 +7,12 @@ export const authService = {
     return response.data;
   },
 
-  async getToken(room: string, name: string) {
+  async getToken(room: string, name: string, password?: string) {
     try {
       const response = await axiosClassic.get<IGetTokenResponse>(
         "/auth/token",
         {
-          params: { room, name },
+          params: { room, name, password },
         }
       );
       if (!response.data?.token) {
@@ -20,7 +20,6 @@ export const authService = {
       }
       return response.data;
     } catch (err) {
-      console.error("Error in authService.getToken:", err);
       throw err;
     }
   },

@@ -4,7 +4,7 @@ export const CreateRoomSchema = z.object({
   ownerId: z.number().int().positive(),
   isPublic: z.boolean().optional(),
   showHistoryToNewbies: z.boolean().optional(),
-  password: z.string().min(1).optional(),
+  password: z.string().optional(),
   waitingRoomEnabled: z.boolean().optional(),
 });
 

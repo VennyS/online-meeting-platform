@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { Redis } from "ioredis";
+import { createLivekitToken } from "../services/livekit.js";
 
 const redis = new Redis(process.env.REDIS_URL!);
 
@@ -60,7 +61,7 @@ export function createWaitingWebSocketServer(server: any) {
           }
 
           if (message.type === "host_approval") {
-            await handleHostApproval(roomId, message, userId);
+            await handleHostApproval(roomId, message);
           }
         } catch (error) {
           console.error("Error processing message:", error);
@@ -95,35 +96,35 @@ export function createWaitingWebSocketServer(server: any) {
   }
 
   // Хост одобряет/отклоняет гостя
-  async function handleHostApproval(
-    roomId: string,
-    message: any,
-    hostId: string
-  ) {
-    const { guestId, approved } = message;
+  async function handleHostApproval(roomId: string, message: any) {
+    const { guestId, approved, guestName } = message;
+
+    const guestConn = connections.get(roomId)?.get(guestId);
+    if (!guestConn || guestConn.ws.readyState !== WebSocket.OPEN) return;
 
     if (approved) {
-      const token = `guest_token_${guestId}_${Date.now()}`;
-      const guestConn = connections.get(roomId)?.get(guestId);
-      if (guestConn?.ws.readyState === WebSocket.OPEN) {
-        guestConn.ws.send(
-          JSON.stringify({
-            type: "guest_approved",
-            token,
-            roomId,
-          })
-        );
-      }
+      // Генерация настоящего LiveKit токена
+      const token = await createLivekitToken(
+        roomId, // название комнаты
+        guestId, // уникальный идентификатор гостя
+        true, // isGuest = true
+        "guest" // роль
+      );
+
+      guestConn.ws.send(
+        JSON.stringify({
+          type: "guest_approved",
+          token,
+          roomId,
+        })
+      );
     } else {
-      const guestConn = connections.get(roomId)?.get(guestId);
-      if (guestConn?.ws.readyState === WebSocket.OPEN) {
-        guestConn.ws.send(
-          JSON.stringify({
-            type: "guest_rejected",
-            reason: "Host rejected your request",
-          })
-        );
-      }
+      guestConn.ws.send(
+        JSON.stringify({
+          type: "guest_rejected",
+          reason: "Host rejected your request",
+        })
+      );
     }
 
     await removeGuestFromWaiting(roomId, guestId);

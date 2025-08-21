@@ -7,6 +7,7 @@ import {
   ShortIdSchema,
 } from "../schemas/room.schema.js";
 import bcrypt from "bcrypt";
+import { extractAuthToken } from "../utils/auth.js";
 
 export const roomsRouter = Router();
 const redis = new Redis(process.env.REDIS_URL!);
@@ -62,17 +63,28 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
     const { shortId } = parsed.data;
     const room = await db.room.findUnique({
       where: { shortId },
-      select: { isPublic: true, passwordHash: true, waitingRoomEnabled: true },
+      select: {
+        isPublic: true,
+        passwordHash: true,
+        waitingRoomEnabled: true,
+        ownerId: true,
+      },
     });
 
     if (!room) {
       return res.status(404).json({ error: "Room not found" });
     }
 
+    // Получаем userID из куки auth-token
+    const cookieHeader = req.headers.cookie;
+    const tokenPayload = extractAuthToken(cookieHeader);
+    const userId = tokenPayload?.id;
+
     res.json({
       guestAllowed: room.isPublic,
       passwordRequired: !!room.passwordHash,
       waitingRoomEnabled: room.waitingRoomEnabled,
+      isOwner: userId ? room.ownerId === userId : false, // ← добавляем проверку владельца
     });
   } catch (err) {
     console.error("Error checking guest access:", err);
