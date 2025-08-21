@@ -14,7 +14,7 @@ import {
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { RemoteParticipant, RoomEvent, Track } from "livekit-client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
 import { roomService } from "@/app/services/room.service";
 import { authService } from "@/app/services/auth.service";
@@ -22,31 +22,20 @@ import styles from "./page.module.css";
 import cn from "classnames";
 import { Panel } from "./types";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
-
-// Guest Form Component
-const GuestForm = ({
-  guestName,
-  setGuestName,
-  onSubmit,
-}: {
-  guestName: string;
-  setGuestName: (name: string) => void;
-  onSubmit: () => void;
-}) => (
-  <div className={styles.guestForm}>
-    <h2>Введите имя для входа в комнату</h2>
-    <input
-      type="text"
-      value={guestName}
-      onChange={(e) => setGuestName(e.target.value)}
-      placeholder="Ваше имя"
-    />
-    <button onClick={onSubmit}>Войти как гость</button>
-  </div>
-);
+import { IWaitingGuest } from "@/app/types/room.types";
 
 // Room Content Component
-const RoomContent = ({ roomName }: { roomName: string }) => {
+const RoomContent = ({
+  roomName,
+  waitingGuests,
+  approveGuest,
+  rejectGuest,
+}: {
+  roomName: string;
+  waitingGuests: IWaitingGuest[];
+  approveGuest: (guestId: string) => void;
+  rejectGuest: (guestId: string) => void;
+}) => {
   const tracks = useTracks(
     [{ source: Track.Source.Camera, withPlaceholder: true }],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
@@ -132,7 +121,11 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
           [styles.active]: openedRightPanel === "participants",
         })}
       >
-        <ParticipantsList />
+        <ParticipantsList
+          waitingGuests={waitingGuests}
+          approveGuest={approveGuest}
+          rejectGuest={rejectGuest}
+        />
       </div>
       <div
         className={cn(styles.chat, {
@@ -196,11 +189,33 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
   );
 };
 
-const ParticipantsList = () => {
+const ParticipantsList = ({
+  waitingGuests,
+  approveGuest,
+  rejectGuest,
+}: {
+  waitingGuests: IWaitingGuest[];
+  approveGuest: (guestId: string) => void;
+  rejectGuest: (guestId: string) => void;
+}) => {
   const participants = useParticipants();
 
   return (
     <div className={styles.participantsList}>
+      <h2>Ожидающие гости</h2>
+      <div>
+        {waitingGuests.map((guest) => (
+          <div key={guest.guestId} className={styles.participantWrapper}>
+            <p>{guest.name}</p>
+            <button onClick={() => approveGuest(guest.guestId)}>
+              Одобрить
+            </button>
+            <button onClick={() => rejectGuest(guest.guestId)}>
+              Отклонить
+            </button>
+          </div>
+        ))}
+      </div>
       <h2>Участники встречи</h2>
       <div>
         {participants.map((participant) => (
@@ -217,27 +232,44 @@ const ParticipantsList = () => {
 // Main Component
 export default function MeetingRoom() {
   const { roomName } = useParams();
-  const { user, setUser } = useUser();
-  const [token, setToken] = useState<string | null>(null);
-  const [guestAllowed, setGuestAllowed] = useState(false);
-  const [guestName, setGuestName] = useState("");
+  const { token, setToken, user } = useUser();
+  const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (!roomName) return;
+    console.log(token, user);
+    if (!token) {
+      router.replace(`/room/${roomName}/prejoin`);
+    }
+  }, [token, user, roomName, router]);
 
-    const checkGuestAccess = async () => {
-      try {
-        const { guestAllowed } = await roomService.guestAllowed(
-          roomName as string
-        );
-        setGuestAllowed(guestAllowed);
-      } catch (err) {
-        console.error("Ошибка при проверке гостевого доступа:", err);
-      }
-    };
+  // WebSocket для хоста
+  useEffect(() => {
+    if (!roomName || !user || user.isGuest) return;
 
-    checkGuestAccess();
-  }, [roomName]);
+    // Если пользователь - хост комнаты
+    const isHost = true; // Здесь нужно проверить, что user - владелец комнаты
+
+    if (isHost) {
+      const websocket = new WebSocket(
+        `ws://localhost:3001/ws?roomId=${roomName}&userId=${user.id}&isHost=true`
+      );
+
+      websocket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === "waiting_queue_updated") {
+          setWaitingGuests(message.guests);
+        }
+      };
+
+      setWs(websocket);
+
+      return () => {
+        websocket.close();
+      };
+    }
+  }, [roomName, user]);
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
@@ -259,44 +291,29 @@ export default function MeetingRoom() {
     fetchToken();
   }, [roomName, user]);
 
-  const handleGuestSubmit = async () => {
-    if (!guestName) return;
-
-    const guestId = Math.floor(Math.random() * 1_000_000); // уникальный временный ID
-
-    setUser({
-      id: guestId,
-      firstName: guestName,
-      lastName: "",
-      email: "",
-      phoneNumber: "",
-      role: "guest",
-      roleId: 0,
-      emailVerified: false,
-      profileImage: "",
-      isGuest: true,
-    });
-
-    try {
-      const response = await authService.getToken(
-        roomName as string,
-        guestName
+  const approveGuest = (guestId: string) => {
+    if (ws) {
+      ws.send(
+        JSON.stringify({
+          type: "host_approval",
+          guestId,
+          approved: true,
+        })
       );
-      setToken(response.token);
-    } catch (err) {
-      console.error("Ошибка при получении токена для гостя:", err);
     }
   };
 
-  if (guestAllowed && !user) {
-    return (
-      <GuestForm
-        guestName={guestName}
-        setGuestName={setGuestName}
-        onSubmit={handleGuestSubmit}
-      />
-    );
-  }
+  const rejectGuest = (guestId: string) => {
+    if (ws) {
+      ws.send(
+        JSON.stringify({
+          type: "host_approval",
+          guestId,
+          approved: false,
+        })
+      );
+    }
+  };
 
   if (!token && user) {
     return <div>Loading...</div>;
@@ -310,7 +327,12 @@ export default function MeetingRoom() {
         connect
         className={styles.roomContainer}
       >
-        <RoomContent roomName={roomName as string} />
+        <RoomContent
+          roomName={roomName as string}
+          waitingGuests={waitingGuests}
+          approveGuest={approveGuest}
+          rejectGuest={rejectGuest}
+        />
       </LiveKitRoom>
     </main>
   );

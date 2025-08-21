@@ -11,15 +11,23 @@ export default function CreateCallButton() {
   const { user } = useUser();
   const [isPublic, setIsPublic] = useState(false);
   const [showHistoryToNewbies, setShowHistoryToNewbies] = useState(false);
+  const [password, setPassword] = useState("");
 
   const handleCreateRoom = async () => {
     try {
       const room = await roomService.createRoom(
         user!.id,
         isPublic,
-        showHistoryToNewbies
+        showHistoryToNewbies,
+        password
       );
-      router.push(`/room/${room.shortId}`);
+
+      let nextUrl = `/room/${room.shortId}`;
+      if (password) {
+        nextUrl += `/prejoin`;
+      }
+
+      router.push(nextUrl);
     } catch (error) {
       console.error("Ошибка при создании комнаты:", error);
     }
@@ -69,6 +77,17 @@ export default function CreateCallButton() {
           />
           Показать историю
         </label>
+      </div>
+
+      <div className={styles.inputGroup}>
+        <label htmlFor="password">Пароль (если есть):</label>
+        <input
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Введите пароль"
+        />
       </div>
 
       <button onClick={handleCreateRoom} className={styles.button}>

@@ -1,24 +1,26 @@
 import { axiosClassic } from "../api/interceptors";
 import { IUser } from "../types/auth.types";
-import { IRoom } from "../types/room.types";
+import { IPrequisites, IRoom } from "../types/room.types";
 
 export const roomService = {
   async createRoom(
     ownerId: number,
     isPublic: boolean,
-    showHistoryToNewbies: boolean
+    showHistoryToNewbies: boolean,
+    password?: string
   ) {
     const response = await axiosClassic.post<IRoom>("/room", {
       ownerId,
       isPublic,
       showHistoryToNewbies,
+      password,
     });
     return response.data;
   },
 
-  async guestAllowed(shortId: string) {
-    const response = await axiosClassic.get<{ guestAllowed: boolean }>(
-      `/room/${shortId}/guest-allowed`
+  async prequisites(shortId: string) {
+    const response = await axiosClassic.get<IPrequisites>(
+      `/room/${shortId}/prequisites`
     );
     return response.data;
   },
