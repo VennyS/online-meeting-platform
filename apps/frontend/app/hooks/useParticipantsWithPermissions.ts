@@ -1,7 +1,4 @@
-import {
-  useParticipants,
-  useRemoteParticipants,
-} from "@livekit/components-react";
+import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
 import { useEffect } from "react";
 import {
@@ -54,19 +51,23 @@ const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
 });
 
 export function useParticipantsWithPermissions(
-  ws: WebSocket | null
+  ws: WebSocket | null,
+  localUserId: number
 ): ParticipantsWithPermissions | null {
   const participants = useParticipants();
+
   const [permissionsMap, setPermissionsMap] = React.useState<
     Record<RoomRole, UserPermissions>
   >(getDefaultPermissions());
+
   const [usersRoles, setUsersRoles] = React.useState<Record<string, RoomRole>>(
     {}
   );
-  const [localRole, setLocalRole] = React.useState<RoomRole>("participant");
+
+  const [waitingGuests, setWaitingGuests] = React.useState<IWaitingGuest[]>([]);
+
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
-  const [waitingGuests, setWaitingGuests] = React.useState<IWaitingGuest[]>([]);
 
   function updateRolePermissions(
     targetRole: RoomRole,
@@ -74,7 +75,6 @@ export function useParticipantsWithPermissions(
     value: boolean
   ) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
     ws.send(
       JSON.stringify({
         type: "update_permission",
@@ -87,7 +87,6 @@ export function useParticipantsWithPermissions(
 
   function updateUserRole(targetUserId: string, newRole: RoomRole) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-
     ws.send(
       JSON.stringify({
         type: "update_role",
@@ -98,32 +97,19 @@ export function useParticipantsWithPermissions(
   }
 
   const approveGuest = (guestId: string) => {
-    if (ws) {
-      ws.send(
-        JSON.stringify({
-          type: "host_approval",
-          guestId,
-          approved: true,
-        })
-      );
-    }
+    if (!ws) return;
+    ws.send(JSON.stringify({ type: "host_approval", guestId, approved: true }));
   };
 
   const rejectGuest = (guestId: string) => {
-    if (ws) {
-      ws.send(
-        JSON.stringify({
-          type: "host_approval",
-          guestId,
-          approved: false,
-        })
-      );
-    }
+    if (!ws) return;
+    ws.send(
+      JSON.stringify({ type: "host_approval", guestId, approved: false })
+    );
   };
 
   useEffect(() => {
     if (!ws) return;
-
     ws.onmessage = (event: MessageEvent) => {
       const message: RoomWSMessage = JSON.parse(event.data);
 
@@ -143,21 +129,33 @@ export function useParticipantsWithPermissions(
             [message.userId]: message.role,
           }));
           break;
+        case "roles_updated":
+          setUsersRoles((prev) => ({
+            ...prev,
+            ...message.roles,
+          }));
+          break;
         case "waiting_queue_updated":
           setWaitingGuests(message.guests);
           break;
-
         case "new_guest_waiting":
           setWaitingGuests((prev) => [...prev, message.guest]);
           break;
         case "init":
-          setLocalRole(message.role);
+          setUsersRoles((prev) => ({
+            ...prev,
+            [localUserId]: message.role,
+          }));
           break;
       }
     };
   }, [ws]);
 
   if (!localParticipant) return null;
+
+  console.log(usersRoles);
+
+  const localRole = usersRoles[localUserId] || "participant";
 
   const local: ParticipantWithPermissions = {
     participant: localParticipant,

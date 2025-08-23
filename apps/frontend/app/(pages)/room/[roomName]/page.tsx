@@ -261,9 +261,11 @@ export default function MeetingRoom() {
         connect
         className={styles.roomContainer}
       >
-        <ParticipantsProvider ws={ws}>
-          <RoomContent roomName={roomName as string} />
-        </ParticipantsProvider>
+        {user && (
+          <ParticipantsProvider localUserId={user.id} ws={ws}>
+            <RoomContent roomName={roomName as string} />
+          </ParticipantsProvider>
+        )}
       </LiveKitRoom>
     </main>
   );

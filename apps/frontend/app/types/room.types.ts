@@ -41,4 +41,5 @@ export type RoomWSMessage =
       permissions: Partial<Permissions>;
     }
   | { type: "guest_approved"; token: string }
-  | { type: "guest_rejected" };
+  | { type: "guest_rejected" }
+  | { type: "roles_updated"; roles: Record<string, RoomRole> };

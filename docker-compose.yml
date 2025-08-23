@@ -14,6 +14,7 @@ services:
       context: ./apps/backend
     ports:
       - "3001:3001"
+      - "5555:5555"
     env_file:
       - ./apps/backend/.env
     depends_on:

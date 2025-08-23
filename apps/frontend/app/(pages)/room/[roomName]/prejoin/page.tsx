@@ -156,7 +156,8 @@ const PrejoinPage = () => {
         const response = await authService.getToken(
           roomName as string,
           userName,
-          password
+          password,
+          userId
         );
         livekitToken = response.token;
       } catch (err) {
@@ -180,7 +181,9 @@ const PrejoinPage = () => {
       try {
         const response = await authService.getToken(
           roomName as string,
-          userName
+          userName,
+          password,
+          userId
         );
         livekitToken = response.token;
       } catch (err) {

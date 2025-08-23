@@ -67,20 +67,24 @@ export function ParticipantsList() {
 
   return (
     <div className={styles.participantsList}>
-      <h2>Ожидающие гости</h2>
-      <div>
-        {waitingGuests.map((guest) => (
-          <div key={guest.guestId} className={styles.participantWrapper}>
-            <p>{guest.name}</p>
-            <button onClick={() => approveGuest(guest.guestId)}>
-              Одобрить
-            </button>
-            <button onClick={() => rejectGuest(guest.guestId)}>
-              Отклонить
-            </button>
+      {waitingGuests && (
+        <>
+          <h2>Ожидающие гости</h2>
+          <div>
+            {waitingGuests.map((guest) => (
+              <div key={guest.guestId} className={styles.participantWrapper}>
+                <p>{guest.name}</p>
+                <button onClick={() => approveGuest(guest.guestId)}>
+                  Одобрить
+                </button>
+                <button onClick={() => rejectGuest(guest.guestId)}>
+                  Отклонить
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       <h2>Участники встречи</h2>
       <div>

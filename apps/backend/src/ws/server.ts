@@ -58,11 +58,13 @@ export function createWaitingWebSocketServer(server: any) {
       );
 
       if (isHost) {
-        sendWaitingQueueToHost(roomId, userId);
+        sendInitToHost(roomId, userId);
       }
 
       // присвоим дефолтную роль (если не задана)
       setDefaultRole(roomId, userId, isHost ? "owner" : "participant");
+
+      await broadcastRoles(roomId);
 
       ws.on("message", async (data) => {
         try {
@@ -98,6 +100,55 @@ export function createWaitingWebSocketServer(server: any) {
       ws.close(1011, "Server error");
     }
   });
+
+  async function broadcastRoles(roomId: string) {
+    const roomConns = connections.get(roomId);
+    if (!roomConns) return;
+
+    const roles = await redis.hgetall(`room:${roomId}:roles`);
+
+    const message = JSON.stringify({
+      type: "roles_updated",
+      roles, // userId → role
+    });
+
+    for (const { ws } of roomConns.values()) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+      }
+    }
+  }
+
+  /**
+   * Инициализация хоста — очередь + карта прав
+   */
+  async function sendInitToHost(roomId: string, hostId: string) {
+    const hostConn = connections.get(roomId)?.get(hostId);
+    if (!hostConn || hostConn.ws.readyState !== WebSocket.OPEN) return;
+
+    // очередь гостей
+    const waitingList = await redis.lrange(`room:${roomId}:waiting`, 0, -1);
+
+    // карта прав (используем hgetall для hash)
+    const permissionsRaw = await redis.hgetall(`room:${roomId}:permissions`);
+    const permissionsMap: Record<string, any> = {};
+
+    for (const [role, permsStr] of Object.entries(permissionsRaw)) {
+      try {
+        permissionsMap[role] = JSON.parse(permsStr as string);
+      } catch {
+        permissionsMap[role] = {};
+      }
+    }
+
+    hostConn.ws.send(
+      JSON.stringify({
+        type: "init_host",
+        guests: waitingList.map((item) => JSON.parse(item)),
+        permissions: permissionsMap,
+      })
+    );
+  }
 
   async function isOwnerOrAdmin(
     roomId: string,
@@ -135,31 +186,32 @@ export function createWaitingWebSocketServer(server: any) {
   async function handlePermissionUpdate(roomId: string, message: any) {
     const { targetRole, permission, value } = message;
 
-    // Читаем текущие права из Redis
     const key = `room:${roomId}:permissions`;
-    let permissions: any = {};
-    const stored = await redis.get(key);
+
+    // Читаем текущие права для конкретной роли
+    let rolePermissions: any = {};
+    const stored = await redis.hget(key, targetRole);
     if (stored) {
-      permissions = JSON.parse(stored);
+      try {
+        rolePermissions = JSON.parse(stored);
+      } catch {
+        rolePermissions = {};
+      }
     }
 
-    // Обновляем
-    if (!permissions[targetRole]) {
-      permissions[targetRole] = {};
-    }
-    permissions[targetRole][permission] = value;
+    // Обновляем permission
+    rolePermissions[permission] = value;
 
-    // Сохраняем
-    await redis.set(key, JSON.stringify(permissions));
+    // Сохраняем обратно как hash поле
+    await redis.hset(key, targetRole, JSON.stringify(rolePermissions));
 
     // Шлем всем участникам
     broadcast(roomId, {
       type: "permissions_updated",
       role: targetRole,
-      permissions: permissions[targetRole],
+      permissions: rolePermissions,
     });
   }
-
   // === Хелперы ===
   function broadcast(roomId: string, msg: any) {
     const roomConnections = connections.get(roomId);
@@ -201,7 +253,8 @@ export function createWaitingWebSocketServer(server: any) {
       // Генерация настоящего LiveKit токена
       const token = await createLivekitToken(
         roomId, // название комнаты
-        guestId, // уникальный идентификатор гостя
+        guestId,
+        guestName, // уникальный идентификатор гостя
         true, // isGuest = true
         "guest" // роль
       );
@@ -261,23 +314,6 @@ export function createWaitingWebSocketServer(server: any) {
           })
         );
       }
-    }
-  }
-
-  // Отправляем хосту текущую очередь
-  async function sendWaitingQueueToHost(roomId: string, hostId: string) {
-    const hostConn = connections.get(roomId)?.get(hostId);
-    if (!hostConn) return;
-
-    const waitingList = await redis.lrange(`room:${roomId}:waiting`, 0, -1);
-
-    if (hostConn.ws.readyState === WebSocket.OPEN) {
-      hostConn.ws.send(
-        JSON.stringify({
-          type: "waiting_queue",
-          guests: waitingList.map((item) => JSON.parse(item)),
-        })
-      );
     }
   }
 

@@ -12,13 +12,15 @@ const ParticipantsContext = createContext<ParticipantsWithPermissions | null>(
 interface ParticipantsProviderProps {
   ws: WebSocket | null;
   children: ReactNode;
+  localUserId: number;
 }
 
 export function ParticipantsProvider({
   ws,
   children,
+  localUserId,
 }: ParticipantsProviderProps) {
-  const participantsData = useParticipantsWithPermissions(ws);
+  const participantsData = useParticipantsWithPermissions(ws, localUserId);
 
   return (
     <ParticipantsContext.Provider value={participantsData}>
