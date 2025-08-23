@@ -156,16 +156,6 @@
   }
 }
 
-.participantWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  p {
-    margin: 0;
-  }
-}
-
 .closePanelButton {
   display: none; /* по умолчанию скрыта */
 }

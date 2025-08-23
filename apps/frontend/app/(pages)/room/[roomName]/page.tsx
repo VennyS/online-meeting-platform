@@ -8,21 +8,29 @@ import {
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
-  useParticipants,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import { RemoteParticipant, RoomEvent, Track } from "livekit-client";
+import {
+  LocalParticipant,
+  RemoteParticipant,
+  RoomEvent,
+  Track,
+} from "livekit-client";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
-import { roomService } from "@/app/services/room.service";
 import { authService } from "@/app/services/auth.service";
 import styles from "./page.module.css";
 import cn from "classnames";
 import { Panel } from "./types";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
-import { IWaitingGuest } from "@/app/types/room.types";
+import { IWaitingGuest, RoomRole, RoomWSMessage } from "@/app/types/room.types";
+import {
+  ParticipantsProvider,
+  useParticipantsContext,
+} from "@/app/providers/participants.provider";
+import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
 
 // Room Content Component
 const RoomContent = ({
@@ -37,7 +45,10 @@ const RoomContent = ({
   rejectGuest: (guestId: string) => void;
 }) => {
   const tracks = useTracks(
-    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
   const [copied, setCopied] = useState(false);
@@ -46,6 +57,7 @@ const RoomContent = ({
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
+  const { local } = useParticipantsContext();
 
   useEffect(() => {
     if (!room) return;
@@ -69,6 +81,24 @@ const RoomContent = ({
   useEffect(() => {
     if (openedRightPanel === "chat") setUnreadCount(0);
   }, [openedRightPanel]);
+
+  useEffect(() => {
+    if (!local.participant) return;
+
+    // проверяем что это локальный участник
+    if (local.participant instanceof LocalParticipant) {
+      if (!local.permissions.permissions.canShareScreen) {
+        // выключаем стрим, если он идет
+        const screenTrackPub = Array.from(
+          local.participant.trackPublications.values()
+        ).find((pub) => pub.source === "screen_share");
+
+        if (screenTrackPub?.track) {
+          local.participant.unpublishTrack(screenTrackPub.track);
+        }
+      }
+    }
+  }, [local.permissions.permissions.canShareScreen, local.participant]);
 
   const generateMeetingInfo = () => {
     const meetingDate = new Date().toLocaleString("ru-RU", {
@@ -150,7 +180,7 @@ const RoomContent = ({
           controls={{
             microphone: true,
             camera: true,
-            screenShare: false,
+            screenShare: local.permissions.permissions.canShareScreen,
             settings: false,
             leave: false,
           }}
@@ -189,46 +219,6 @@ const RoomContent = ({
   );
 };
 
-const ParticipantsList = ({
-  waitingGuests,
-  approveGuest,
-  rejectGuest,
-}: {
-  waitingGuests: IWaitingGuest[];
-  approveGuest: (guestId: string) => void;
-  rejectGuest: (guestId: string) => void;
-}) => {
-  const participants = useParticipants();
-
-  return (
-    <div className={styles.participantsList}>
-      <h2>Ожидающие гости</h2>
-      <div>
-        {waitingGuests.map((guest) => (
-          <div key={guest.guestId} className={styles.participantWrapper}>
-            <p>{guest.name}</p>
-            <button onClick={() => approveGuest(guest.guestId)}>
-              Одобрить
-            </button>
-            <button onClick={() => rejectGuest(guest.guestId)}>
-              Отклонить
-            </button>
-          </div>
-        ))}
-      </div>
-      <h2>Участники встречи</h2>
-      <div>
-        {participants.map((participant) => (
-          <div key={participant.sid} className={styles.participantWrapper}>
-            <p>{participant.name || participant.identity || "Аноним"}</p>
-            <p>{participant.metadata === "guest" ? "Гость" : "Пользователь"}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 // Main Component
 export default function MeetingRoom() {
   const { roomName } = useParams();
@@ -246,29 +236,39 @@ export default function MeetingRoom() {
 
   // WebSocket для хоста
   useEffect(() => {
-    if (!roomName || !user || user.isGuest) return;
+    if (!roomName || !user) return;
 
-    // Если пользователь - хост комнаты
-    const isHost = true; // Здесь нужно проверить, что user - владелец комнаты
+    const websocket = new WebSocket(
+      `ws://localhost:3001/ws?roomId=${roomName}&userId=${user.id}`
+    );
 
-    if (isHost) {
-      const websocket = new WebSocket(
-        `ws://localhost:3001/ws?roomId=${roomName}&userId=${user.id}&isHost=true`
-      );
+    websocket.onopen = () => {
+      console.log("WS connected");
+    };
 
-      websocket.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        if (message.type === "waiting_queue_updated") {
+    websocket.onmessage = (event: MessageEvent) => {
+      const message: RoomWSMessage = JSON.parse(event.data);
+
+      switch (message.type) {
+        case "waiting_queue_updated":
           setWaitingGuests(message.guests);
-        }
-      };
+          break;
 
-      setWs(websocket);
+        case "new_guest_waiting":
+          setWaitingGuests((prev) => [...prev, message.guest]);
+          break;
+      }
+    };
 
-      return () => {
-        websocket.close();
-      };
-    }
+    websocket.onclose = () => {
+      console.log("WS disconnected");
+    };
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
   }, [roomName, user]);
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
@@ -327,12 +327,14 @@ export default function MeetingRoom() {
         connect
         className={styles.roomContainer}
       >
-        <RoomContent
-          roomName={roomName as string}
-          waitingGuests={waitingGuests}
-          approveGuest={approveGuest}
-          rejectGuest={rejectGuest}
-        />
+        <ParticipantsProvider ws={ws}>
+          <RoomContent
+            roomName={roomName as string}
+            waitingGuests={waitingGuests}
+            approveGuest={approveGuest}
+            rejectGuest={rejectGuest}
+          />
+        </ParticipantsProvider>
       </LiveKitRoom>
     </main>
   );
