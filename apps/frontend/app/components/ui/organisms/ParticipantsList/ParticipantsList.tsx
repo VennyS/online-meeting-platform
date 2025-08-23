@@ -1,16 +1,18 @@
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { ParticipantsListProps } from "./types";
 import { Permissions, RoomRole } from "@/app/types/room.types";
 import styles from "./ParticipantsList.module.css";
 import { useState } from "react";
 
-export function ParticipantsList({
-  waitingGuests,
-  approveGuest,
-  rejectGuest,
-}: ParticipantsListProps) {
-  const { local, remote, updateUserRole, updateRolePermissions } =
-    useParticipantsContext();
+export function ParticipantsList() {
+  const {
+    local,
+    remote,
+    updateUserRole,
+    updateRolePermissions,
+    waitingGuests,
+    approveGuest,
+    rejectGuest,
+  } = useParticipantsContext();
   const [canShareScreenValue, setCanShareScreenValue] = useState<
     RoomRole | "all"
   >(getPermissionValue("canShareScreen"));

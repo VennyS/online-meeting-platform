@@ -33,17 +33,7 @@ import {
 import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
 
 // Room Content Component
-const RoomContent = ({
-  roomName,
-  waitingGuests,
-  approveGuest,
-  rejectGuest,
-}: {
-  roomName: string;
-  waitingGuests: IWaitingGuest[];
-  approveGuest: (guestId: string) => void;
-  rejectGuest: (guestId: string) => void;
-}) => {
+const RoomContent = ({ roomName }: { roomName: string }) => {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -151,11 +141,7 @@ const RoomContent = ({
           [styles.active]: openedRightPanel === "participants",
         })}
       >
-        <ParticipantsList
-          waitingGuests={waitingGuests}
-          approveGuest={approveGuest}
-          rejectGuest={rejectGuest}
-        />
+        <ParticipantsList />
       </div>
       <div
         className={cn(styles.chat, {
@@ -223,12 +209,10 @@ const RoomContent = ({
 export default function MeetingRoom() {
   const { roomName } = useParams();
   const { token, setToken, user } = useUser();
-  const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    console.log(token, user);
     if (!token) {
       router.replace(`/room/${roomName}/prejoin`);
     }
@@ -242,33 +226,7 @@ export default function MeetingRoom() {
       `ws://localhost:3001/ws?roomId=${roomName}&userId=${user.id}`
     );
 
-    websocket.onopen = () => {
-      console.log("WS connected");
-    };
-
-    websocket.onmessage = (event: MessageEvent) => {
-      const message: RoomWSMessage = JSON.parse(event.data);
-
-      switch (message.type) {
-        case "waiting_queue_updated":
-          setWaitingGuests(message.guests);
-          break;
-
-        case "new_guest_waiting":
-          setWaitingGuests((prev) => [...prev, message.guest]);
-          break;
-      }
-    };
-
-    websocket.onclose = () => {
-      console.log("WS disconnected");
-    };
-
     setWs(websocket);
-
-    return () => {
-      websocket.close();
-    };
   }, [roomName, user]);
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
@@ -291,30 +249,6 @@ export default function MeetingRoom() {
     fetchToken();
   }, [roomName, user]);
 
-  const approveGuest = (guestId: string) => {
-    if (ws) {
-      ws.send(
-        JSON.stringify({
-          type: "host_approval",
-          guestId,
-          approved: true,
-        })
-      );
-    }
-  };
-
-  const rejectGuest = (guestId: string) => {
-    if (ws) {
-      ws.send(
-        JSON.stringify({
-          type: "host_approval",
-          guestId,
-          approved: false,
-        })
-      );
-    }
-  };
-
   if (!token && user) {
     return <div>Loading...</div>;
   }
@@ -328,12 +262,7 @@ export default function MeetingRoom() {
         className={styles.roomContainer}
       >
         <ParticipantsProvider ws={ws}>
-          <RoomContent
-            roomName={roomName as string}
-            waitingGuests={waitingGuests}
-            approveGuest={approveGuest}
-            rejectGuest={rejectGuest}
-          />
+          <RoomContent roomName={roomName as string} />
         </ParticipantsProvider>
       </LiveKitRoom>
     </main>

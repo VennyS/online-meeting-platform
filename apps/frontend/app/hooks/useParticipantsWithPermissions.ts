@@ -5,6 +5,7 @@ import {
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
 import { useEffect } from "react";
 import {
+  IWaitingGuest,
   Permissions,
   RoomRole,
   RoomWSMessage,
@@ -21,6 +22,9 @@ export interface ParticipantsWithPermissions {
     value: boolean
   ) => void;
   updateUserRole: (targetUserId: string, newRole: RoomRole) => void;
+  waitingGuests: IWaitingGuest[];
+  approveGuest: (guestId: string) => void;
+  rejectGuest: (guestId: string) => void;
 }
 
 type ParticipantWithPermissions = {
@@ -62,6 +66,7 @@ export function useParticipantsWithPermissions(
   const [localRole, setLocalRole] = React.useState<RoomRole>("participant");
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
+  const [waitingGuests, setWaitingGuests] = React.useState<IWaitingGuest[]>([]);
 
   function updateRolePermissions(
     targetRole: RoomRole,
@@ -92,6 +97,30 @@ export function useParticipantsWithPermissions(
     );
   }
 
+  const approveGuest = (guestId: string) => {
+    if (ws) {
+      ws.send(
+        JSON.stringify({
+          type: "host_approval",
+          guestId,
+          approved: true,
+        })
+      );
+    }
+  };
+
+  const rejectGuest = (guestId: string) => {
+    if (ws) {
+      ws.send(
+        JSON.stringify({
+          type: "host_approval",
+          guestId,
+          approved: false,
+        })
+      );
+    }
+  };
+
   useEffect(() => {
     if (!ws) return;
 
@@ -114,6 +143,13 @@ export function useParticipantsWithPermissions(
             [message.userId]: message.role,
           }));
           break;
+        case "waiting_queue_updated":
+          setWaitingGuests(message.guests);
+          break;
+
+        case "new_guest_waiting":
+          setWaitingGuests((prev) => [...prev, message.guest]);
+          break;
         case "init":
           setLocalRole(message.role);
           break;
@@ -131,8 +167,6 @@ export function useParticipantsWithPermissions(
     },
   };
 
-  console.log(usersRoles);
-
   const remote: ParticipantWithPermissions[] = remoteParticipants.map((p) => {
     const role = usersRoles[p.identity] || "participant";
     return {
@@ -144,5 +178,13 @@ export function useParticipantsWithPermissions(
     };
   });
 
-  return { local, remote, updateRolePermissions, updateUserRole };
+  return {
+    local,
+    remote,
+    updateRolePermissions,
+    updateUserRole,
+    waitingGuests,
+    approveGuest,
+    rejectGuest,
+  };
 }
