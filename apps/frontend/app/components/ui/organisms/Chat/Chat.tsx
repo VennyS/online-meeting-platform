@@ -4,6 +4,7 @@ import { roomService } from "@/app/services/room.service";
 import styles from "./Chat.module.css";
 import cn from "classnames";
 import { ChatProps } from "./types";
+import { parseMessage } from "@/app/lib/parseMessage";
 
 export const Chat = ({ roomName, user }: ChatProps) => {
   const { send: sendLivekitMessage, chatMessages } = useChat();
@@ -86,7 +87,7 @@ export const Chat = ({ roomName, user }: ChatProps) => {
                 {from}
                 <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
               </p>
-              <span>{msg.text || msg.message}</span>
+              <span>{parseMessage(msg.text || msg.message)}</span>
             </li>
           );
         })}
