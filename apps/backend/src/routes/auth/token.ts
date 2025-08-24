@@ -18,7 +18,12 @@ livekitRouter.get("/token", async (req, res) => {
         .json({ error: "Invalid query params", details: parsed.error.issues });
     }
 
-    const { room: roomShortId, name, password } = parsed.data;
+    const {
+      room: roomShortId,
+      name,
+      password,
+      userId: optionalUserId,
+    } = parsed.data;
 
     const room = await db.room.findUnique({
       where: { shortId: roomShortId },
@@ -32,7 +37,7 @@ livekitRouter.get("/token", async (req, res) => {
     const tokenPayload = authToken
       ? extractAuthToken(req.headers.cookie)
       : null;
-    const userId = tokenPayload?.id;
+    const userId = tokenPayload?.id ? tokenPayload.id : optionalUserId;
 
     // Проверяем, является ли пользователь владельцем комнаты
     const isOwner = userId ? room.ownerId === userId : false;
@@ -75,6 +80,7 @@ livekitRouter.get("/token", async (req, res) => {
 
     const livekitToken = await createLivekitToken(
       room.shortId,
+      String(userId),
       name,
       isGuest,
       role

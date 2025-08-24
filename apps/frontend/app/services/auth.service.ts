@@ -7,12 +7,17 @@ export const authService = {
     return response.data;
   },
 
-  async getToken(room: string, name: string, password?: string) {
+  async getToken(
+    room: string,
+    name: string,
+    password?: string,
+    userId?: number
+  ) {
     try {
       const response = await axiosClassic.get<IGetTokenResponse>(
         "/auth/token",
         {
-          params: { room, name, password },
+          params: { room, name, password, userId },
         }
       );
       if (!response.data?.token) {

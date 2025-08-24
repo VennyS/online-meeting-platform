@@ -6,7 +6,7 @@ import styles from "./page.module.css";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { roomService } from "@/app/services/room.service";
-import { IPrequisites } from "@/app/types/room.types";
+import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
 
 const PrejoinPage = () => {
@@ -75,22 +75,24 @@ const PrejoinPage = () => {
 
     websocket.onopen = () => {
       console.log("✅ Connected to WebSocket");
-
-      if (!isHost) {
-        // Отправляем запрос на вход
-        websocket.send(
-          JSON.stringify({
-            type: "guest_join_request",
-            name: userName,
-          })
-        );
-      }
     };
 
     websocket.onmessage = (event) => {
       console.log("📨 Message from server:", event.data);
 
-      const message = JSON.parse(event.data);
+      const message: RoomWSMessage = JSON.parse(event.data);
+
+      if (message.type === "init") {
+        if (!isHost) {
+          // Отправляем запрос на вход
+          websocket.send(
+            JSON.stringify({
+              type: "guest_join_request",
+              name: userName,
+            })
+          );
+        }
+      }
 
       if (message.type === "guest_approved") {
         handleApprovedAccess(userId, userName, message.token);
@@ -154,7 +156,8 @@ const PrejoinPage = () => {
         const response = await authService.getToken(
           roomName as string,
           userName,
-          password
+          password,
+          userId
         );
         livekitToken = response.token;
       } catch (err) {
@@ -178,7 +181,9 @@ const PrejoinPage = () => {
       try {
         const response = await authService.getToken(
           roomName as string,
-          userName
+          userName,
+          password,
+          userId
         );
         livekitToken = response.token;
       } catch (err) {

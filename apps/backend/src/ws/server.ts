@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { Redis } from "ioredis";
 import { createLivekitToken } from "../services/livekit.js";
+import { db } from "../db/client.js";
 
 const redis = new Redis(process.env.REDIS_URL!);
 
@@ -17,25 +18,29 @@ export function createWaitingWebSocketServer(server: any) {
   // roomId -> Map<userId, UserConnection>
   const connections = new Map<string, Map<string, UserConnection>>();
 
-  wss.on("connection", (ws, request) => {
+  wss.on("connection", async (ws, request) => {
     console.log("🔗 New WS connection:", request.url);
 
     try {
       const url = new URL(request.url!, `http://${request.headers.host}`);
       const roomId = url.searchParams.get("roomId");
       const userId = url.searchParams.get("userId");
-      const isHost = url.searchParams.get("isHost") === "true";
 
       if (!roomId || !userId) {
         ws.close(1008, "Need roomId and userId");
         return;
       }
 
-      // Сохраняем подключение с информацией о хосте
+      const room = await db.room.findUnique({
+        where: { shortId: roomId },
+        select: { ownerId: true },
+      });
+
+      const isHost = room?.ownerId.toString() === userId;
+
       if (!connections.has(roomId)) {
         connections.set(roomId, new Map());
       }
-
       connections.get(roomId)!.set(userId, {
         ws,
         isHost,
@@ -43,25 +48,43 @@ export function createWaitingWebSocketServer(server: any) {
         userId,
       });
 
-      console.log(`✅ ${userId} joined room ${roomId} (host: ${isHost})`);
+      console.log(`✅ ${userId} joined room ${roomId}`);
 
-      // Если это хост - отправляем ему текущую очередь ожидания
+      ws.send(
+        JSON.stringify({
+          type: "init",
+          role: isHost ? "owner" : "participant",
+        })
+      );
+
       if (isHost) {
-        sendWaitingQueueToHost(roomId, userId);
+        sendInitToHost(roomId, userId);
       }
 
-      // Обработка сообщений
+      // присвоим дефолтную роль (если не задана)
+      setDefaultRole(roomId, userId, isHost ? "owner" : "participant");
+
+      await broadcastRoles(roomId);
+
       ws.on("message", async (data) => {
         try {
           const message = JSON.parse(data.toString());
-          console.log("📨 Received:", message);
 
-          if (message.type === "guest_join_request") {
-            await handleGuestJoinRequest(roomId, message, userId);
-          }
-
-          if (message.type === "host_approval") {
-            await handleHostApproval(roomId, message);
+          switch (message.type) {
+            case "guest_join_request":
+              await handleGuestJoinRequest(roomId, message, userId);
+              break;
+            case "host_approval":
+              await handleHostApproval(roomId, message);
+              break;
+            case "update_permission":
+              if (!(await isOwnerOrAdmin(roomId, userId))) return;
+              await handlePermissionUpdate(roomId, message);
+              break;
+            case "update_role":
+              if (!(await isOwnerOrAdmin(roomId, userId))) return;
+              await handleRoleUpdate(roomId, message);
+              break;
           }
         } catch (error) {
           console.error("Error processing message:", error);
@@ -77,6 +100,130 @@ export function createWaitingWebSocketServer(server: any) {
       ws.close(1011, "Server error");
     }
   });
+
+  async function broadcastRoles(roomId: string) {
+    const roomConns = connections.get(roomId);
+    if (!roomConns) return;
+
+    const roles = await redis.hgetall(`room:${roomId}:roles`);
+
+    const message = JSON.stringify({
+      type: "roles_updated",
+      roles, // userId → role
+    });
+
+    for (const { ws } of roomConns.values()) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+      }
+    }
+  }
+
+  /**
+   * Инициализация хоста — очередь + карта прав
+   */
+  async function sendInitToHost(roomId: string, hostId: string) {
+    const hostConn = connections.get(roomId)?.get(hostId);
+    if (!hostConn || hostConn.ws.readyState !== WebSocket.OPEN) return;
+
+    // очередь гостей
+    const waitingList = await redis.lrange(`room:${roomId}:waiting`, 0, -1);
+
+    // карта прав (используем hgetall для hash)
+    const permissionsRaw = await redis.hgetall(`room:${roomId}:permissions`);
+    const permissionsMap: Record<string, any> = {};
+
+    for (const [role, permsStr] of Object.entries(permissionsRaw)) {
+      try {
+        permissionsMap[role] = JSON.parse(permsStr as string);
+      } catch {
+        permissionsMap[role] = {};
+      }
+    }
+
+    hostConn.ws.send(
+      JSON.stringify({
+        type: "init_host",
+        guests: waitingList.map((item) => JSON.parse(item)),
+        permissions: permissionsMap,
+      })
+    );
+  }
+
+  async function isOwnerOrAdmin(
+    roomId: string,
+    userId: string
+  ): Promise<boolean> {
+    const role = await redis.hget(`room:${roomId}:roles`, userId);
+    return role === "owner" || role === "admin";
+  }
+
+  async function setDefaultRole(roomId: string, userId: string, role: string) {
+    const key = `room:${roomId}:roles`;
+    const existing = await redis.hget(key, userId);
+    if (!existing) {
+      await redis.hset(key, userId, role);
+      broadcast(roomId, {
+        type: "role_updated",
+        userId,
+        role,
+      });
+    }
+  }
+
+  async function handleRoleUpdate(roomId: string, message: any) {
+    const { targetUserId, newRole } = message;
+    const key = `room:${roomId}:roles`;
+    await redis.hset(key, targetUserId, newRole);
+
+    broadcast(roomId, {
+      type: "role_updated",
+      userId: targetUserId,
+      role: newRole,
+    });
+  }
+
+  async function handlePermissionUpdate(roomId: string, message: any) {
+    const { targetRole, permission, value } = message;
+
+    const key = `room:${roomId}:permissions`;
+
+    // Читаем текущие права для конкретной роли
+    let rolePermissions: any = {};
+    const stored = await redis.hget(key, targetRole);
+    if (stored) {
+      try {
+        rolePermissions = JSON.parse(stored);
+      } catch {
+        rolePermissions = {};
+      }
+    }
+
+    // Обновляем permission
+    rolePermissions[permission] = value;
+
+    // Сохраняем обратно как hash поле
+    await redis.hset(key, targetRole, JSON.stringify(rolePermissions));
+
+    // Шлем всем участникам
+    broadcast(roomId, {
+      type: "permissions_updated",
+      role: targetRole,
+      permissions: rolePermissions,
+    });
+  }
+  // === Хелперы ===
+  function broadcast(roomId: string, msg: any) {
+    const roomConnections = connections.get(roomId);
+    if (!roomConnections) return;
+
+    const json = JSON.stringify(msg);
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === WebSocket.OPEN) {
+        conn.ws.send(json);
+      }
+    }
+  }
 
   // Гость хочет присоединиться
   async function handleGuestJoinRequest(
@@ -106,7 +253,8 @@ export function createWaitingWebSocketServer(server: any) {
       // Генерация настоящего LiveKit токена
       const token = await createLivekitToken(
         roomId, // название комнаты
-        guestId, // уникальный идентификатор гостя
+        guestId,
+        guestName, // уникальный идентификатор гостя
         true, // isGuest = true
         "guest" // роль
       );
@@ -166,23 +314,6 @@ export function createWaitingWebSocketServer(server: any) {
           })
         );
       }
-    }
-  }
-
-  // Отправляем хосту текущую очередь
-  async function sendWaitingQueueToHost(roomId: string, hostId: string) {
-    const hostConn = connections.get(roomId)?.get(hostId);
-    if (!hostConn) return;
-
-    const waitingList = await redis.lrange(`room:${roomId}:waiting`, 0, -1);
-
-    if (hostConn.ws.readyState === WebSocket.OPEN) {
-      hostConn.ws.send(
-        JSON.stringify({
-          type: "waiting_queue",
-          guests: waitingList.map((item) => JSON.parse(item)),
-        })
-      );
     }
   }
 

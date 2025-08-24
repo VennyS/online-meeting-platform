@@ -10,22 +10,23 @@ export interface Metadata {
 
 export function createLivekitToken(
   room: string,
-  identity: string,
-  isGuest: boolean = false,
+  userId: string,
+  displayName: string,
+  isGuest: boolean,
   role: string
 ) {
-  const Metadata: Metadata = {
-    isGuest,
-    role,
-  };
+  const metadata: Metadata = { isGuest, role };
 
   const at = new AccessToken(API_KEY, API_SECRET, {
-    identity,
-    metadata: JSON.stringify(Metadata),
+    identity: userId, // уникальный идентификатор
+    name: displayName, // будет в participant.name
+    metadata: JSON.stringify(metadata), // кастомные данные
   });
+
   at.addGrant({
     roomJoin: true,
     room,
   });
+
   return at.toJwt();
 }
