@@ -1,20 +1,10 @@
 import { axiosClassic } from "../api/interceptors";
 import { IUser } from "../types/auth.types";
-import { IPrequisites, IRoom } from "../types/room.types";
+import { CreateRoomDto, IPrequisites, IRoom } from "../types/room.types";
 
 export const roomService = {
-  async createRoom(
-    ownerId: number,
-    isPublic: boolean,
-    showHistoryToNewbies: boolean,
-    password?: string
-  ) {
-    const response = await axiosClassic.post<IRoom>("/room", {
-      ownerId,
-      isPublic,
-      showHistoryToNewbies,
-      password,
-    });
+  async createRoom(data: CreateRoomDto) {
+    const response = await axiosClassic.post<IRoom>("/room", data);
     return response.data;
   },
 

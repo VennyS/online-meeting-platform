@@ -19,12 +19,22 @@ const PrejoinPage = () => {
     passwordRequired: false,
     waitingRoomEnabled: false,
     isOwner: false,
+    allowEarlyJoin: false,
+    name: "",
+    description: "",
+    startAt: new Date(),
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRoomOwner, setIsRoomOwner] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
 
   useEffect(() => {
     const checkPrerequisites = async () => {
@@ -33,8 +43,16 @@ const PrejoinPage = () => {
       try {
         const data = await roomService.prequisites(roomName as string);
         setPrequisites(data);
-
         setIsRoomOwner(data.isOwner);
+
+        // Если разрешен ранний вход и встреча еще не началась
+        if (
+          data.allowEarlyJoin &&
+          data.startAt &&
+          new Date(data.startAt) > new Date()
+        ) {
+          startCountdown(data.startAt);
+        }
       } catch (error) {
         console.error("Error fetching prerequisites:", error);
       }
@@ -42,6 +60,30 @@ const PrejoinPage = () => {
 
     checkPrerequisites();
   }, [roomName, user]);
+
+  const startCountdown = (startDate: Date) => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const difference = new Date(startDate).getTime() - now.getTime();
+
+      if (difference <= 0) {
+        clearInterval(interval);
+        setTimeLeft(null);
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  };
 
   // Если пользователь уже авторизован и является владельцем - пропускаем prejoin
   useEffect(() => {
@@ -196,9 +238,47 @@ const PrejoinPage = () => {
     handleApprovedAccess(userId, userName, livekitToken);
   };
 
-  // Для гостей
+  const isTimerVisible =
+    prequisites.allowEarlyJoin &&
+    prequisites.startAt &&
+    new Date(prequisites.startAt) > new Date() &&
+    timeLeft;
+
   return (
     <div className={styles.guestForm}>
+      {isTimerVisible && (
+        <div className={styles.timer}>
+          <h3>Встреча начнется через:</h3>
+          <div className={styles.timerDigits}>
+            {timeLeft.days > 0 && (
+              <div className={styles.timeUnit}>
+                <span className={styles.timeValue}>{timeLeft.days}</span>
+                <span className={styles.timeLabel}>дней</span>
+              </div>
+            )}
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.hours.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>часов</span>
+            </div>
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.minutes.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>минут</span>
+            </div>
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.seconds.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>секунд</span>
+            </div>
+          </div>
+          <p>Ожидайте начала встречи...</p>
+        </div>
+      )}
+
       {prequisites.guestAllowed && !user && (
         <>
           <h2>Введите имя для входа в комнату</h2>
@@ -207,7 +287,7 @@ const PrejoinPage = () => {
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
             placeholder="Ваше имя"
-            disabled={isConnecting}
+            disabled={isConnecting || isTimerVisible !== null}
           />
         </>
       )}
@@ -219,7 +299,7 @@ const PrejoinPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Ваш пароль"
-            disabled={isConnecting}
+            disabled={isConnecting || isTimerVisible !== null}
           />
         </>
       )}
@@ -228,7 +308,8 @@ const PrejoinPage = () => {
         onClick={handleAccessRequest}
         disabled={
           isConnecting ||
-          !guestName ||
+          isTimerVisible !== null ||
+          (!user && !guestName) ||
           (prequisites.passwordRequired && !password)
         }
       >
