@@ -22,10 +22,15 @@ roomsRouter.post("/", async (req, res) => {
 
   const {
     ownerId,
+    name,
+    description,
+    startAt,
+    durationMinutes,
     isPublic,
     showHistoryToNewbies,
     password,
     waitingRoomEnabled,
+    allowEarlyJoin,
   } = parseResult.data;
 
   let shortId: string;
@@ -35,22 +40,28 @@ roomsRouter.post("/", async (req, res) => {
     if (!exists) break;
   }
 
-  const hashedPassword = password
-    ? await bcrypt.hash(password, 10) // 🔑 соль + хеш
-    : null;
+  const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
   const room = await db.room.create({
     data: {
       shortId,
-      isPublic: !!isPublic,
       ownerId,
+      name,
+      description: description || null,
+      startAt,
+      durationMinutes: durationMinutes ?? null,
+      isPublic: !!isPublic,
       showHistoryToNewbies: !!showHistoryToNewbies,
       passwordHash: hashedPassword,
       waitingRoomEnabled: !!waitingRoomEnabled,
+      allowEarlyJoin: allowEarlyJoin ?? true,
     },
   });
 
-  res.json({ ...room, password: undefined }); // не отдаём хеш в ответе
+  res.json({
+    ...room,
+    passwordHash: undefined,
+  });
 });
 
 roomsRouter.get("/:shortId/prequisites", async (req, res) => {
@@ -64,9 +75,13 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
     const room = await db.room.findUnique({
       where: { shortId },
       select: {
+        name: true,
+        description: true,
+        startAt: true,
         isPublic: true,
         passwordHash: true,
         waitingRoomEnabled: true,
+        allowEarlyJoin: true,
         ownerId: true,
       },
     });
@@ -81,10 +96,14 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
     const userId = tokenPayload?.id;
 
     res.json({
+      name: room.name,
+      description: room.description,
+      startAt: room.startAt,
       guestAllowed: room.isPublic,
       passwordRequired: !!room.passwordHash,
       waitingRoomEnabled: room.waitingRoomEnabled,
-      isOwner: userId ? room.ownerId === userId : false, // ← добавляем проверку владельца
+      allowEarlyJoin: room.allowEarlyJoin,
+      isOwner: userId ? room.ownerId === userId : false,
     });
   } catch (err) {
     console.error("Error checking guest access:", err);

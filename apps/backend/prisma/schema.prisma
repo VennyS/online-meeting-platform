@@ -9,13 +9,18 @@ datasource db {
 }
 
 model Room {
-  id                  Int      @id @default(autoincrement())
-  shortId             String   @unique
-  isPublic            Boolean  @default(false)
-  showHistoryToNewbies Boolean  @default(false)
-  passwordHash        String?
-  waitingRoomEnabled  Boolean  @default(false)
-  ownerId             Int
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                   Int       @id @default(autoincrement())
+  shortId              String    @unique
+  name                 String
+  description          String?
+  startAt              DateTime
+  durationMinutes      Int?
+  isPublic             Boolean   @default(false)
+  showHistoryToNewbies Boolean   @default(false)
+  passwordHash         String?
+  waitingRoomEnabled   Boolean   @default(false)
+  allowEarlyJoin       Boolean   @default(true)
+  ownerId              Int
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
