@@ -25,12 +25,12 @@ import styles from "./page.module.css";
 import cn from "classnames";
 import { Panel } from "./types";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
-import { IWaitingGuest, RoomRole, RoomWSMessage } from "@/app/types/room.types";
 import {
   ParticipantsProvider,
   useParticipantsContext,
 } from "@/app/providers/participants.provider";
 import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
+import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
 // Room Content Component
 const RoomContent = ({ roomName }: { roomName: string }) => {
@@ -223,7 +223,7 @@ export default function MeetingRoom() {
     if (!roomName || !user) return;
 
     const websocket = new WebSocket(
-      `ws://localhost:3001/ws?roomId=${roomName}&userId=${user.id}`
+      getWebSocketUrl(roomName as string, user.id)
     );
 
     setWs(websocket);

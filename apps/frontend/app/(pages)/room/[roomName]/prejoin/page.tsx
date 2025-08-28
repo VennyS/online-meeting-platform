@@ -8,6 +8,7 @@ import { authService } from "@/app/services/auth.service";
 import { roomService } from "@/app/services/room.service";
 import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
+import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
 const PrejoinPage = () => {
   const { roomName } = useParams();
@@ -113,7 +114,7 @@ const PrejoinPage = () => {
     setIsConnecting(true);
 
     const websocket = new WebSocket(
-      `ws://localhost:3001/ws?roomId=${roomName}&userId=${userId}&isHost=${isHost}`
+      getWebSocketUrl(roomName as string, userId, isHost)
     );
 
     websocket.onopen = () => {
