@@ -2,7 +2,7 @@ export interface CreateRoomDto {
   ownerId: number;
   name: string;
   description?: string;
-  startAt: string; // ISO
+  startAt?: string; // ISO
   durationMinutes?: number;
   isPublic?: boolean;
   showHistoryToNewbies?: boolean;

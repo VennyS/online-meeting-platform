@@ -4,7 +4,7 @@ export const CreateRoomSchema = z.object({
   ownerId: z.number().int().positive(),
   name: z.string().min(1, "Название обязательно"),
   description: z.string().optional(),
-  startAt: z.coerce.date(),
+  startAt: z.coerce.date().optional(),
   durationMinutes: z.number().int().positive().optional(),
   isPublic: z.boolean().optional(),
   showHistoryToNewbies: z.boolean().optional(),

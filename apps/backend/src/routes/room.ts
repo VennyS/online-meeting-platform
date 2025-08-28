@@ -49,7 +49,7 @@ roomsRouter.post("/", async (req, res) => {
       ownerId,
       name,
       description: description || null,
-      startAt,
+      startAt: startAt,
       durationMinutes: durationMinutes ?? null,
       isPublic: !!isPublic,
       showHistoryToNewbies: !!showHistoryToNewbies,
@@ -84,7 +84,6 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
         waitingRoomEnabled: true,
         allowEarlyJoin: true,
         ownerId: true,
-        cancelled: true,
       },
     });
 

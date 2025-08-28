@@ -13,7 +13,7 @@ model Room {
   shortId              String    @unique
   name                 String
   description          String?
-  startAt              DateTime
+  startAt              DateTime?
   durationMinutes      Int?
   isPublic             Boolean   @default(false)
   showHistoryToNewbies Boolean   @default(false)
@@ -23,4 +23,5 @@ model Room {
   ownerId              Int
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  cancelled            Boolean @default(false)
 }

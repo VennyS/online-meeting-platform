@@ -26,7 +26,7 @@ export default function Main() {
         ownerId: user!.id,
         name,
         description,
-        startAt: new Date(startAt).toISOString(),
+        startAt: startAt ? new Date(startAt).toISOString() : undefined,
         durationMinutes:
           durationMinutes === "" ? undefined : Number(durationMinutes),
         isPublic,
