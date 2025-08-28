@@ -12,6 +12,20 @@ export const CreateRoomSchema = z.object({
   waitingRoomEnabled: z.boolean().optional(),
   allowEarlyJoin: z.boolean().optional(),
 });
+
+export const UpdateRoomSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  startAt: z.coerce.date().optional(),
+  durationMinutes: z.number().int().positive().optional(),
+  isPublic: z.boolean().optional(),
+  showHistoryToNewbies: z.boolean().optional(),
+  password: z.string().optional(),
+  waitingRoomEnabled: z.boolean().optional(),
+  allowEarlyJoin: z.boolean().optional(),
+  cancelled: z.boolean().optional(),
+});
+
 export const ShortIdSchema = z.object({
   shortId: z.string().min(1, "shortId is required"),
 });

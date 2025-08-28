@@ -5,6 +5,7 @@ import {
   CreateRoomSchema,
   PostMessageSchema,
   ShortIdSchema,
+  UpdateRoomSchema,
 } from "../schemas/room.schema.js";
 import bcrypt from "bcrypt";
 import { extractAuthToken } from "../utils/auth.js";
@@ -83,6 +84,7 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
         waitingRoomEnabled: true,
         allowEarlyJoin: true,
         ownerId: true,
+        cancelled: true,
       },
     });
 
@@ -185,6 +187,75 @@ roomsRouter.post("/:shortId/messages", async (req, res) => {
     res.json(msg);
   } catch (err) {
     console.error("Error saving message:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+roomsRouter.get("/", async (req, res) => {
+  try {
+    const rooms = await db.room.findMany({
+      orderBy: { startAt: "desc" },
+      select: {
+        id: true,
+        shortId: true,
+        name: true,
+        description: true,
+        startAt: true,
+        durationMinutes: true,
+        isPublic: true,
+        showHistoryToNewbies: true,
+        waitingRoomEnabled: true,
+        allowEarlyJoin: true,
+        ownerId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    res.json(rooms);
+  } catch (err) {
+    console.error("Error fetching rooms:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+roomsRouter.patch("/:shortId", async (req, res) => {
+  try {
+    const parsedParams = ShortIdSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: "Invalid shortId" });
+    }
+
+    const parsedBody = UpdateRoomSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: "Invalid request body",
+        details: parsedBody.error.issues,
+      });
+    }
+
+    const { shortId } = parsedParams.data;
+    const data = parsedBody.data;
+
+    let passwordHash: string | undefined;
+    if (data.password) {
+      passwordHash = await bcrypt.hash(data.password, 10);
+    }
+
+    const updatedRoom = await db.room.update({
+      where: { shortId },
+      data: {
+        ...data,
+        passwordHash,
+      },
+    });
+
+    res.json({
+      ...updatedRoom,
+      passwordHash: undefined,
+    });
+  } catch (err) {
+    console.error("Error updating room:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
