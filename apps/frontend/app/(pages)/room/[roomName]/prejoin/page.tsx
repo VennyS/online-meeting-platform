@@ -23,6 +23,7 @@ const PrejoinPage = () => {
     name: "",
     description: "",
     startAt: new Date(),
+    cancelled: false,
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

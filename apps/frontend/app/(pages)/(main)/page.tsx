@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { roomService } from "../../services/room.service";
 import { useUser } from "../../hooks/useUser";
-import styles from './page.module.css'
+import styles from "./page.module.css";
 
-export default function CreateCallButton() {
+export default function Main() {
   const router = useRouter();
   const { user } = useUser();
 
@@ -27,7 +27,8 @@ export default function CreateCallButton() {
         name,
         description,
         startAt: new Date(startAt).toISOString(),
-        durationMinutes: durationMinutes === "" ? undefined : Number(durationMinutes),
+        durationMinutes:
+          durationMinutes === "" ? undefined : Number(durationMinutes),
         isPublic,
         showHistoryToNewbies,
         password,
@@ -87,7 +88,9 @@ export default function CreateCallButton() {
           id="duration"
           value={durationMinutes}
           onChange={(e) =>
-            setDurationMinutes(e.target.value === "" ? "" : Number(e.target.value))
+            setDurationMinutes(
+              e.target.value === "" ? "" : Number(e.target.value)
+            )
           }
           placeholder="Например: 60"
         />

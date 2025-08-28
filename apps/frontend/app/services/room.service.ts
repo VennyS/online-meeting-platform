@@ -1,6 +1,11 @@
 import { axiosClassic } from "../api/interceptors";
 import { IUser } from "../types/auth.types";
-import { CreateRoomDto, IPrequisites, IRoom } from "../types/room.types";
+import {
+  CreateRoomDto,
+  IPrequisites,
+  IRoom,
+  UpdateRoomDto,
+} from "../types/room.types";
 
 export const roomService = {
   async createRoom(data: CreateRoomDto) {
@@ -27,6 +32,16 @@ export const roomService = {
       text,
       user,
     });
+    return response.data;
+  },
+
+  async getRooms() {
+    const response = await axiosClassic.get<IRoom[]>("/room");
+    return response.data;
+  },
+
+  async updateRoom(shortId: string, data: UpdateRoomDto) {
+    const response = await axiosClassic.put<IRoom>(`/room/${shortId}`, data);
     return response.data;
   },
 };
