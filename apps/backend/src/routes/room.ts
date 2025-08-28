@@ -94,8 +94,8 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
 
     // Получаем userID из куки auth-token
     const cookieHeader = req.headers.cookie;
-    const tokenPayload = extractAuthToken(cookieHeader);
-    const userId = tokenPayload?.id;
+    const authResult = extractAuthToken(cookieHeader);
+    const userId = authResult?.payload?.id;
 
     res.json({
       name: room.name,

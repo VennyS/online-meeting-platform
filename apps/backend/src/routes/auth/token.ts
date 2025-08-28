@@ -33,11 +33,10 @@ livekitRouter.get("/token", async (req, res) => {
     }
 
     // Получаем информацию о пользователе из токена
-    const authToken = extractAuthToken(req.headers.cookie);
-    const tokenPayload = authToken
-      ? extractAuthToken(req.headers.cookie)
-      : null;
-    const userId = tokenPayload?.id ? tokenPayload.id : optionalUserId;
+    const authResult = extractAuthToken(req.headers.cookie);
+    const authToken = authResult?.token;
+    const payload = authResult?.payload;
+    const userId = payload?.id ? payload.id : optionalUserId;
 
     // Проверяем, является ли пользователь владельцем комнаты
     const isOwner = userId ? room.ownerId === userId : false;

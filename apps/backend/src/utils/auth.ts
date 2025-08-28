@@ -10,7 +10,7 @@ export interface AuthTokenPayload extends JwtPayload {
 
 export function extractAuthToken(
   cookieHeader?: string
-): AuthTokenPayload | null {
+): { token: string; payload: AuthTokenPayload } | null {
   if (!cookieHeader) return null;
 
   const token = cookieHeader
@@ -21,7 +21,8 @@ export function extractAuthToken(
   if (!token) return null;
 
   try {
-    return jwt.decode(token) as AuthTokenPayload;
+    const payload = jwt.decode(token) as AuthTokenPayload;
+    return { token, payload };
   } catch (error) {
     console.error("Error decoding auth token:", error);
     return null;
