@@ -99,7 +99,7 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const meetingLink = `${window.location.origin}/meet/${roomName}`;
+    const meetingLink = `${window.location.origin}/room/${roomName}`;
 
     return `Встреча: ${roomName}
 Дата: ${meetingDate} (Москва)

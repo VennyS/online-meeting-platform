@@ -12,6 +12,7 @@ export function ParticipantsList() {
     waitingGuests,
     approveGuest,
     rejectGuest,
+    permissionsMap,
   } = useParticipantsContext();
   const [canShareScreenValue, setCanShareScreenValue] = useState<
     RoomRole | "all"
@@ -48,20 +49,14 @@ export function ParticipantsList() {
   };
 
   function getPermissionValue(permission: keyof Permissions): RoomRole | "all" {
-    const owners = local.permissions.permissions[permission];
-    const admins = remote.some(
-      (r) =>
-        r.permissions.role === "admin" && r.permissions.permissions[permission]
-    );
-    const participants = remote.some(
-      (r) =>
-        r.permissions.role === "participant" &&
-        r.permissions.permissions[permission]
-    );
+    const ownerHas = permissionsMap["owner"]?.permissions[permission];
+    const adminHas = permissionsMap["admin"]?.permissions[permission];
+    const participantHas =
+      permissionsMap["participant"]?.permissions[permission];
 
-    if (owners && admins && participants) return "all";
-    if (owners && admins && !participants) return "admin";
-    if (owners && !admins && !participants) return "owner";
+    if (ownerHas && adminHas && participantHas) return "all";
+    if (ownerHas && adminHas && !participantHas) return "admin";
+    if (ownerHas && !adminHas && !participantHas) return "owner";
     return "owner"; // дефолт
   }
 

@@ -76,7 +76,7 @@ export const Chat = ({ roomName, user }: ChatProps) => {
             msg.from?.sid === localParticipant.localParticipant.sid;
           const from = isMine
             ? "Вы"
-            : msg.user?.firstName || msg.from?.identity || "Гость";
+            : msg.user?.firstName || msg.from?.name || "Гость";
 
           return (
             <li
