@@ -13,7 +13,7 @@ import { getWebSocketUrl } from "@/app/config/websocketUrl";
 const PrejoinPage = () => {
   const { roomName } = useParams();
   const [guestName, setGuestName] = useState("");
-  const { user, setUser, setToken } = useUser();
+  const { user, setUser, setToken, loading: isUserLoading } = useUser();
   const router = useRouter();
   const [prequisites, setPrequisites] = useState<IPrequisites>({
     guestAllowed: false,
@@ -37,12 +37,14 @@ const PrejoinPage = () => {
     minutes: number;
     seconds: number;
   } | null>(null);
+  const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
 
   useEffect(() => {
     const checkPrerequisites = async () => {
       if (!roomName) return;
 
       try {
+        setIsPrequisitesLoading(true);
         const data = await roomService.prequisites(roomName as string);
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
@@ -57,11 +59,21 @@ const PrejoinPage = () => {
         }
       } catch (error) {
         console.error("Error fetching prerequisites:", error);
+      } finally {
+        setIsPrequisitesLoading(false);
       }
     };
 
     checkPrerequisites();
   }, [roomName, user]);
+
+  useEffect(() => {
+    if (isUserLoading || isPrequisitesLoading) return;
+
+    if (!prequisites.guestAllowed && !user) {
+      router.replace("https://ru.noimann.academy/");
+    }
+  }, [prequisites, isUserLoading, isPrequisitesLoading, user]);
 
   const startCountdown = (startDate: Date) => {
     const interval = setInterval(() => {
