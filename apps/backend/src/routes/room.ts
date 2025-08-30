@@ -84,6 +84,7 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
         waitingRoomEnabled: true,
         allowEarlyJoin: true,
         ownerId: true,
+        cancelled: true,
       },
     });
 
@@ -105,6 +106,7 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
       waitingRoomEnabled: room.waitingRoomEnabled,
       allowEarlyJoin: room.allowEarlyJoin,
       isOwner: userId ? room.ownerId === userId : false,
+      cancelled: room.cancelled,
     });
   } catch (err) {
     console.error("Error checking guest access:", err);
@@ -192,6 +194,48 @@ roomsRouter.post("/:shortId/messages", async (req, res) => {
 
 roomsRouter.get("/", async (req, res) => {
   try {
+    const cookieHeader = req.headers.cookie;
+    const authResult = extractAuthToken(cookieHeader);
+    const userId = authResult?.payload?.id;
+
+    const rooms = await db.room.findMany({
+      orderBy: { startAt: "desc" },
+      where: { id: userId },
+      select: {
+        id: true,
+        shortId: true,
+        name: true,
+        description: true,
+        startAt: true,
+        durationMinutes: true,
+        isPublic: true,
+        showHistoryToNewbies: true,
+        waitingRoomEnabled: true,
+        allowEarlyJoin: true,
+        ownerId: true,
+        createdAt: true,
+        updatedAt: true,
+        cancelled: true,
+      },
+    });
+
+    res.json(rooms);
+  } catch (err) {
+    console.error("Error fetching rooms:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+roomsRouter.get("/all", async (req, res) => {
+  try {
+    const cookieHeader = req.headers.cookie;
+    const authResult = extractAuthToken(cookieHeader);
+    const roleId = authResult?.payload?.roleId;
+
+    if (roleId !== 4) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     const rooms = await db.room.findMany({
       orderBy: { startAt: "desc" },
       select: {
@@ -208,6 +252,7 @@ roomsRouter.get("/", async (req, res) => {
         ownerId: true,
         createdAt: true,
         updatedAt: true,
+        cancelled: true,
       },
     });
 
@@ -234,11 +279,11 @@ roomsRouter.patch("/:shortId", async (req, res) => {
     }
 
     const { shortId } = parsedParams.data;
-    const data = parsedBody.data;
+    const { password, ...data } = parsedBody.data;
 
     let passwordHash: string | undefined;
-    if (data.password) {
-      passwordHash = await bcrypt.hash(data.password, 10);
+    if (password) {
+      passwordHash = await bcrypt.hash(password, 10);
     }
 
     const updatedRoom = await db.room.update({
