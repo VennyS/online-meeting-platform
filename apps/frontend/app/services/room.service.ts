@@ -41,7 +41,7 @@ export const roomService = {
   },
 
   async updateRoom(shortId: string, data: UpdateRoomDto) {
-    const response = await axiosClassic.put<IRoom>(`/room/${shortId}`, data);
+    const response = await axiosClassic.patch<IRoom>(`/room/${shortId}`, data);
     return response.data;
   },
 };

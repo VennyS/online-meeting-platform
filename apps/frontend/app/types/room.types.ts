@@ -21,7 +21,7 @@ export interface UpdateRoomDto {
   password?: string;
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
-  canceled?: boolean;
+  cancelled?: boolean;
 }
 
 export interface IRoom {
