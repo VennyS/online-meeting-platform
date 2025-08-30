@@ -4,18 +4,27 @@ import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
 import { IRoom, UpdateRoomDto } from "@/app/types/room.types";
 import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
-import styles from "./page.module.css";
+import styles from "./RoomList.module.css";
+import { RoomListProps } from "./types";
 
-export default function RoomList() {
-  const [rooms, setRooms] = useState<IRoom[]>([]);
+export default function RoomList({
+  fetchMode = "user",
+  initialRooms = [],
+}: RoomListProps) {
+  const [rooms, setRooms] = useState<IRoom[]>(initialRooms);
   const [loading, setLoading] = useState(false);
   const [updatingRoomId, setUpdatingRoomId] = useState<number | null>(null);
 
   useEffect(() => {
+    if (fetchMode === "none") return; // ничего не грузим, юзаем initialRooms
+
     const fetchRooms = async () => {
       try {
         setLoading(true);
-        const data = await roomService.getRooms();
+        const data =
+          fetchMode === "all"
+            ? await roomService.getAll()
+            : await roomService.getRooms();
         setRooms(data);
       } catch (err) {
         console.error("Ошибка при загрузке комнат:", err);
@@ -25,7 +34,7 @@ export default function RoomList() {
     };
 
     fetchRooms();
-  }, []);
+  }, [fetchMode]);
 
   const saveRoom = async (
     roomId: number,
@@ -33,7 +42,7 @@ export default function RoomList() {
     updatedData: UpdateRoomDto
   ) => {
     try {
-      setUpdatingRoomId(roomId); // ✅ используем id из IRoom
+      setUpdatingRoomId(roomId);
       const updated = await roomService.updateRoom(shortId, updatedData);
       setRooms((prev) =>
         prev.map((r) => (r.shortId === shortId ? updated : r))

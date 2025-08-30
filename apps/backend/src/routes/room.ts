@@ -200,7 +200,7 @@ roomsRouter.get("/", async (req, res) => {
 
     const rooms = await db.room.findMany({
       orderBy: { startAt: "desc" },
-      where: { id: userId },
+      where: { ownerId: userId },
       select: {
         id: true,
         shortId: true,
