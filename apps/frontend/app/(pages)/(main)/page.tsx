@@ -5,6 +5,7 @@ import { useState } from "react";
 import { roomService } from "../../services/room.service";
 import { useUser } from "../../hooks/useUser";
 import styles from "./page.module.css";
+import RoomList from "@/app/components/ui/organisms/RoomList/RoomList";
 
 export default function Main() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function Main() {
   const [password, setPassword] = useState("");
   const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(false);
   const [allowEarlyJoin, setAllowEarlyJoin] = useState(true);
+  const [isConnectInstantly, setIsConnectInstantly] = useState(true);
 
   const handleCreateRoom = async () => {
     try {
@@ -36,12 +38,14 @@ export default function Main() {
         allowEarlyJoin,
       });
 
-      let nextUrl = `/room/${room.shortId}`;
-      if (password) {
-        nextUrl += `/prejoin`;
-      }
+      if (isConnectInstantly) {
+        let nextUrl = `/room/${room.shortId}`;
+        if (password) {
+          nextUrl += `/prejoin`;
+        }
 
-      router.push(nextUrl);
+        router.push(nextUrl);
+      }
     } catch (error) {
       console.error("Ошибка при создании комнаты:", error);
     }
@@ -151,7 +155,20 @@ export default function Main() {
         </label>
       </div>
 
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={isConnectInstantly}
+            onChange={(e) => setIsConnectInstantly(e.target.checked)}
+          />
+          Сразу же подключится
+        </label>
+      </div>
+
       <button onClick={handleCreateRoom}>Создать звонок</button>
+
+      <RoomList />
     </main>
   );
 }
