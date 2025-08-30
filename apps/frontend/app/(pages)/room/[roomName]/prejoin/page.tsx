@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { useUser } from "@/app/hooks/useUser";
@@ -49,15 +49,17 @@ const PrejoinPage = () => {
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
 
-        // Если разрешен ранний вход и встреча еще не началась
         if (
-          data.allowEarlyJoin &&
+          !data.allowEarlyJoin &&
           data.startAt &&
           new Date(data.startAt) > new Date()
         ) {
           startCountdown(data.startAt);
         }
-      } catch (error) {
+      } catch (err) {
+        if (err instanceof AxiosError && err.response?.status === 404) {
+          router.replace("/404");
+        }
         console.error("Error fetching prerequisites:", error);
       } finally {
         setIsPrequisitesLoading(false);
@@ -253,13 +255,20 @@ const PrejoinPage = () => {
   };
 
   const isTimerVisible =
-    prequisites.allowEarlyJoin &&
+    !prequisites.allowEarlyJoin &&
     prequisites.startAt &&
     new Date(prequisites.startAt) > new Date() &&
-    timeLeft;
+    !!timeLeft;
+
+  if (prequisites.cancelled) return <span>Встреча отменена</span>;
 
   return (
     <div className={styles.guestForm}>
+      <div>
+        <h2>{prequisites.name}</h2>
+        <span>{prequisites.description}</span>
+      </div>
+
       {isTimerVisible && (
         <div className={styles.timer}>
           <h3>Встреча начнется через:</h3>
@@ -301,7 +310,7 @@ const PrejoinPage = () => {
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
             placeholder="Ваше имя"
-            disabled={isConnecting || isTimerVisible !== null}
+            disabled={isConnecting || isTimerVisible === true}
           />
         </>
       )}
@@ -313,7 +322,7 @@ const PrejoinPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Ваш пароль"
-            disabled={isConnecting || isTimerVisible !== null}
+            disabled={isConnecting || isTimerVisible === true}
           />
         </>
       )}
@@ -322,7 +331,7 @@ const PrejoinPage = () => {
         onClick={handleAccessRequest}
         disabled={
           isConnecting ||
-          isTimerVisible !== null ||
+          isTimerVisible === true ||
           (!user && !guestName) ||
           (prequisites.passwordRequired && !password)
         }
