@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db/client.js";
 import Redis from "ioredis";
 import {
+  AddParticipantsSchema,
   CreateRoomSchema,
   PostMessageSchema,
   ShortIdSchema,
@@ -300,6 +301,48 @@ roomsRouter.patch("/:shortId", async (req, res) => {
     });
   } catch (err) {
     console.error("Error updating room:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+roomsRouter.post("/:shortId/participants", async (req, res) => {
+  try {
+    const parsedParams = ShortIdSchema.safeParse(req.params);
+    if (!parsedParams.success) {
+      return res.status(400).json({ error: "Invalid shortId" });
+    }
+
+    const parsedBody = AddParticipantsSchema.safeParse(req.body);
+    if (!parsedBody.success) {
+      return res.status(400).json({
+        error: "Invalid request body",
+        details: parsedBody.error.issues,
+      });
+    }
+
+    const { shortId } = parsedParams.data;
+    const { userIds } = parsedBody.data;
+
+    const room = await db.room.findUnique({
+      where: { shortId },
+      select: { id: true },
+    });
+
+    if (!room) {
+      return res.status(404).json({ error: "Room not found" });
+    }
+
+    const created = await db.allowedParticipant.createMany({
+      data: userIds.map((uid) => ({
+        roomId: room.id,
+        userId: typeof uid === "string" ? parseInt(uid, 10) : uid,
+      })),
+      skipDuplicates: true,
+    });
+
+    res.json({ added: created.count });
+  } catch (err) {
+    console.error("Error adding participants:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

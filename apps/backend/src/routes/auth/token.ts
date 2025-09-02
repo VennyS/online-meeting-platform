@@ -25,36 +25,18 @@ livekitRouter.get("/token", async (req, res) => {
       userId: optionalUserId,
     } = parsed.data;
 
-    const room = await db.room.findUnique({
-      where: { shortId: roomShortId },
-    });
+    const room = await db.room.findUnique({ where: { shortId: roomShortId } });
     if (!room) {
       return res.status(404).json({ error: "Room not found" });
     }
 
-    // Получаем информацию о пользователе из токена
+    // Получаем userId и токен
     const authResult = extractAuthToken(req.headers.cookie);
     const authToken = authResult?.token;
     const payload = authResult?.payload;
-    const userId = payload?.id ? payload.id : optionalUserId;
+    const userId = payload?.id ?? optionalUserId;
 
-    // Проверяем, является ли пользователь владельцем комнаты
-    const isOwner = userId ? room.ownerId === userId : false;
-
-    // Если пользователь НЕ владелец, проверяем пароль
-    if (room.passwordHash && !isOwner) {
-      if (!password) {
-        return res.status(401).json({ error: "Password required" });
-      }
-
-      const isPasswordValid = await bcrypt.compare(password, room.passwordHash);
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Invalid password" });
-      }
-    }
-
-    let isGuest = false;
-
+    // Проверка через прокси для авторизации, если комната не публичная
     if (!room.isPublic) {
       if (!authToken) {
         return res.status(401).json({ error: "No auth token found" });
@@ -69,13 +51,41 @@ livekitRouter.get("/token", async (req, res) => {
           .status(proxyResponse.status)
           .json(await proxyResponse.json());
       }
-    } else {
-      // Публичная комната → гость, если нет токена
-      isGuest = !authToken;
     }
 
-    // Для владельца устанавливаем роль owner
-    const role = isOwner ? "owner" : isGuest ? "guest" : "member";
+    const isOwner = userId ? room.ownerId === userId : false;
+
+    // Проверка пароля для владельцев
+    if (room.passwordHash && !isOwner) {
+      if (!password) {
+        return res.status(401).json({ error: "Password required" });
+      }
+      const isPasswordValid = await bcrypt.compare(password, room.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Invalid password" });
+      }
+    }
+
+    // Проверка таблицы разрешённых участников
+    if (!room.isPublic && !isOwner) {
+      const numericUserId = Number(userId);
+
+      if (!numericUserId) {
+        return res.status(401).json({ error: "Invalid user ID" });
+      }
+
+      const allowed = await db.allowedParticipant.findFirst({
+        where: { roomId: room.id, userId: numericUserId },
+      });
+      if (!allowed) {
+        return res
+          .status(403)
+          .json({ error: "Forbidden: not allowed in this room" });
+      }
+    }
+
+    const role = isOwner ? "owner" : "member";
+    const isGuest = !authToken && room.isPublic;
 
     const livekitToken = await createLivekitToken(
       room.shortId,
@@ -87,11 +97,7 @@ livekitRouter.get("/token", async (req, res) => {
 
     res.json({
       token: livekitToken,
-      metadata: {
-        isOwner,
-        isGuest,
-        role,
-      },
+      metadata: { isOwner, isGuest, role },
     });
   } catch (err) {
     console.error("❌ Error generating LiveKit token:", err);
