@@ -331,7 +331,7 @@ const PrejoinPage = () => {
         onClick={handleAccessRequest}
         disabled={
           isConnecting ||
-          isTimerVisible === true ||
+          !!isTimerVisible ||
           (!user && !guestName) ||
           (prequisites.passwordRequired && !password)
         }

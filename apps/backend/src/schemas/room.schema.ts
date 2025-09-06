@@ -37,3 +37,7 @@ export const PostMessageSchema = z.object({
     firstName: z.string().min(1),
   }),
 });
+
+export const AddParticipantsSchema = z.object({
+  userIds: z.array(z.union([z.string(), z.number()])).min(1),
+});
