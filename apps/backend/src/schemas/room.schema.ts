@@ -11,12 +11,14 @@ export const CreateRoomSchema = z.object({
   password: z.string().optional(),
   waitingRoomEnabled: z.boolean().optional(),
   allowEarlyJoin: z.boolean().optional(),
+  timeZone: z.string().default("Europe/Moscow"),
 });
 
 export const UpdateRoomSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   startAt: z.coerce.date().optional(),
+  timeZone: z.string().optional(),
   durationMinutes: z.number().int().positive().optional(),
   isPublic: z.boolean().optional(),
   showHistoryToNewbies: z.boolean().optional(),

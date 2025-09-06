@@ -14,6 +14,7 @@ model Room {
   name                 String
   description          String?
   startAt              DateTime?
+  timeZone             String    @default("Europe/Moscow") 
   durationMinutes      Int?
   isPublic             Boolean   @default(false)
   showHistoryToNewbies Boolean   @default(false)
@@ -23,7 +24,7 @@ model Room {
   ownerId              Int
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
-  cancelled            Boolean @default(false)
+  cancelled            Boolean   @default(false)
 
   AllowedParticipant AllowedParticipant[]
 }

@@ -2,13 +2,14 @@ export interface CreateRoomDto {
   ownerId: number;
   name: string;
   description?: string;
-  startAt?: string; // ISO
+  startAt?: string;
   durationMinutes?: number;
   isPublic?: boolean;
   showHistoryToNewbies?: boolean;
   password?: string;
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
+  timeZone?: string;
 }
 
 export interface UpdateRoomDto {
@@ -22,6 +23,7 @@ export interface UpdateRoomDto {
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
   cancelled?: boolean;
+  timeZone?: string;
 }
 
 export interface IRoom {

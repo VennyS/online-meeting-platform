@@ -33,6 +33,7 @@ roomsRouter.post("/", async (req, res) => {
     password,
     waitingRoomEnabled,
     allowEarlyJoin,
+    timeZone,
   } = parseResult.data;
 
   let shortId: string;
@@ -50,13 +51,14 @@ roomsRouter.post("/", async (req, res) => {
       ownerId,
       name,
       description: description || null,
-      startAt: startAt,
+      startAt,
       durationMinutes: durationMinutes ?? null,
       isPublic: !!isPublic,
       showHistoryToNewbies: !!showHistoryToNewbies,
       passwordHash: hashedPassword,
       waitingRoomEnabled: !!waitingRoomEnabled,
       allowEarlyJoin: allowEarlyJoin ?? true,
+      timeZone: timeZone || "Europe/Moscow",
     },
   });
 

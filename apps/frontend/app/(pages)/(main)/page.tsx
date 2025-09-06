@@ -6,6 +6,7 @@ import { roomService } from "../../services/room.service";
 import { useUser } from "../../hooks/useUser";
 import styles from "./page.module.css";
 import RoomList from "@/app/components/ui/organisms/RoomList/RoomList";
+import { toUtcISOString } from "@/app/lib/toUtcISOString";
 
 export default function Main() {
   const router = useRouter();
@@ -24,11 +25,15 @@ export default function Main() {
 
   const handleCreateRoom = async () => {
     try {
+      const startDate = startAt
+        ? toUtcISOString(startAt, "Europe/Moscow")
+        : undefined;
+
       const room = await roomService.createRoom({
         ownerId: user!.id,
         name,
         description,
-        startAt: startAt ? new Date(startAt).toISOString() : undefined,
+        startAt: startDate,
         durationMinutes:
           durationMinutes === "" ? undefined : Number(durationMinutes),
         isPublic,
@@ -36,6 +41,7 @@ export default function Main() {
         password,
         waitingRoomEnabled,
         allowEarlyJoin,
+        timeZone: "Europe/Moscow",
       });
 
       if (isConnectInstantly) {
@@ -76,7 +82,7 @@ export default function Main() {
       </div>
 
       <div>
-        <label htmlFor="startAt">Дата и время начала:</label>
+        <label htmlFor="startAt">Дата и время начала (мск):</label>
         <input
           type="datetime-local"
           id="startAt"
