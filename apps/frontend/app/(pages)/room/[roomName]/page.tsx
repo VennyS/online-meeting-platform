@@ -12,12 +12,7 @@ import {
   useTracks,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import {
-  LocalParticipant,
-  RemoteParticipant,
-  RoomEvent,
-  Track,
-} from "livekit-client";
+import { LocalParticipant, RoomEvent, Track } from "livekit-client";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
@@ -33,7 +28,13 @@ import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
 // Room Content Component
-const RoomContent = ({ roomName }: { roomName: string }) => {
+const RoomContent = ({
+  roomId,
+  roomName,
+}: {
+  roomId: string;
+  roomName: string;
+}) => {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -52,10 +53,7 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
   useEffect(() => {
     if (!room) return;
 
-    const handleMessage = (
-      payload: Uint8Array,
-      participant?: RemoteParticipant
-    ) => {
+    const handleMessage = () => {
       // если чат не открыт → увеличиваем счетчик
       if (openedRightPanel !== "chat") {
         setUnreadCount((prev) => prev + 1);
@@ -99,7 +97,7 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const meetingLink = `${window.location.origin}/room/${roomName}`;
+    const meetingLink = `${window.location.origin}/room/${roomId}`;
 
     return `Встреча: ${roomName}
 Дата: ${meetingDate} (Москва)
@@ -148,7 +146,7 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        {!!user.user && <Chat roomName={roomName} user={user.user} />}
+        {!!user.user && <Chat roomName={roomId} user={user.user} />}
       </div>
 
       {openedRightPanel && (
@@ -207,47 +205,44 @@ const RoomContent = ({ roomName }: { roomName: string }) => {
 
 // Main Component
 export default function MeetingRoom() {
-  const { roomName } = useParams();
+  const { roomId } = useParams();
+  const [roomName, setRoomName] = useState<string>("");
   const { token, setToken, user } = useUser();
   const [ws, setWs] = useState<WebSocket | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (!token) {
-      router.replace(`/room/${roomName}/prejoin`);
+      router.replace(`/room/${roomId}/prejoin`);
     }
-  }, [token, user, roomName, router]);
+  }, [token, user, roomId, router]);
 
   // WebSocket для хоста
   useEffect(() => {
-    if (!roomName || !user) return;
+    if (!roomId || !user) return;
 
-    const websocket = new WebSocket(
-      getWebSocketUrl(roomName as string, user.id)
-    );
+    const websocket = new WebSocket(getWebSocketUrl(roomId as string, user.id));
 
     setWs(websocket);
-  }, [roomName, user]);
+  }, [roomId, user]);
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
   useEffect(() => {
-    if (!roomName || !user || user.isGuest) return;
+    if (!roomId || !user || user.isGuest) return;
 
     const fetchToken = async () => {
       try {
-        const response = await authService.getToken(
-          roomName as string,
-          fullName
-        );
+        const response = await authService.getToken(roomId as string, fullName);
         setToken(response.token);
+        setRoomName(response.name);
       } catch (err) {
         console.error("Ошибка при получении токена для пользователя:", err);
       }
     };
 
     fetchToken();
-  }, [roomName, user]);
+  }, [roomId, user]);
 
   if (!token && user) {
     return <div>Loading...</div>;
@@ -263,7 +258,7 @@ export default function MeetingRoom() {
       >
         {user && (
           <ParticipantsProvider localUserId={user.id} ws={ws}>
-            <RoomContent roomName={roomName as string} />
+            <RoomContent roomId={roomId as string} roomName={roomName} />
           </ParticipantsProvider>
         )}
       </LiveKitRoom>

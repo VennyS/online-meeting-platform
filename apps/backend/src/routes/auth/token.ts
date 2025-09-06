@@ -97,7 +97,7 @@ livekitRouter.get("/token", async (req, res) => {
 
     res.json({
       token: livekitToken,
-      metadata: { isOwner, isGuest, role },
+      metadata: { isOwner, isGuest, role, name: room.name },
     });
   } catch (err) {
     console.error("❌ Error generating LiveKit token:", err);

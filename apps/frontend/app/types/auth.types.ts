@@ -19,4 +19,5 @@ export interface ICheckTokenResponse {
 export interface IGetTokenResponse {
   token: string;
   guestAllowed: boolean;
+  name: string;
 }
