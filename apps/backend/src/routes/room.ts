@@ -219,6 +219,7 @@ roomsRouter.get("/", async (req, res) => {
         createdAt: true,
         updatedAt: true,
         cancelled: true,
+        timeZone: true,
       },
     });
 

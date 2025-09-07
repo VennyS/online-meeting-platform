@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
 import { IRoom, UpdateRoomDto } from "@/app/types/room.types";
-import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
 import styles from "./RoomList.module.css";
 import { RoomListProps } from "./types";
+import { toDateTimeLocalString } from "@/app/lib/toDateTimeLocalString";
+import { toUtcISOString } from "@/app/lib/toUtcISOString";
 
 export default function RoomList({
   fetchMode = "user",
@@ -80,7 +81,9 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
   const [editData, setEditData] = useState<UpdateRoomDto>({
     name: room.name,
     description: room.description ?? "",
-    startAt: room.startAt ? formatDateTimeLocal(new Date(room.startAt)) : "",
+    startAt: room.startAt
+      ? toDateTimeLocalString(room.startAt, room.timeZone)
+      : "",
     durationMinutes: 60,
     isPublic: room.isPublic,
     showHistoryToNewbies: false, // если нет в IRoom, ставим дефолт
@@ -110,7 +113,13 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
   };
 
   const handleSave = () => {
-    onSave(editData);
+    onSave({
+      ...editData,
+      startAt: editData.startAt
+        ? toUtcISOString(editData.startAt, "Europe/Moscow")
+        : undefined,
+      timeZone: "Europe/Moscow",
+    });
   };
 
   return (

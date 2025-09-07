@@ -11,7 +11,7 @@ import { AxiosError } from "axios";
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
 const PrejoinPage = () => {
-  const { roomName } = useParams();
+  const { roomId } = useParams();
   const [guestName, setGuestName] = useState("");
   const { user, setUser, setToken, loading: isUserLoading } = useUser();
   const router = useRouter();
@@ -41,11 +41,11 @@ const PrejoinPage = () => {
 
   useEffect(() => {
     const checkPrerequisites = async () => {
-      if (!roomName) return;
+      if (!roomId) return;
 
       try {
         setIsPrequisitesLoading(true);
-        const data = await roomService.prequisites(roomName as string);
+        const data = await roomService.prequisites(roomId as string);
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
 
@@ -67,7 +67,7 @@ const PrejoinPage = () => {
     };
 
     checkPrerequisites();
-  }, [roomName, user]);
+  }, [roomId, user]);
 
   useEffect(() => {
     if (isUserLoading || isPrequisitesLoading) return;
@@ -103,18 +103,18 @@ const PrejoinPage = () => {
 
   // Если пользователь уже авторизован и является владельцем - пропускаем prejoin
   useEffect(() => {
-    if (user && !user.isGuest && isRoomOwner && roomName) {
+    if (user && !user.isGuest && isRoomOwner && roomId) {
       handleRoomOwnerAccess();
     }
-  }, [user, isRoomOwner, roomName]);
+  }, [user, isRoomOwner, roomId]);
 
   const handleRoomOwnerAccess = async () => {
     try {
       const fullName = `${user!.firstName} ${user!.lastName}`;
-      const response = await authService.getToken(roomName as string, fullName);
+      const response = await authService.getToken(roomId as string, fullName);
 
       setToken(response.token);
-      router.replace(`/room/${roomName}`);
+      router.replace(`/room/${roomId}`);
     } catch (err) {
       console.error("Error accessing room as owner:", err);
     }
@@ -128,7 +128,7 @@ const PrejoinPage = () => {
     setIsConnecting(true);
 
     const websocket = new WebSocket(
-      getWebSocketUrl(roomName as string, userId, isHost)
+      getWebSocketUrl(roomId as string, userId, isHost)
     );
 
     websocket.onopen = () => {
@@ -196,7 +196,7 @@ const PrejoinPage = () => {
       isGuest: true,
     });
 
-    router.replace(`/room/${roomName}`);
+    router.replace(`/room/${roomId}`);
   };
 
   const handleAccessRequest = async () => {
@@ -212,7 +212,7 @@ const PrejoinPage = () => {
     if (prequisites.passwordRequired) {
       try {
         const response = await authService.getToken(
-          roomName as string,
+          roomId as string,
           userName,
           password,
           userId
@@ -238,7 +238,7 @@ const PrejoinPage = () => {
     if (!livekitToken) {
       try {
         const response = await authService.getToken(
-          roomName as string,
+          roomId as string,
           userName,
           password,
           userId

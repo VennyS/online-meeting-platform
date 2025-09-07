@@ -235,7 +235,7 @@ export default function MeetingRoom() {
       try {
         const response = await authService.getToken(roomId as string, fullName);
         setToken(response.token);
-        setRoomName(response.name);
+        setRoomName(response.metadata.name);
       } catch (err) {
         console.error("Ошибка при получении токена для пользователя:", err);
       }

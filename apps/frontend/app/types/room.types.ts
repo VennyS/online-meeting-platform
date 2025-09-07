@@ -39,6 +39,7 @@ export interface IRoom {
   waitingRoomEnabled: boolean;
   allowEarlyJoin: boolean;
   cancelled: boolean;
+  timeZone: string;
 }
 
 export interface IWaitingGuest {
