@@ -58,6 +58,7 @@ export interface IPrequisites {
   allowEarlyJoin: boolean;
   isOwner: boolean;
   cancelled: boolean;
+  isFinished: boolean;
 }
 
 export interface Permissions {

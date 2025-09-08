@@ -25,6 +25,7 @@ const PrejoinPage = () => {
     description: "",
     startAt: new Date(),
     cancelled: false,
+    isFinished: false,
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -260,6 +261,8 @@ const PrejoinPage = () => {
     new Date(prequisites.startAt) > new Date() &&
     !!timeLeft;
 
+  if (prequisites.isFinished)
+    return <span>Встреча не существует или завершена</span>;
   if (prequisites.cancelled) return <span>Встреча отменена</span>;
 
   return (

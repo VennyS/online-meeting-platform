@@ -7,14 +7,17 @@ import { useUser } from "../../hooks/useUser";
 import styles from "./page.module.css";
 import RoomList from "@/app/components/ui/organisms/RoomList/RoomList";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
+import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
 
 export default function Main() {
   const router = useRouter();
   const { user } = useUser();
 
+  const now = new Date();
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startAt, setStartAt] = useState("");
+  const [startAt, setStartAt] = useState(formatDateTimeLocal(now));
   const [durationMinutes, setDurationMinutes] = useState<number | "">("");
   const [isPublic, setIsPublic] = useState(false);
   const [showHistoryToNewbies, setShowHistoryToNewbies] = useState(false);
@@ -88,6 +91,7 @@ export default function Main() {
           id="startAt"
           value={startAt}
           onChange={(e) => setStartAt(e.target.value)}
+          min={formatDateTimeLocal(now)}
         />
       </div>
 

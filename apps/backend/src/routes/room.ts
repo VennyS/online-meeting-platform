@@ -10,6 +10,15 @@ import {
 } from "../schemas/room.schema.js";
 import bcrypt from "bcrypt";
 import { extractAuthToken } from "../utils/auth.js";
+import { isMeetingFinished } from "../utils/room.js";
+
+import { RoomServiceClient } from "livekit-server-sdk";
+
+const livekitClient = new RoomServiceClient(
+  process.env.LIVEKIT_URL || "ws://livekit:7880",
+  process.env.LIVEKIT_API_KEY || "devkey",
+  process.env.LIVEKIT_API_SECRET || "devsecret"
+);
 
 export const roomsRouter = Router();
 const redis = new Redis(process.env.REDIS_URL!);
@@ -100,6 +109,22 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
     const authResult = extractAuthToken(cookieHeader);
     const userId = authResult?.payload?.id;
 
+    let numParticipants = 0;
+    try {
+      const participants = await livekitClient.listParticipants(shortId);
+      numParticipants = participants.length;
+    } catch (livekitError) {
+      console.error("Error fetching participants from LiveKit:", livekitError);
+      numParticipants = 0;
+    }
+
+    // Check if the meeting is finished
+    const isFinished = isMeetingFinished({
+      ...room,
+      numParticipants,
+      gracePeriod: 5 * 60_000,
+    });
+
     res.json({
       name: room.name,
       description: room.description,
@@ -110,6 +135,7 @@ roomsRouter.get("/:shortId/prequisites", async (req, res) => {
       allowEarlyJoin: room.allowEarlyJoin,
       isOwner: userId ? room.ownerId === userId : false,
       cancelled: room.cancelled,
+      isFinished: isFinished,
     });
   } catch (err) {
     console.error("Error checking guest access:", err);

@@ -13,7 +13,7 @@ model Room {
   shortId              String    @unique
   name                 String
   description          String?
-  startAt              DateTime?
+  startAt              DateTime  @default(now())
   timeZone             String    @default("Europe/Moscow") 
   durationMinutes      Int?
   isPublic             Boolean   @default(false)
