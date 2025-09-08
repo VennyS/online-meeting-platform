@@ -1,33 +1,60 @@
 "use client";
 
-import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { roomService } from "../../services/room.service";
 import { useUser } from "../../hooks/useUser";
+import styles from "./page.module.css";
+import RoomList from "@/app/components/ui/organisms/RoomList/RoomList";
+import { toUtcISOString } from "@/app/lib/toUtcISOString";
+import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
 
-export default function CreateCallButton() {
+export default function Main() {
   const router = useRouter();
   const { user } = useUser();
+
+  const now = new Date();
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [startAt, setStartAt] = useState(formatDateTimeLocal(now));
+  const [durationMinutes, setDurationMinutes] = useState<number | "">("");
   const [isPublic, setIsPublic] = useState(false);
   const [showHistoryToNewbies, setShowHistoryToNewbies] = useState(false);
   const [password, setPassword] = useState("");
+  const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(false);
+  const [allowEarlyJoin, setAllowEarlyJoin] = useState(true);
+  const [isConnectInstantly, setIsConnectInstantly] = useState(true);
 
   const handleCreateRoom = async () => {
     try {
-      const room = await roomService.createRoom(
-        user!.id,
+      const startDate = startAt
+        ? toUtcISOString(startAt, "Europe/Moscow")
+        : undefined;
+
+      const room = await roomService.createRoom({
+        ownerId: user!.id,
+        name,
+        description,
+        startAt: startDate,
+        durationMinutes:
+          durationMinutes === "" ? undefined : Number(durationMinutes),
         isPublic,
         showHistoryToNewbies,
-        password
-      );
+        password,
+        waitingRoomEnabled,
+        allowEarlyJoin,
+        timeZone: "Europe/Moscow",
+      });
 
-      let nextUrl = `/room/${room.shortId}`;
-      if (password) {
-        nextUrl += `/prejoin`;
+      if (isConnectInstantly) {
+        let nextUrl = `/room/${room.shortId}`;
+        if (password) {
+          nextUrl += `/prejoin`;
+        }
+
+        router.push(nextUrl);
       }
-
-      router.push(nextUrl);
     } catch (error) {
       console.error("Ошибка при создании комнаты:", error);
     }
@@ -35,51 +62,77 @@ export default function CreateCallButton() {
 
   return (
     <main className={styles.main}>
-      <div className={styles.radioGroup}>
-        <h3>Тип доступа:</h3>
+      <div>
+        <label htmlFor="name">Название:</label>
+        <input
+          type="text"
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Например: Встреча команды"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="description">Описание:</label>
+        <input
+          type="text"
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Необязательно"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="startAt">Дата и время начала (мск):</label>
+        <input
+          type="datetime-local"
+          id="startAt"
+          value={startAt}
+          onChange={(e) => setStartAt(e.target.value)}
+          min={formatDateTimeLocal(now)}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="duration">Длительность (минуты):</label>
+        <input
+          type="number"
+          id="duration"
+          value={durationMinutes}
+          onChange={(e) =>
+            setDurationMinutes(
+              e.target.value === "" ? "" : Number(e.target.value)
+            )
+          }
+          placeholder="Например: 60"
+        />
+      </div>
+
+      <div>
         <label>
           <input
-            type="radio"
-            name="accessType"
-            checked={!isPublic}
-            onChange={() => setIsPublic(false)}
-          />
-          Только авторизованные
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="accessType"
+            type="checkbox"
             checked={isPublic}
-            onChange={() => setIsPublic(true)}
+            onChange={(e) => setIsPublic(e.target.checked)}
           />
           По ссылке без авторизации
         </label>
       </div>
 
-      <div className={styles.radioGroup}>
-        <h3>Показывать историю новым участникам:</h3>
+      <div>
         <label>
           <input
-            type="radio"
-            name="historyVisibility"
-            checked={!showHistoryToNewbies}
-            onChange={() => setShowHistoryToNewbies(false)}
-          />
-          Скрыть историю
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="historyVisibility"
+            type="checkbox"
             checked={showHistoryToNewbies}
-            onChange={() => setShowHistoryToNewbies(true)}
+            onChange={(e) => setShowHistoryToNewbies(e.target.checked)}
           />
-          Показать историю
+          Показывать историю новым участникам
         </label>
       </div>
 
-      <div className={styles.inputGroup}>
+      <div>
         <label htmlFor="password">Пароль (если есть):</label>
         <input
           type="password"
@@ -90,9 +143,42 @@ export default function CreateCallButton() {
         />
       </div>
 
-      <button onClick={handleCreateRoom} className={styles.button}>
-        Создать звонок
-      </button>
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={waitingRoomEnabled}
+            onChange={(e) => setWaitingRoomEnabled(e.target.checked)}
+          />
+          Включить зал ожидания
+        </label>
+      </div>
+
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={allowEarlyJoin}
+            onChange={(e) => setAllowEarlyJoin(e.target.checked)}
+          />
+          Разрешить ранний вход
+        </label>
+      </div>
+
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={isConnectInstantly}
+            onChange={(e) => setIsConnectInstantly(e.target.checked)}
+          />
+          Сразу же подключится
+        </label>
+      </div>
+
+      <button onClick={handleCreateRoom}>Создать звонок</button>
+
+      <RoomList />
     </main>
   );
 }

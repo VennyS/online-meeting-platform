@@ -1,9 +1,45 @@
+export interface CreateRoomDto {
+  ownerId: number;
+  name: string;
+  description?: string;
+  startAt?: string;
+  durationMinutes?: number;
+  isPublic?: boolean;
+  showHistoryToNewbies?: boolean;
+  password?: string;
+  waitingRoomEnabled?: boolean;
+  allowEarlyJoin?: boolean;
+  timeZone?: string;
+}
+
+export interface UpdateRoomDto {
+  name?: string;
+  description?: string;
+  startAt?: string;
+  durationMinutes?: number;
+  isPublic?: boolean;
+  showHistoryToNewbies?: boolean;
+  password?: string;
+  waitingRoomEnabled?: boolean;
+  allowEarlyJoin?: boolean;
+  cancelled?: boolean;
+  timeZone?: string;
+}
+
 export interface IRoom {
   id: number;
   shortId: string;
   isPublic: boolean;
-  ownerId: number;
   createdAt: string;
+  name: string;
+  description: string | null;
+  startAt: Date;
+  guestAllowed: boolean;
+  passwordRequired: boolean;
+  waitingRoomEnabled: boolean;
+  allowEarlyJoin: boolean;
+  cancelled: boolean;
+  timeZone: string;
 }
 
 export interface IWaitingGuest {
@@ -13,10 +49,16 @@ export interface IWaitingGuest {
 }
 
 export interface IPrequisites {
+  name: string;
+  description: string | null;
+  startAt: Date;
   guestAllowed: boolean;
   passwordRequired: boolean;
   waitingRoomEnabled: boolean;
+  allowEarlyJoin: boolean;
   isOwner: boolean;
+  cancelled: boolean;
+  isFinished: boolean;
 }
 
 export interface Permissions {

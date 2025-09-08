@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-dotenv.config();
 import express from "express";
 import cors from "cors";
 import { authRouter } from "./routes/auth/check.js";
@@ -8,6 +7,7 @@ import { roomsRouter } from "./routes/room.js";
 import { createServer } from "http";
 import { createWaitingWebSocketServer } from "./ws/server.js";
 
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 

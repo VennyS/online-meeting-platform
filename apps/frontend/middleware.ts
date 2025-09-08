@@ -59,6 +59,10 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
+    if (pathname.startsWith("/admin") && data.user.roleId !== 4) {
+      return NextResponse.rewrite(new URL("/404", req.url));
+    }
+
     const res = NextResponse.next();
     saveAccessToken(data.token, true, res);
     return res;

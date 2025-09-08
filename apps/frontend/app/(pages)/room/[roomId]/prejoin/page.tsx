@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { useUser } from "@/app/hooks/useUser";
@@ -8,55 +8,114 @@ import { authService } from "@/app/services/auth.service";
 import { roomService } from "@/app/services/room.service";
 import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
+import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
 const PrejoinPage = () => {
-  const { roomName } = useParams();
+  const { roomId } = useParams();
   const [guestName, setGuestName] = useState("");
-  const { user, setUser, setToken } = useUser();
+  const { user, setUser, setToken, loading: isUserLoading } = useUser();
   const router = useRouter();
   const [prequisites, setPrequisites] = useState<IPrequisites>({
     guestAllowed: false,
     passwordRequired: false,
     waitingRoomEnabled: false,
     isOwner: false,
+    allowEarlyJoin: false,
+    name: "",
+    description: "",
+    startAt: new Date(),
+    cancelled: false,
+    isFinished: false,
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRoomOwner, setIsRoomOwner] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+  const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
 
   useEffect(() => {
     const checkPrerequisites = async () => {
-      if (!roomName) return;
+      if (!roomId) return;
 
       try {
-        const data = await roomService.prequisites(roomName as string);
+        setIsPrequisitesLoading(true);
+        const data = await roomService.prequisites(roomId as string);
         setPrequisites(data);
-
         setIsRoomOwner(data.isOwner);
-      } catch (error) {
+
+        if (
+          !data.allowEarlyJoin &&
+          data.startAt &&
+          new Date(data.startAt) > new Date()
+        ) {
+          startCountdown(data.startAt);
+        }
+      } catch (err) {
+        if (err instanceof AxiosError && err.response?.status === 404) {
+          router.replace("/404");
+        }
         console.error("Error fetching prerequisites:", error);
+      } finally {
+        setIsPrequisitesLoading(false);
       }
     };
 
     checkPrerequisites();
-  }, [roomName, user]);
+  }, [roomId, user]);
+
+  useEffect(() => {
+    if (isUserLoading || isPrequisitesLoading) return;
+
+    if (!prequisites.guestAllowed && !user) {
+      router.replace("https://ru.noimann.academy/");
+    }
+  }, [prequisites, isUserLoading, isPrequisitesLoading, user]);
+
+  const startCountdown = (startDate: Date) => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const difference = new Date(startDate).getTime() - now.getTime();
+
+      if (difference <= 0) {
+        clearInterval(interval);
+        setTimeLeft(null);
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  };
 
   // Если пользователь уже авторизован и является владельцем - пропускаем prejoin
   useEffect(() => {
-    if (user && !user.isGuest && isRoomOwner && roomName) {
+    if (user && !user.isGuest && isRoomOwner && roomId) {
       handleRoomOwnerAccess();
     }
-  }, [user, isRoomOwner, roomName]);
+  }, [user, isRoomOwner, roomId]);
 
   const handleRoomOwnerAccess = async () => {
     try {
       const fullName = `${user!.firstName} ${user!.lastName}`;
-      const response = await authService.getToken(roomName as string, fullName);
+      const response = await authService.getToken(roomId as string, fullName);
 
       setToken(response.token);
-      router.replace(`/room/${roomName}`);
+      router.replace(`/room/${roomId}`);
     } catch (err) {
       console.error("Error accessing room as owner:", err);
     }
@@ -70,7 +129,7 @@ const PrejoinPage = () => {
     setIsConnecting(true);
 
     const websocket = new WebSocket(
-      `ws://localhost:3001/ws?roomId=${roomName}&userId=${userId}&isHost=${isHost}`
+      getWebSocketUrl(roomId as string, userId, isHost)
     );
 
     websocket.onopen = () => {
@@ -138,7 +197,7 @@ const PrejoinPage = () => {
       isGuest: true,
     });
 
-    router.replace(`/room/${roomName}`);
+    router.replace(`/room/${roomId}`);
   };
 
   const handleAccessRequest = async () => {
@@ -154,7 +213,7 @@ const PrejoinPage = () => {
     if (prequisites.passwordRequired) {
       try {
         const response = await authService.getToken(
-          roomName as string,
+          roomId as string,
           userName,
           password,
           userId
@@ -180,7 +239,7 @@ const PrejoinPage = () => {
     if (!livekitToken) {
       try {
         const response = await authService.getToken(
-          roomName as string,
+          roomId as string,
           userName,
           password,
           userId
@@ -196,9 +255,56 @@ const PrejoinPage = () => {
     handleApprovedAccess(userId, userName, livekitToken);
   };
 
-  // Для гостей
+  const isTimerVisible =
+    !prequisites.allowEarlyJoin &&
+    prequisites.startAt &&
+    new Date(prequisites.startAt) > new Date() &&
+    !!timeLeft;
+
+  if (prequisites.isFinished)
+    return <span>Встреча не существует или завершена</span>;
+  if (prequisites.cancelled) return <span>Встреча отменена</span>;
+
   return (
     <div className={styles.guestForm}>
+      <div>
+        <h2>{prequisites.name}</h2>
+        <span>{prequisites.description}</span>
+      </div>
+
+      {isTimerVisible && (
+        <div className={styles.timer}>
+          <h3>Встреча начнется через:</h3>
+          <div className={styles.timerDigits}>
+            {timeLeft.days > 0 && (
+              <div className={styles.timeUnit}>
+                <span className={styles.timeValue}>{timeLeft.days}</span>
+                <span className={styles.timeLabel}>дней</span>
+              </div>
+            )}
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.hours.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>часов</span>
+            </div>
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.minutes.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>минут</span>
+            </div>
+            <div className={styles.timeUnit}>
+              <span className={styles.timeValue}>
+                {timeLeft.seconds.toString().padStart(2, "0")}
+              </span>
+              <span className={styles.timeLabel}>секунд</span>
+            </div>
+          </div>
+          <p>Ожидайте начала встречи...</p>
+        </div>
+      )}
+
       {prequisites.guestAllowed && !user && (
         <>
           <h2>Введите имя для входа в комнату</h2>
@@ -207,7 +313,7 @@ const PrejoinPage = () => {
             value={guestName}
             onChange={(e) => setGuestName(e.target.value)}
             placeholder="Ваше имя"
-            disabled={isConnecting}
+            disabled={isConnecting || isTimerVisible === true}
           />
         </>
       )}
@@ -219,7 +325,7 @@ const PrejoinPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Ваш пароль"
-            disabled={isConnecting}
+            disabled={isConnecting || isTimerVisible === true}
           />
         </>
       )}
@@ -228,7 +334,8 @@ const PrejoinPage = () => {
         onClick={handleAccessRequest}
         disabled={
           isConnecting ||
-          !guestName ||
+          !!isTimerVisible ||
+          (!user && !guestName) ||
           (prequisites.passwordRequired && !password)
         }
       >

@@ -22,6 +22,7 @@ export interface ParticipantsWithPermissions {
   waitingGuests: IWaitingGuest[];
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
+  permissionsMap: Record<RoomRole, UserPermissions>;
 }
 
 type ParticipantWithPermissions = {
@@ -153,8 +154,6 @@ export function useParticipantsWithPermissions(
 
   if (!localParticipant) return null;
 
-  console.log(usersRoles);
-
   const localRole = usersRoles[localUserId] || "participant";
 
   const local: ParticipantWithPermissions = {
@@ -184,5 +183,6 @@ export function useParticipantsWithPermissions(
     waitingGuests,
     approveGuest,
     rejectGuest,
+    permissionsMap,
   };
 }

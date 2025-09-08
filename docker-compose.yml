@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 
 services:
   frontend:
@@ -30,14 +30,12 @@ services:
       - "7882:7882/tcp"
     env_file:
       - ./infrastructure/livekit/.env
-    command: [
-      "--config", "/infrastructure/livekit/livekit.yaml"
-    ]
+    command: ["--config", "/infrastructure/livekit/livekit.yaml"]
     volumes:
       - ./infrastructure/livekit:/infrastructure/livekit
 
   postgres:
-    image: postgres:15
+    image: postgres:17-alpine
     restart: always
     ports:
       - "5432:5432"
@@ -47,7 +45,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     restart: always
     ports:
       - "6379:6379"

@@ -18,5 +18,10 @@ export interface ICheckTokenResponse {
 
 export interface IGetTokenResponse {
   token: string;
-  guestAllowed: boolean;
+  metadata: {
+    isOwner: boolean;
+    isGuest: any;
+    role: string;
+    name: string;
+  };
 }

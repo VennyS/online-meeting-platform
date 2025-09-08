@@ -1,20 +1,15 @@
 import { axiosClassic } from "../api/interceptors";
 import { IUser } from "../types/auth.types";
-import { IPrequisites, IRoom } from "../types/room.types";
+import {
+  CreateRoomDto,
+  IPrequisites,
+  IRoom,
+  UpdateRoomDto,
+} from "../types/room.types";
 
 export const roomService = {
-  async createRoom(
-    ownerId: number,
-    isPublic: boolean,
-    showHistoryToNewbies: boolean,
-    password?: string
-  ) {
-    const response = await axiosClassic.post<IRoom>("/room", {
-      ownerId,
-      isPublic,
-      showHistoryToNewbies,
-      password,
-    });
+  async createRoom(data: CreateRoomDto) {
+    const response = await axiosClassic.post<IRoom>("/room", data);
     return response.data;
   },
 
@@ -37,6 +32,21 @@ export const roomService = {
       text,
       user,
     });
+    return response.data;
+  },
+
+  async getRooms() {
+    const response = await axiosClassic.get<IRoom[]>("/room");
+    return response.data;
+  },
+
+  async getAll() {
+    const response = await axiosClassic.get<IRoom[]>("/room/all");
+    return response.data;
+  },
+
+  async updateRoom(shortId: string, data: UpdateRoomDto) {
+    const response = await axiosClassic.patch<IRoom>(`/room/${shortId}`, data);
     return response.data;
   },
 };
