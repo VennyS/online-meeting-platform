@@ -1,12 +1,16 @@
 "use client";
 
-import { notFound, useParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { roomService } from "@/app/services/room.service";
-import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
+import {
+  IPrequisites,
+  RoomWSMessage,
+  RoomWSSendMessage,
+} from "@/app/types/room.types";
 import { AxiosError } from "axios";
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
 
@@ -136,30 +140,35 @@ const PrejoinPage = () => {
       console.log("✅ Connected to WebSocket");
     };
 
-    websocket.onmessage = (event) => {
+    websocket.onmessage = (event: MessageEvent) => {
       console.log("📨 Message from server:", event.data);
 
       const message: RoomWSMessage = JSON.parse(event.data);
+      const { event: evt, data } = message;
 
-      if (message.type === "init") {
-        if (!isHost) {
-          // Отправляем запрос на вход
-          websocket.send(
-            JSON.stringify({
-              type: "guest_join_request",
-              name: userName,
-            })
-          );
-        }
-      }
+      switch (evt) {
+        case "init":
+          if (!isHost) {
+            const joinRequest: RoomWSSendMessage = {
+              event: "guest_join_request",
+              data: { name: userName },
+            };
+            websocket.send(JSON.stringify(joinRequest));
+          }
+          break;
 
-      if (message.type === "guest_approved") {
-        handleApprovedAccess(userId, userName, message.token);
-      }
+        case "guest_approved":
+          handleApprovedAccess(userId, userName, data.token);
+          break;
 
-      if (message.type === "guest_rejected") {
-        setError("Ваш запрос был отклонен");
-        setIsConnecting(false);
+        case "guest_rejected":
+          setError("Ваш запрос был отклонен");
+          setIsConnecting(false);
+          break;
+
+        default:
+          console.warn("⚠️ Неизвестное событие от сервера:", evt, data);
+          break;
       }
     };
 

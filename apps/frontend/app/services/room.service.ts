@@ -28,9 +28,14 @@ export const roomService = {
   },
 
   async sendMessage(shortId: string, text: string, user: IUser) {
+    const from = {
+      id: user.id,
+      firstName: user.firstName,
+    };
+
     const response = await axiosClassic.post(`/room/${shortId}/messages`, {
       text,
-      user,
+      from,
     });
     return response.data;
   },

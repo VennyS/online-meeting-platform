@@ -3,7 +3,9 @@ import { ICheckTokenResponse, IGetTokenResponse } from "../types/auth.types";
 
 export const authService = {
   async checkToken() {
-    const response = await axiosClassic.get<ICheckTokenResponse>("/auth/check");
+    const response = await axiosClassic.get<ICheckTokenResponse>(
+      "/auth/proxycheck"
+    );
     return response.data;
   },
 
