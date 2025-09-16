@@ -14,28 +14,54 @@ model Room {
   name                 String
   description          String?
   startAt              DateTime  @default(now())
-  timeZone             String    @default("Europe/Moscow") 
+  timeZone             String    @default("Europe/Moscow")
   durationMinutes      Int?
   isPublic             Boolean   @default(false)
   showHistoryToNewbies Boolean   @default(false)
   passwordHash         String?
   waitingRoomEnabled   Boolean   @default(false)
   allowEarlyJoin       Boolean   @default(true)
-  ownerId              Int
+  ownerId              Int       // ID владельца комнаты из внешнего сервиса
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   cancelled            Boolean   @default(false)
 
-  AllowedParticipant AllowedParticipant[]
+  allowedParticipants  AllowedParticipant[]
+  files                File[]            // Файлы, связанные с комнатой
 }
 
 model AllowedParticipant {
   id        Int      @id @default(autoincrement())
   roomId    Int
-  userId    Int      // или String, если идентификаторы не числовые
+  userId    Int      // ID пользователя из внешнего сервиса
   createdAt DateTime @default(now())
 
-  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
-  @@unique([roomId, userId]) // чтобы один и тот же пользователь не дублировался
+  @@unique([roomId, userId])
+}
+
+model File {
+  id           Int       @id @default(autoincrement())
+  roomId       Int
+  userId       Int       // ID пользователя из внешнего сервиса
+  fileKey      String    // Путь в MinIO (например, "rooms/123/user/456/video.mp4")
+  fileType     FileType  // Enum для типов файлов
+  fileName     String    // Оригинальное имя файла
+  fileSize     Int?      // Размер файла в байтах
+  mimeType     String?   // MIME-тип (например, "video/mp4")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  room         Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId]) // Для быстрого поиска файлов по комнате
+  @@index([userId]) // Для быстрого поиска файлов по пользователю
+}
+
+enum FileType {
+  VIDEO
+  AUDIO
+  TEXT
+  PDF
 }

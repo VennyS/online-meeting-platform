@@ -72,16 +72,29 @@ export interface UserPermissions {
 
 export type RoomRole = "owner" | "admin" | "participant";
 
+type WSMessage<E extends string, D> = {
+  event: E;
+  data: D;
+};
+
 export type RoomWSMessage =
-  | { type: "init"; role: RoomRole }
-  | { type: "waiting_queue_updated"; guests: IWaitingGuest[] }
-  | { type: "new_guest_waiting"; guest: IWaitingGuest }
-  | { type: "role_updated"; role: RoomRole; userId: string }
-  | {
-      type: "permissions_updated";
-      role: RoomRole;
-      permissions: Partial<Permissions>;
-    }
-  | { type: "guest_approved"; token: string }
-  | { type: "guest_rejected" }
-  | { type: "roles_updated"; roles: Record<string, RoomRole> };
+  | WSMessage<"init", { role: RoomRole }>
+  | WSMessage<"waiting_queue_updated", { guests: IWaitingGuest[] }>
+  | WSMessage<"new_guest_waiting", { guest: IWaitingGuest }>
+  | WSMessage<"role_updated", { role: RoomRole; userId: string | number }>
+  | WSMessage<
+      "permissions_updated",
+      { role: RoomRole; permissions: Partial<Permissions> }
+    >
+  | WSMessage<"guest_approved", { token: string }>
+  | WSMessage<"guest_rejected", {}>
+  | WSMessage<"roles_updated", { roles: Record<string, RoomRole> }>;
+
+export type RoomWSSendMessage =
+  | WSMessage<
+      "update_permission",
+      { targetRole: RoomRole; permission: keyof Permissions; value: boolean }
+    >
+  | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
+  | WSMessage<"host_approval", { guestId: string; approved: boolean }>
+  | WSMessage<"guest_join_request", { name: string }>;

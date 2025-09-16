@@ -9,18 +9,40 @@ services:
     env_file:
       - ./apps/frontend/.env
 
-  backend:
+  backend-dev:
     build:
       context: ./apps/backend
+      target: development
+    container_name: backend-dev
     ports:
       - "3001:3001"
       - "5555:5555"
     env_file:
       - ./apps/backend/.env
+    volumes:
+      - ./apps/backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run start:dev
     depends_on:
       - postgres
       - redis
 
+  backend-prod:
+    build:
+      context: ./apps/backend
+      target: production
+    container_name: backend-prod
+    ports:
+      - "3001:3001"
+      - "5555:5555"
+    env_file:
+      - ./apps/backend/.env
+    command: node dist/main
+    depends_on:
+      - postgres
+      - redis
+
+  # ---- LiveKit ----
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
@@ -34,6 +56,7 @@ services:
     volumes:
       - ./infrastructure/livekit:/infrastructure/livekit
 
+  # ---- PostgreSQL ----
   postgres:
     image: postgres:17-alpine
     restart: always
@@ -44,6 +67,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # ---- Redis ----
   redis:
     image: redis:7-alpine
     restart: always

@@ -13,7 +13,7 @@ export const getWebSocketUrl = (
   const protocol = url.protocol === "https:" ? "wss:" : "ws:";
 
   // Формируем базовый WebSocket URL
-  const wsBaseUrl = `${protocol}//${url.host}/ws`;
+  const wsBaseUrl = `${protocol}//${url.host}/waiting-room`;
 
   // Добавляем query параметры
   const searchParams = new URLSearchParams({

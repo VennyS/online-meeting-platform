@@ -6,6 +6,7 @@ import {
   Permissions,
   RoomRole,
   RoomWSMessage,
+  RoomWSSendMessage,
   UserPermissions,
 } from "../types/room.types";
 import React from "react";
@@ -26,29 +27,15 @@ export interface ParticipantsWithPermissions {
 }
 
 type ParticipantWithPermissions = {
-  participant: RemoteParticipant | LocalParticipant; // объект из LiveKit
+  participant: RemoteParticipant | LocalParticipant;
   permissions: UserPermissions;
 };
 
+// ---------- Хук ----------
 const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
-  owner: {
-    role: "owner",
-    permissions: {
-      canShareScreen: true,
-    },
-  },
-  admin: {
-    role: "admin",
-    permissions: {
-      canShareScreen: true,
-    },
-  },
-  participant: {
-    role: "participant",
-    permissions: {
-      canShareScreen: true,
-    },
-  },
+  owner: { role: "owner", permissions: { canShareScreen: true } },
+  admin: { role: "admin", permissions: { canShareScreen: true } },
+  participant: { role: "participant", permissions: { canShareScreen: true } },
 });
 
 export function useParticipantsWithPermissions(
@@ -70,91 +57,101 @@ export function useParticipantsWithPermissions(
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
 
+  // Универсальный отправитель сообщений
+  function sendMessage<E extends RoomWSSendMessage["event"]>(
+    event: E,
+    data: Extract<RoomWSSendMessage, { event: E }>["data"]
+  ) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ event, data }));
+  }
+
   function updateRolePermissions(
     targetRole: RoomRole,
     permission: keyof Permissions,
     value: boolean
   ) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(
-      JSON.stringify({
-        type: "update_permission",
-        targetRole,
-        permission,
-        value,
-      })
-    );
+    sendMessage("update_permission", { targetRole, permission, value });
   }
 
   function updateUserRole(targetUserId: string, newRole: RoomRole) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(
-      JSON.stringify({
-        type: "update_role",
-        targetUserId,
-        newRole,
-      })
-    );
+    sendMessage("update_role", { targetUserId, newRole });
   }
 
   const approveGuest = (guestId: string) => {
-    if (!ws) return;
-    ws.send(JSON.stringify({ type: "host_approval", guestId, approved: true }));
+    sendMessage("host_approval", { guestId, approved: true });
   };
 
   const rejectGuest = (guestId: string) => {
-    if (!ws) return;
-    ws.send(
-      JSON.stringify({ type: "host_approval", guestId, approved: false })
-    );
+    sendMessage("host_approval", { guestId, approved: false });
   };
 
   useEffect(() => {
     if (!ws) return;
+
     ws.onmessage = (event: MessageEvent) => {
       const message: RoomWSMessage = JSON.parse(event.data);
+      const { event: evt, data } = message;
 
-      switch (message.type) {
+      switch (evt) {
         case "permissions_updated":
           setPermissionsMap((prev) => ({
             ...prev,
-            [message.role]: {
-              ...prev[message.role],
-              permissions: message.permissions,
+            [data.role]: {
+              ...prev[data.role],
+              permissions: data.permissions,
             },
           }));
           break;
+
         case "role_updated":
           setUsersRoles((prev) => ({
             ...prev,
-            [message.userId]: message.role,
+            [String(data.userId)]: data.role,
           }));
           break;
+
         case "roles_updated":
+          // приводим ключи к строкам
+          const roles: Record<string, RoomRole> = {};
+          for (const [id, role] of Object.entries(data.roles)) {
+            roles[String(id)] = role;
+          }
           setUsersRoles((prev) => ({
             ...prev,
-            ...message.roles,
+            ...roles,
           }));
           break;
+
         case "waiting_queue_updated":
-          setWaitingGuests(message.guests);
+          setWaitingGuests(data.guests);
           break;
+
         case "new_guest_waiting":
-          setWaitingGuests((prev) => [...prev, message.guest]);
+          setWaitingGuests((prev) => [...prev, data.guest]);
           break;
+
         case "init":
           setUsersRoles((prev) => ({
             ...prev,
-            [localUserId]: message.role,
+            [String(localUserId)]: data.role,
           }));
+          break;
+
+        case "guest_approved":
+          // можно обработать токен если нужно
+          break;
+
+        case "guest_rejected":
+          // здесь просто игнорируем или делаем что-то
           break;
       }
     };
-  }, [ws]);
+  }, [ws, localUserId]);
 
   if (!localParticipant) return null;
 
-  const localRole = usersRoles[localUserId] || "participant";
+  const localRole = usersRoles[String(localUserId)] || "participant";
 
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
