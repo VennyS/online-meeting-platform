@@ -1,0 +1,10 @@
+import { Module } from '@nestjs/common';
+import { AppConfigModule } from './config/config.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { RoomModule } from './modules/room/room.module';
+import { WaitingRoomModule } from './modules/waiting-room/waiting-room.module';
+
+@Module({
+  imports: [AppConfigModule, AuthModule, RoomModule, WaitingRoomModule],
+})
+export class AppModule {}
