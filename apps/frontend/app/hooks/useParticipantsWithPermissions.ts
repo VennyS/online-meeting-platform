@@ -214,6 +214,10 @@ export function useParticipantsWithPermissions(
         }
 
         case "presentation_scroll_changed": {
+          if (presentation && presentation?.authorId === String(localUserId)) {
+            break;
+          }
+
           setPresentation((prev) => {
             if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
 

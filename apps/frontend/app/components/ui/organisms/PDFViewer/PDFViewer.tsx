@@ -69,23 +69,16 @@ const PDFViewer = ({
   }, [scrollPosition, currentPage, zoom]);
 
   useEffect(() => {
-    if (!onScrollChange) return;
     const container = pdfContainerRef.current;
-    if (!container) return;
+    if (!container || !onScrollChange) return;
 
-    let timeout: NodeJS.Timeout;
     const handleScroll = () => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        onScrollChange({ x: container.scrollLeft, y: container.scrollTop });
-      }, 100);
+      const { scrollLeft, scrollTop } = container;
+      onScrollChange({ x: scrollLeft, y: scrollTop });
     };
 
     container.addEventListener("scroll", handleScroll);
-    return () => {
-      clearTimeout(timeout);
-      container.removeEventListener("scroll", handleScroll);
-    };
+    return () => container.removeEventListener("scroll", handleScroll);
   }, [onScrollChange]);
 
   const documentElement = useMemo(
