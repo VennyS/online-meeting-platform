@@ -1,0 +1,49 @@
+import { axiosClassic } from "../api/interceptors";
+
+interface UploadFileResponse {
+  message: string;
+  urls: string[];
+}
+
+export interface IFile {
+  id: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+}
+
+export const fileService = {
+  async uploadFiles(shortId: string, files: File[]): Promise<string[]> {
+    const invalidFiles = files.filter(
+      (file) => file.type !== "application/pdf"
+    );
+    if (invalidFiles.length > 0) {
+      throw new Error("Only PDF files are allowed");
+    }
+
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await axiosClassic.post<UploadFileResponse>(
+      `/file/${shortId}/batch`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    return response.data.urls;
+  },
+
+  async listFiles(shortId: string, skip = 0, take = 10): Promise<IFile[]> {
+    const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
+      params: { skip, take },
+    });
+    return response.data;
+  },
+};
