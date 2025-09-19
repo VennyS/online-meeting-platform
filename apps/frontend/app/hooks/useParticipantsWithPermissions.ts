@@ -26,6 +26,7 @@ export interface ParticipantsWithPermissions {
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
   startPresentation: (url: string) => void;
+  changePage: (newPage: number) => void;
 }
 
 type Presentation = {
@@ -90,16 +91,20 @@ export function useParticipantsWithPermissions(
     sendMessage("update_role", { targetUserId, newRole });
   }
 
-  const approveGuest = (guestId: string) => {
+  function approveGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: true });
-  };
+  }
 
-  const rejectGuest = (guestId: string) => {
+  function rejectGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: false });
-  };
+  }
 
   function startPresentation(url: string) {
     sendMessage("presentation_started", { url: url });
+  }
+
+  function changePage(newPage: number) {
+    sendMessage("presentation_page_changed", { page: newPage });
   }
 
   useEffect(() => {
@@ -218,5 +223,6 @@ export function useParticipantsWithPermissions(
     approveGuest,
     rejectGuest,
     startPresentation,
+    changePage,
   };
 }

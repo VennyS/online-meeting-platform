@@ -112,4 +112,5 @@ export type RoomWSSendMessage =
   | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
   | WSMessage<"guest_join_request", { name: string }>
-  | WSMessage<"presentation_started", { url: string }>;
+  | WSMessage<"presentation_started", { url: string }>
+  | WSMessage<"presentation_page_changed", { page: number }>;

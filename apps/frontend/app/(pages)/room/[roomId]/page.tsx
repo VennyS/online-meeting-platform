@@ -56,13 +56,12 @@ const RoomContent = ({
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
-  const { local, presentation, startPresentation } = useParticipantsContext();
+  const { local, presentation, startPresentation, changePage } =
+    useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
-  const [currentPage, setCurrentPage] = useState(1);
-
   const onPageChange = (page: number) => {
-    setCurrentPage(page);
+    changePage(page);
   };
 
   useEffect(() => {
@@ -169,14 +168,14 @@ const RoomContent = ({
         </div>
       </div>
       <div
-        className={cn(styles.rigthPanel, {
+        className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "participants",
         })}
       >
         <ParticipantsList />
       </div>
       <div
-        className={cn(styles.rigthPanel, {
+        className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "chat",
         })}
       >
