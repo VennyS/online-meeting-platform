@@ -3,8 +3,15 @@ import { AppConfigModule } from './config/config.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RoomModule } from './modules/room/room.module';
 import { WaitingRoomModule } from './modules/waiting-room/waiting-room.module';
+import { FileModule } from './modules/file/file.module';
 
 @Module({
-  imports: [AppConfigModule, AuthModule, RoomModule, WaitingRoomModule],
+  imports: [
+    AppConfigModule,
+    AuthModule,
+    RoomModule,
+    WaitingRoomModule,
+    FileModule,
+  ],
 })
 export class AppModule {}
