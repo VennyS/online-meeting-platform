@@ -179,4 +179,37 @@ export class WaitingRoomGateway
       this.connections.get(roomId)!,
     );
   }
+
+  @SubscribeMessage('presentation_started')
+  async startPresentation(
+    @MessageBody() data: { url: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId, userId } = info;
+
+    await this.waitingRoomService.broadcastStartingPresentation(
+      data.url,
+      userId,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_page_changed')
+  async changePage(
+    @MessageBody() data: { page: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    await this.waitingRoomService.broadcastPresentationPageChanged(
+      data.page,
+      this.connections.get(roomId)!,
+    );
+  }
 }

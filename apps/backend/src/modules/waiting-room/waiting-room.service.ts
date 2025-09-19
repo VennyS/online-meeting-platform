@@ -170,4 +170,39 @@ export class WaitingRoomService {
       if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
+
+  // --- Презентация ---
+  async broadcastStartingPresentation(
+    url: string,
+    authorId: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const msg = JSON.stringify({
+      event: 'presentation_started',
+      data: {
+        url: url,
+        authorId: authorId,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
+  }
+
+  async broadcastPresentationPageChanged(
+    newPage: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const msg = JSON.stringify({
+      event: 'presentation_page_changed',
+      data: {
+        page: newPage,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
+  }
 }
