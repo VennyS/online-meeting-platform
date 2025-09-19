@@ -186,7 +186,7 @@ export class WaitingRoomService {
     });
 
     for (const conn of roomConnections.values()) {
-      if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+      if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
 
@@ -202,7 +202,7 @@ export class WaitingRoomService {
     });
 
     for (const conn of roomConnections.values()) {
-      if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+      if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
 }
