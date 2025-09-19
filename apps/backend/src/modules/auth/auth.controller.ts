@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppConfig } from 'src/config/configuration';
 import {
   ApiBadRequestResponse,
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -57,6 +58,7 @@ export class AuthController {
 
   @Get('proxycheck')
   @UseGuards(AuthGuard({ required: true }))
+  @ApiCookieAuth('auth-token')
   @ApiOkResponse({
     type: ProxyCheckResponseDto,
     description: 'Token is valid, proxy returned user info',
