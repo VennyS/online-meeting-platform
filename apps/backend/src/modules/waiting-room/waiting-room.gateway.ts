@@ -228,4 +228,21 @@ export class WaitingRoomGateway
       this.connections.get(roomId)!,
     );
   }
+
+  @SubscribeMessage('presentation_scroll_changed')
+  async changeScroll(
+    @MessageBody() data: { x: string; y: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    await this.waitingRoomService.broadcastPresentationScrollChanged(
+      data.x,
+      data.y,
+      this.connections.get(roomId)!,
+    );
+  }
 }

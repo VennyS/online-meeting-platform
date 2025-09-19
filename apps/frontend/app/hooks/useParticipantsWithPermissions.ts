@@ -28,6 +28,7 @@ export interface ParticipantsWithPermissions {
   startPresentation: (url: string) => void;
   changePage: (newPage: number) => void;
   changeZoom: (newZoom: number) => void;
+  changeScroll: (position: { x: number; y: number }) => void;
 }
 
 type Presentation = {
@@ -35,6 +36,10 @@ type Presentation = {
   url: string;
   currentPage: number;
   zoom: number;
+  scroll: {
+    x: number;
+    y: number;
+  };
 };
 
 type ParticipantWithPermissions = {
@@ -113,6 +118,13 @@ export function useParticipantsWithPermissions(
     sendMessage("presentation_zoom_changed", { zoom: newZoom });
   }
 
+  function changeScroll(position: { x: number; y: number }) {
+    sendMessage("presentation_scroll_changed", {
+      x: position.x,
+      y: position.y,
+    });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -169,8 +181,12 @@ export function useParticipantsWithPermissions(
           setPresentation((prev) => ({
             ...prev,
             ...data,
+            scroll: {
+              x: 0,
+              y: 0,
+            },
             zoom: 1,
-            currentPage: 1, // гарантируем число
+            currentPage: 1,
           }));
           break;
 
@@ -192,6 +208,21 @@ export function useParticipantsWithPermissions(
             return {
               ...prev,
               zoom: Number(data.zoom),
+            };
+          });
+          break;
+        }
+
+        case "presentation_scroll_changed": {
+          setPresentation((prev) => {
+            if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
+
+            return {
+              ...prev,
+              scroll: {
+                x: data.x,
+                y: data.y,
+              },
             };
           });
           break;
@@ -236,5 +267,6 @@ export function useParticipantsWithPermissions(
     startPresentation,
     changePage,
     changeZoom,
+    changeScroll,
   };
 }

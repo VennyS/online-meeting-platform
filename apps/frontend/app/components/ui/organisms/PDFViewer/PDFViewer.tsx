@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import styles from "./PDFViewer.module.css";
 import { PDFViewerProps } from "./types";
@@ -18,14 +24,15 @@ const PDFViewer = ({
   onPageChange,
   onZoomChange,
   showControls = false,
+  scrollPosition = { x: 0, y: 0 },
+  onScrollChange,
 }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>(totalPages);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
 
-  // Когда документ загружен — обновляем количество страниц
   const handleDocumentLoad = useCallback(
     ({ numPages }: { numPages: number }) => {
       setNumPages(numPages);
-      // Если пришло 0 страниц (т.е. totalPages не был передан), уведомим родителя
       if (totalPages === 0 && onPageChange) {
         onPageChange(Math.min(currentPage, numPages));
       }
@@ -46,12 +53,54 @@ const PDFViewer = ({
   };
 
   const handleZoomIn = () => {
-    onZoomChange?.(Math.min(zoom + 0.25, 3)); // макс. зум 300%
+    onZoomChange?.(Math.min(zoom + 0.25, 3));
   };
 
   const handleZoomOut = () => {
-    onZoomChange?.(Math.max(zoom - 0.25, 0.25)); // мин. зум 25%
+    onZoomChange?.(Math.max(zoom - 0.25, 0.25));
   };
+
+  useEffect(() => {
+    const container = pdfContainerRef.current;
+    if (container) {
+      container.scrollLeft = scrollPosition.x;
+      container.scrollTop = scrollPosition.y;
+    }
+  }, [scrollPosition, currentPage, zoom]);
+
+  useEffect(() => {
+    if (!onScrollChange) return;
+    const container = pdfContainerRef.current;
+    if (!container) return;
+
+    let timeout: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        onScrollChange({ x: container.scrollLeft, y: container.scrollTop });
+      }, 100);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => {
+      clearTimeout(timeout);
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [onScrollChange]);
+
+  const documentElement = useMemo(
+    () => (
+      <Document key={pdfUrl} file={pdfUrl} onLoadSuccess={handleDocumentLoad}>
+        <Page
+          pageNumber={currentPage}
+          scale={zoom}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+        />
+      </Document>
+    ),
+    [pdfUrl, currentPage, zoom] // только эти зависимости
+  );
 
   return (
     <div className={styles.container}>
@@ -73,15 +122,8 @@ const PDFViewer = ({
         </div>
       )}
 
-      <div className={styles.pdfContainer}>
-        <Document file={pdfUrl} onLoadSuccess={handleDocumentLoad}>
-          <Page
-            pageNumber={currentPage}
-            scale={zoom}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        </Document>
+      <div className={styles.pdfContainer} ref={pdfContainerRef}>
+        {documentElement}
       </div>
     </div>
   );

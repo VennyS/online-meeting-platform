@@ -56,8 +56,14 @@ const RoomContent = ({
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
-  const { local, presentation, startPresentation, changePage, changeZoom } =
-    useParticipantsContext();
+  const {
+    local,
+    presentation,
+    startPresentation,
+    changePage,
+    changeZoom,
+    changeScroll,
+  } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
   useEffect(() => {
@@ -153,6 +159,7 @@ const RoomContent = ({
           </TrackLoop>
           {presentation && (
             <PDFViewer
+              key={presentation.url}
               showControls={
                 presentation.authorId === local.participant.identity
               }
@@ -161,6 +168,8 @@ const RoomContent = ({
               onZoomChange={changeZoom}
               currentPage={presentation.currentPage}
               zoom={presentation.zoom}
+              onScrollChange={changeScroll}
+              scrollPosition={presentation.scroll}
             />
           )}
         </div>

@@ -108,6 +108,13 @@ export type RoomWSMessage =
       {
         zoom: string;
       }
+    >
+  | WSMessage<
+      "presentation_scroll_changed",
+      {
+        x: number;
+        y: number;
+      }
     >;
 
 export type RoomWSSendMessage =
@@ -124,5 +131,12 @@ export type RoomWSSendMessage =
       "presentation_zoom_changed",
       {
         zoom: number;
+      }
+    >
+  | WSMessage<
+      "presentation_scroll_changed",
+      {
+        x: number;
+        y: number;
       }
     >;

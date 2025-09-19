@@ -221,4 +221,22 @@ export class WaitingRoomService {
       if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
+
+  async broadcastPresentationScrollChanged(
+    x: string,
+    y: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const msg = JSON.stringify({
+      event: 'presentation_scroll_changed',
+      data: {
+        x: x,
+        y: y,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
+  }
 }
