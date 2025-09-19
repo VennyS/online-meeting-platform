@@ -212,4 +212,20 @@ export class WaitingRoomGateway
       this.connections.get(roomId)!,
     );
   }
+
+  @SubscribeMessage('presentation_zoom_changed')
+  async changeZoom(
+    @MessageBody() data: { zoom: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    await this.waitingRoomService.broadcastPresentationZoomChanged(
+      data.zoom,
+      this.connections.get(roomId)!,
+    );
+  }
 }

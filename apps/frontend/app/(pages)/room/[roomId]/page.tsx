@@ -56,13 +56,9 @@ const RoomContent = ({
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
-  const { local, presentation, startPresentation, changePage } =
+  const { local, presentation, startPresentation, changePage, changeZoom } =
     useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
-
-  const onPageChange = (page: number) => {
-    changePage(page);
-  };
 
   useEffect(() => {
     if (!room) return;
@@ -161,8 +157,10 @@ const RoomContent = ({
                 presentation.authorId === local.participant.identity
               }
               pdfUrl={presentation.url}
-              onPageChange={onPageChange}
+              onPageChange={changePage}
+              onZoomChange={changeZoom}
               currentPage={presentation.currentPage}
+              zoom={presentation.zoom}
             />
           )}
         </div>

@@ -205,4 +205,20 @@ export class WaitingRoomService {
       if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
+
+  async broadcastPresentationZoomChanged(
+    newZoom: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const msg = JSON.stringify({
+      event: 'presentation_zoom_changed',
+      data: {
+        zoom: newZoom,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
+  }
 }

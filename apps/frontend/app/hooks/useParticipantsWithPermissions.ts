@@ -27,12 +27,14 @@ export interface ParticipantsWithPermissions {
   rejectGuest: (guestId: string) => void;
   startPresentation: (url: string) => void;
   changePage: (newPage: number) => void;
+  changeZoom: (newZoom: number) => void;
 }
 
 type Presentation = {
   authorId: string;
   url: string;
   currentPage: number;
+  zoom: number;
 };
 
 type ParticipantWithPermissions = {
@@ -107,6 +109,10 @@ export function useParticipantsWithPermissions(
     sendMessage("presentation_page_changed", { page: newPage });
   }
 
+  function changeZoom(newZoom: number) {
+    sendMessage("presentation_zoom_changed", { zoom: newZoom });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -163,6 +169,7 @@ export function useParticipantsWithPermissions(
           setPresentation((prev) => ({
             ...prev,
             ...data,
+            zoom: 1,
             currentPage: 1, // гарантируем число
           }));
           break;
@@ -178,13 +185,17 @@ export function useParticipantsWithPermissions(
           });
           break;
 
-        case "guest_approved":
-          // можно обработать токен если нужно
-          break;
+        case "presentation_zoom_changed": {
+          setPresentation((prev) => {
+            if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
 
-        case "guest_rejected":
-          // здесь просто игнорируем или делаем что-то
+            return {
+              ...prev,
+              zoom: Number(data.zoom),
+            };
+          });
           break;
+        }
       }
     };
   }, [ws, localUserId]);
@@ -224,5 +235,6 @@ export function useParticipantsWithPermissions(
     rejectGuest,
     startPresentation,
     changePage,
+    changeZoom,
   };
 }

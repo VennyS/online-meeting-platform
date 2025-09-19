@@ -102,6 +102,12 @@ export type RoomWSMessage =
       {
         page: string;
       }
+    >
+  | WSMessage<
+      "presentation_zoom_changed",
+      {
+        zoom: string;
+      }
     >;
 
 export type RoomWSSendMessage =
@@ -113,4 +119,10 @@ export type RoomWSSendMessage =
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
   | WSMessage<"guest_join_request", { name: string }>
   | WSMessage<"presentation_started", { url: string }>
-  | WSMessage<"presentation_page_changed", { page: number }>;
+  | WSMessage<"presentation_page_changed", { page: number }>
+  | WSMessage<
+      "presentation_zoom_changed",
+      {
+        zoom: number;
+      }
+    >;
