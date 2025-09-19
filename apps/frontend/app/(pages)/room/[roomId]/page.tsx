@@ -4,10 +4,9 @@ import "@livekit/components-styles";
 import {
   ChatIcon,
   ControlBar,
-  GridLayout,
   LiveKitRoom,
-  ParticipantTile,
   RoomAudioRenderer,
+  TrackLoop,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
@@ -26,6 +25,15 @@ import {
 } from "@/app/providers/participants.provider";
 import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
+import { fileService, IFile } from "@/app/services/file.service";
+import dynamic from "next/dynamic";
+
+const PDFViewer = dynamic(
+  () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
+  {
+    ssr: false,
+  }
+);
 
 // Room Content Component
 const RoomContent = ({
@@ -48,7 +56,14 @@ const RoomContent = ({
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
-  const { local } = useParticipantsContext();
+  const { local, presentation, startPresentation } = useParticipantsContext();
+  const [files, setFiles] = useState<IFile[]>([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const onPageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   useEffect(() => {
     if (!room) return;
@@ -125,24 +140,43 @@ const RoomContent = ({
     }
   };
 
+  const handleFetchFiles = async () => {
+    const files = await fileService.listFiles(roomId);
+    setFiles(files);
+
+    startPresentation(files[0].url);
+  };
+
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
-      <div className={styles.gridContainer}>
-        <GridLayout tracks={tracks}>
-          <ParticipantTile />
-        </GridLayout>
+      <div>
+        <div className={styles.gridContainer}>
+          <TrackLoop tracks={tracks}>
+            <p>member</p>
+          </TrackLoop>
+          {presentation && (
+            <PDFViewer
+              showControls={
+                presentation.authorId === local.participant.identity
+              }
+              pdfUrl={presentation.url}
+              onPageChange={onPageChange}
+              currentPage={presentation.currentPage}
+            />
+          )}
+        </div>
       </div>
       <div
-        className={cn(styles.participants, {
+        className={cn(styles.rigthPanel, {
           [styles.active]: openedRightPanel === "participants",
         })}
       >
         <ParticipantsList />
       </div>
       <div
-        className={cn(styles.chat, {
+        className={cn(styles.rigthPanel, {
           [styles.active]: openedRightPanel === "chat",
         })}
       >
@@ -169,6 +203,9 @@ const RoomContent = ({
             leave: false,
           }}
         />
+        {local.permissions.permissions.canStartPresentation && (
+          <button onClick={handleFetchFiles}>Транслировать презентацию</button>
+        )}
         <button onClick={() => handleChangeOpenPanel("participants")}>
           {openedRightPanel === "participants" ? "Закрыть" : "Открыть"}
         </button>
