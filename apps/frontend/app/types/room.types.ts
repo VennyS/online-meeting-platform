@@ -63,6 +63,7 @@ export interface IPrequisites {
 
 export interface Permissions {
   canShareScreen?: boolean;
+  canStartPresentation?: boolean;
 }
 
 export interface UserPermissions {
@@ -88,7 +89,20 @@ export type RoomWSMessage =
     >
   | WSMessage<"guest_approved", { token: string }>
   | WSMessage<"guest_rejected", {}>
-  | WSMessage<"roles_updated", { roles: Record<string, RoomRole> }>;
+  | WSMessage<"roles_updated", { roles: Record<string, RoomRole> }>
+  | WSMessage<
+      "presentation_started",
+      {
+        url: string;
+        authorId: string;
+      }
+    >
+  | WSMessage<
+      "presentation_page_changed",
+      {
+        page: string;
+      }
+    >;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -97,4 +111,5 @@ export type RoomWSSendMessage =
     >
   | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
-  | WSMessage<"guest_join_request", { name: string }>;
+  | WSMessage<"guest_join_request", { name: string }>
+  | WSMessage<"presentation_started", { url: string }>;

@@ -138,6 +138,26 @@ export function ParticipantsList() {
             </select>
           </div>
 
+          <div className={styles.permissionControl}>
+            <label>Может делиться презентацией:</label>
+            <select
+              title="canStartPresentation dropdown"
+              value={canShareScreenValue}
+              onChange={(e) =>
+                handlePermissionChange(
+                  "canStartPresentation",
+                  e.target.value as RoomRole | "all"
+                )
+              }
+            >
+              {roleOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* сюда можно добавить другие права аналогично */}
         </div>
       )}
