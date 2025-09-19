@@ -42,6 +42,13 @@ services:
       - postgres
       - redis
 
+  backend-test:
+    build:
+      context: ./apps/test-backend
+    container_name: test-backend
+    ports:
+      - "8080:8080"
+
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
