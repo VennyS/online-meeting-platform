@@ -7,6 +7,7 @@ import styles from "./RoomList.module.css";
 import { RoomListProps } from "./types";
 import { toDateTimeLocalString } from "@/app/lib/toDateTimeLocalString";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
+import Link from "next/link";
 
 export default function RoomList({
   fetchMode = "user",
@@ -252,6 +253,17 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
         >
           Сохранить
         </button>
+        <Link
+          href={`/room/${room.shortId}`}
+          style={{
+            background: "green",
+            color: "white",
+            padding: "5px 10px",
+            marginRight: "5px",
+          }}
+        >
+          Зайти
+        </Link>
       </div>
     </div>
   );
