@@ -4,9 +4,10 @@ import "@livekit/components-styles";
 import {
   ChatIcon,
   ControlBar,
+  GridLayout,
   LiveKitRoom,
+  ParticipantTile,
   RoomAudioRenderer,
-  TrackLoop,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
@@ -27,6 +28,7 @@ import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
+import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -50,8 +52,7 @@ const RoomContent = ({
     ],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
-  const [copied, setCopied] = useState(false);
-  const [manualText, setManualText] = useState<string | null>(null);
+
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const user = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -104,22 +105,6 @@ const RoomContent = ({
     }
   }, [local.permissions.permissions.canShareScreen, local.participant]);
 
-  const generateMeetingInfo = () => {
-    const meetingDate = new Date().toLocaleString("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const meetingLink = `${window.location.origin}/room/${roomId}`;
-
-    return `Встреча: ${roomName}
-Дата: ${meetingDate} (Москва)
-Подключиться: ${meetingLink}`;
-  };
-
   const handleChangeOpenPanel = (panel: Panel) => {
     if (panel !== openedRightPanel) {
       setOpenedRightPanel(panel);
@@ -128,41 +113,29 @@ const RoomContent = ({
     setOpenedRightPanel(undefined);
   };
 
-  const handleCopy = async () => {
-    const text = generateMeetingInfo();
+  useEffect(() => {
+    const handleFetchFiles = async () => {
+      try {
+        const files = await fileService.listFiles(roomId);
+        setFiles(files);
+      } catch (err) {
+        console.error("Error fetching files:", err);
+      }
+    };
 
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Не удалось скопировать:", err);
-      setManualText(text);
-    }
-  };
-
-  const handleFetchFiles = async () => {
-    const files = await fileService.listFiles(roomId);
-    setFiles(files);
-
-    startPresentation(files[0].url);
-  };
+    handleFetchFiles();
+  }, []);
 
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
-      <div>
-        <div className={styles.gridContainer}>
-          <TrackLoop tracks={tracks}>
-            <p>member</p>
-          </TrackLoop>
-          {presentation && (
+      <div className={styles.gridContainer}>
+        {presentation ? (
+          <div className={styles.presentationMain}>
             <PDFViewer
               key={presentation.url}
-              showControls={
-                presentation.authorId === local.participant.identity
-              }
+              isAuthor={presentation.authorId === local.participant.identity}
               pdfUrl={presentation.url}
               onPageChange={changePage}
               onZoomChange={changeZoom}
@@ -171,15 +144,25 @@ const RoomContent = ({
               onScrollChange={changeScroll}
               scrollPosition={presentation.scroll}
             />
-          )}
-        </div>
+            <div className={styles.participantsStrip}>
+              <GridLayout tracks={tracks}>
+                <ParticipantTile />
+              </GridLayout>
+            </div>
+          </div>
+        ) : (
+          <GridLayout tracks={tracks}>
+            <ParticipantTile />
+          </GridLayout>
+        )}
       </div>
+
       <div
         className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "participants",
         })}
       >
-        <ParticipantsList />
+        <ParticipantsList roomId={roomId} roomName={roomName} />
       </div>
       <div
         className={cn(styles.rightPanel, {
@@ -187,6 +170,14 @@ const RoomContent = ({
         })}
       >
         {!!user.user && <Chat roomName={roomId} user={user.user} />}
+      </div>
+
+      <div
+        className={cn(styles.rightPanel, {
+          [styles.active]: openedRightPanel === "files",
+        })}
+      >
+        <PresentationList files={files} onClick={startPresentation} />
       </div>
 
       {openedRightPanel && (
@@ -210,7 +201,13 @@ const RoomContent = ({
           }}
         />
         {local.permissions.permissions.canStartPresentation && (
-          <button onClick={handleFetchFiles}>Транслировать презентацию</button>
+          <button
+            onClick={() => {
+              handleChangeOpenPanel("files");
+            }}
+          >
+            {!presentation ? "Транслировать презентацию" : "Стоп"}
+          </button>
         )}
         <button onClick={() => handleChangeOpenPanel("participants")}>
           {openedRightPanel === "participants" ? "Закрыть" : "Открыть"}
@@ -225,22 +222,8 @@ const RoomContent = ({
             <div className={styles.notificationDot}>{unreadCount}</div>
           )}
         </button>
-        <button onClick={handleCopy}>Поделиться встречей</button>
       </div>
 
-      {copied && (
-        <div className={styles.copiedToast}>Скопировано в буфер обмена</div>
-      )}
-      {manualText && (
-        <div className={styles.manualCopy}>
-          <div>Не удалось скопировать. Скопируйте вручную:</div>
-          <textarea
-            readOnly
-            value={manualText}
-            className={styles.manualTextarea}
-          />
-        </div>
-      )}
       <RoomAudioRenderer />
     </div>
   );

@@ -3,7 +3,7 @@ export type PDFViewerProps = {
   currentPage?: number;
   zoom?: number;
   totalPages?: number;
-  showControls?: boolean;
+  isAuthor?: boolean;
   onPageChange?: (page: number) => void;
   onZoomChange?: (zoom: number) => void;
   scrollPosition?: { x: number; y: number };
