@@ -64,7 +64,7 @@ export class FileController {
     }
   }
 
-  @ApiConsumes('multipart/form-data') // Указываем, что эндпоинт принимает multipart/form-data
+  @ApiConsumes('multipart/form-data')
   @ApiParam({
     name: 'shortId',
     description: 'Short ID of the room to upload the file to',

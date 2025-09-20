@@ -93,30 +93,37 @@ export type RoomWSMessage =
   | WSMessage<
       "presentation_started",
       {
+        presentationId: string;
         url: string;
         authorId: string;
+        currentPage: number;
+        zoom: number;
+        scroll: { x: number; y: number };
       }
     >
   | WSMessage<
       "presentation_page_changed",
       {
-        page: string;
+        presentationId: string;
+        page: number;
       }
     >
   | WSMessage<
       "presentation_zoom_changed",
       {
-        zoom: string;
+        presentationId: string;
+        zoom: number;
       }
     >
   | WSMessage<
       "presentation_scroll_changed",
       {
+        presentationId: string;
         x: number;
         y: number;
       }
     >
-  | WSMessage<"presentation_finished", {}>;
+  | WSMessage<"presentation_finished", { presentationId: string }>;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -127,18 +134,23 @@ export type RoomWSSendMessage =
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
   | WSMessage<"guest_join_request", { name: string }>
   | WSMessage<"presentation_started", { url: string }>
-  | WSMessage<"presentation_page_changed", { page: number }>
+  | WSMessage<
+      "presentation_page_changed",
+      { presentationId: string; page: number }
+    >
   | WSMessage<
       "presentation_zoom_changed",
       {
+        presentationId: string;
         zoom: number;
       }
     >
   | WSMessage<
       "presentation_scroll_changed",
       {
+        presentationId: string;
         x: number;
         y: number;
       }
     >
-  | WSMessage<"presentation_finished", {}>;
+  | WSMessage<"presentation_finished", { presentationId: string }>;

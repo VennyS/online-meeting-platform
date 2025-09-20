@@ -59,7 +59,7 @@ const RoomContent = ({
   const room = useRoomContext();
   const {
     local,
-    presentation,
+    presentations,
     startPresentation,
     changePage,
     changeZoom,
@@ -67,13 +67,19 @@ const RoomContent = ({
     finishPresentation,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
+  const [activePresentationId, setActivePresentationId] = useState<
+    string | null
+  >(null);
 
   const showPresentationButton =
     local.permissions.permissions.canStartPresentation &&
     user &&
     files.length > 0 &&
-    (!presentation ||
-      (!!presentation && String(user.id) === presentation.authorId));
+    (!presentations.size ||
+      (presentations.size > 0 &&
+        Array.from(presentations.values()).some(
+          (p) => p.authorId === String(user.id)
+        )));
 
   useEffect(() => {
     if (!room) return;
@@ -113,14 +119,27 @@ const RoomContent = ({
 
       if (
         !local.permissions.permissions.canStartPresentation &&
-        presentation &&
+        presentations.size > 0 &&
         user &&
-        presentation.authorId === String(user.id)
+        Array.from(presentations.values()).some(
+          (p) => p.authorId === String(user.id)
+        )
       ) {
-        finishPresentation();
+        // Завершаем все презентации пользователя, если права отозваны
+        presentations.forEach((p, id) => {
+          if (p.authorId === String(user.id)) {
+            finishPresentation(id);
+          }
+        });
       }
     }
-  }, [local.permissions.permissions.canShareScreen, local.participant]);
+  }, [
+    local.permissions.permissions.canShareScreen,
+    local.participant,
+    presentations,
+    user,
+    finishPresentation,
+  ]);
 
   const handleChangeOpenPanel = (panel: Panel) => {
     if (panel !== openedRightPanel) {
@@ -143,23 +162,50 @@ const RoomContent = ({
     handleFetchFiles();
   }, []);
 
+  useEffect(() => {
+    if (presentations.size > 0 && !activePresentationId) {
+      const userPresentation = Array.from(presentations.entries()).find(
+        ([, p]) => p.authorId === String(user?.id)
+      );
+      setActivePresentationId(
+        userPresentation
+          ? userPresentation[0]
+          : Array.from(presentations.keys())[0]
+      );
+    } else if (presentations.size === 0) {
+      setActivePresentationId(null);
+    }
+  }, [presentations, user, activePresentationId]);
+
+  const activePresentation = activePresentationId
+    ? presentations.get(activePresentationId)
+    : null;
+
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
-        {presentation ? (
+        {activePresentation ? (
           <div className={styles.presentationMain}>
             <PDFViewer
-              key={presentation.url}
-              isAuthor={presentation.authorId === local.participant.identity}
-              pdfUrl={presentation.url}
-              onPageChange={changePage}
-              onZoomChange={changeZoom}
-              currentPage={presentation.currentPage}
-              zoom={presentation.zoom}
-              onScrollChange={changeScroll}
-              scrollPosition={presentation.scroll}
+              key={activePresentation.url}
+              isAuthor={
+                activePresentation.authorId === local.participant.identity
+              }
+              pdfUrl={activePresentation.url}
+              onPageChange={(newPage) =>
+                changePage(activePresentationId!, newPage)
+              }
+              onZoomChange={(newZoom) =>
+                changeZoom(activePresentationId!, newZoom)
+              }
+              currentPage={activePresentation.currentPage}
+              zoom={activePresentation.zoom}
+              onScrollChange={(position) =>
+                changeScroll(activePresentationId!, position)
+              }
+              scrollPosition={activePresentation.scroll}
             />
             <div className={styles.participantsStrip}>
               <GridLayout tracks={tracks}>
@@ -220,12 +266,14 @@ const RoomContent = ({
         {showPresentationButton && (
           <button
             onClick={() => {
-              !presentation
-                ? handleChangeOpenPanel("files")
-                : finishPresentation();
+              if (!activePresentation) {
+                handleChangeOpenPanel("files");
+              } else if (activePresentation.authorId === String(user?.id)) {
+                finishPresentation(activePresentationId!);
+              }
             }}
           >
-            {!presentation ? "Транслировать презентацию" : "Стоп"}
+            {!activePresentation ? "Транслировать презентацию" : "Стоп"}
           </button>
         )}
         <button onClick={() => handleChangeOpenPanel("participants")}>

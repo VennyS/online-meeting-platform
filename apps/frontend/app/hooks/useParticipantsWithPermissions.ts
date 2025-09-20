@@ -1,6 +1,6 @@
 import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   IWaitingGuest,
   Permissions,
@@ -9,14 +9,13 @@ import {
   RoomWSSendMessage,
   UserPermissions,
 } from "../types/room.types";
-import React from "react";
 
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;
   remote: ParticipantWithPermissions[];
   permissionsMap: Record<RoomRole, UserPermissions>;
   waitingGuests: IWaitingGuest[];
-  presentation?: Presentation;
+  presentations: Map<string, Presentation>;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -26,21 +25,22 @@ export interface ParticipantsWithPermissions {
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
   startPresentation: (url: string) => void;
-  changePage: (newPage: number) => void;
-  changeZoom: (newZoom: number) => void;
-  changeScroll: (position: { x: number; y: number }) => void;
-  finishPresentation: () => void;
+  changePage: (presentationId: string, newPage: number) => void;
+  changeZoom: (presentationId: string, newZoom: number) => void;
+  changeScroll: (
+    presentationId: string,
+    position: { x: number; y: number }
+  ) => void;
+  finishPresentation: (presentationId: string) => void;
 }
 
 type Presentation = {
-  authorId: string;
+  presentationId: string;
   url: string;
+  authorId: string;
   currentPage: number;
   zoom: number;
-  scroll: {
-    x: number;
-    y: number;
-  };
+  scroll: { x: number; y: number };
 };
 
 type ParticipantWithPermissions = {
@@ -68,16 +68,16 @@ export function useParticipantsWithPermissions(
   localUserId: number
 ): ParticipantsWithPermissions | null {
   const participants = useParticipants();
-  const [permissionsMap, setPermissionsMap] = React.useState<
+  const [permissionsMap, setPermissionsMap] = useState<
     Record<RoomRole, UserPermissions>
   >(getDefaultPermissions());
-  const [usersRoles, setUsersRoles] = React.useState<Record<string, RoomRole>>(
-    {}
+  const [usersRoles, setUsersRoles] = useState<Record<string, RoomRole>>({});
+  const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
+  const [presentations, setPresentations] = useState<Map<string, Presentation>>(
+    new Map()
   );
-  const [waitingGuests, setWaitingGuests] = React.useState<IWaitingGuest[]>([]);
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
-  const [presentation, setPresentation] = React.useState<Presentation>();
 
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
@@ -108,26 +108,35 @@ export function useParticipantsWithPermissions(
   }
 
   function startPresentation(url: string) {
-    sendMessage("presentation_started", { url: url });
+    presentations.forEach((p, id) => {
+      if (p.authorId === String(localUserId)) {
+        finishPresentation(id);
+      }
+    });
+    sendMessage("presentation_started", { url });
   }
 
-  function changePage(newPage: number) {
-    sendMessage("presentation_page_changed", { page: newPage });
+  function changePage(presentationId: string, newPage: number) {
+    sendMessage("presentation_page_changed", { presentationId, page: newPage });
   }
 
-  function changeZoom(newZoom: number) {
-    sendMessage("presentation_zoom_changed", { zoom: newZoom });
+  function changeZoom(presentationId: string, newZoom: number) {
+    sendMessage("presentation_zoom_changed", { presentationId, zoom: newZoom });
   }
 
-  function changeScroll(position: { x: number; y: number }) {
+  function changeScroll(
+    presentationId: string,
+    position: { x: number; y: number }
+  ) {
     sendMessage("presentation_scroll_changed", {
+      presentationId,
       x: position.x,
       y: position.y,
     });
   }
 
-  function finishPresentation() {
-    sendMessage("presentation_finished", {});
+  function finishPresentation(presentationId: string) {
+    sendMessage("presentation_finished", { presentationId });
   }
 
   useEffect(() => {
@@ -156,7 +165,6 @@ export function useParticipantsWithPermissions(
           break;
 
         case "roles_updated":
-          // приводим ключи к строкам
           const roles: Record<string, RoomRole> = {};
           for (const [id, role] of Object.entries(data.roles)) {
             roles[String(id)] = role;
@@ -183,66 +191,75 @@ export function useParticipantsWithPermissions(
           break;
 
         case "presentation_started":
-          setPresentation((prev) => ({
-            ...prev,
-            ...data,
-            scroll: {
-              x: 0,
-              y: 0,
-            },
-            zoom: 1,
-            currentPage: 1,
-          }));
+          setPresentations((prev) => {
+            const newPresentations = new Map(prev);
+            newPresentations.set(data.presentationId, {
+              presentationId: data.presentationId,
+              url: data.url,
+              authorId: data.authorId,
+              currentPage: data.currentPage,
+              zoom: data.zoom,
+              scroll: data.scroll,
+            });
+            return newPresentations;
+          });
           break;
 
         case "presentation_page_changed":
-          setPresentation((prev) => {
-            if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
 
-            return {
-              ...prev,
-              currentPage: Number(data.page),
-            };
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              currentPage: data.page,
+            });
           });
           break;
 
-        case "presentation_zoom_changed": {
-          setPresentation((prev) => {
-            if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
+        case "presentation_zoom_changed":
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
 
-            return {
-              ...prev,
-              zoom: Number(data.zoom),
-            };
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              zoom: data.zoom,
+            });
           });
           break;
-        }
 
-        case "presentation_scroll_changed": {
-          if (presentation && presentation?.authorId === String(localUserId)) {
+        case "presentation_scroll_changed":
+          if (
+            presentations.get(data.presentationId)?.authorId ===
+            String(localUserId)
+          ) {
             break;
           }
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
 
-          setPresentation((prev) => {
-            if (!prev) return prev; // или return undefined — не обновляем, если ещё не было презентации
-
-            return {
-              ...prev,
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
               scroll: {
                 x: data.x,
                 y: data.y,
               },
-            };
+            });
           });
           break;
-        }
 
-        case "presentation_finished": {
-          setPresentation(undefined);
-        }
+        case "presentation_finished":
+          setPresentations((prev) => {
+            const newPresentations = new Map(prev);
+            newPresentations.delete(data.presentationId);
+            return newPresentations;
+          });
+          break;
       }
     };
-  }, [ws, localUserId]);
+  }, [ws, localUserId, presentations]);
 
   if (!localParticipant) return null;
 
@@ -272,7 +289,7 @@ export function useParticipantsWithPermissions(
     remote,
     permissionsMap,
     waitingGuests,
-    presentation,
+    presentations, // Изменено с presentation на presentations
     updateRolePermissions,
     updateUserRole,
     approveGuest,

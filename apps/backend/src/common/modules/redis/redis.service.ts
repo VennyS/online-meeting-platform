@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { PostMessageResponseDto } from '../../../modules/room/dto/postMessageResponseDto';
 import { Message } from '../../../modules/room/interfaces/message.interface';
+import { IPresentation } from 'src/modules/waiting-room/interfaces/presentation.interface';
 
 @Injectable()
 export class RedisService {
@@ -87,5 +88,83 @@ export class RedisService {
     rolePermissions[permission] = value;
     await this.client.hset(key, targetRole, JSON.stringify(rolePermissions));
     return rolePermissions;
+  }
+
+  // --- Презентация ---
+
+  async setPresentation(
+    roomId: string,
+    presentation: IPresentation & { presentationId: string },
+  ) {
+    const key = `room:${roomId}:presentations`;
+    // Проверяем, есть ли уже презентация с таким ID
+    const existingPresentations = await this.getPresentations(roomId);
+    const updatedPresentations = existingPresentations.filter(
+      (p) => p.presentationId !== presentation.presentationId,
+    );
+    updatedPresentations.push(presentation);
+
+    // Очищаем и перезаписываем список
+    await this.client.del(key);
+    for (const pres of updatedPresentations) {
+      await this.client.rpush(key, JSON.stringify(pres));
+    }
+    await this.client.expire(key, 60 * 60 * 24); // 1 day TTL
+    this.logger.log(
+      `Set presentation ${presentation.presentationId} for room ${roomId}`,
+    );
+  }
+
+  async getPresentations(roomId: string): Promise<IPresentation[]> {
+    const key = `room:${roomId}:presentations`;
+    const raw = await this.client.lrange(key, 0, -1);
+    if (!raw || raw.length === 0) {
+      this.logger.debug(`No presentations found for room ${roomId}`);
+      return [];
+    }
+    try {
+      return raw.map((item) => JSON.parse(item) as IPresentation);
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse presentations for room ${roomId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  async getPresentation(
+    roomId: string,
+    presentationId: string,
+  ): Promise<IPresentation | null> {
+    const presentations = await this.getPresentations(roomId);
+    const presentation = presentations.find(
+      (p) => p.presentationId === presentationId,
+    );
+    if (!presentation) {
+      this.logger.debug(
+        `Presentation ${presentationId} not found in room ${roomId}`,
+      );
+      return null;
+    }
+    return presentation;
+  }
+
+  async deletePresentation(
+    roomId: string,
+    presentationId: string,
+  ): Promise<void> {
+    const key = `room:${roomId}:presentations`;
+    const presentations = await this.getPresentations(roomId);
+    const updated = presentations.filter(
+      (p) => p.presentationId !== presentationId,
+    );
+
+    await this.client.del(key);
+    for (const pres of updated) {
+      await this.client.rpush(key, JSON.stringify(pres));
+    }
+    this.logger.log(
+      `Deleted presentation ${presentationId} from room ${roomId}`,
+    );
   }
 }
