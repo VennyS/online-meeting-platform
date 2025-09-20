@@ -139,11 +139,13 @@ export class FileManagementService {
     userId: number,
     skip = 0,
     take = 10,
+    type?: FileType,
   ): Promise<any[]> {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: { allowedParticipants: true },
     });
+
     if (
       !room ||
       (!room.isPublic &&
@@ -154,19 +156,21 @@ export class FileManagementService {
     }
 
     const files = await this.prisma.file.findMany({
-      where: { roomId },
+      where: {
+        roomId,
+        ...(type ? { fileType: type } : {}), // <-- фильтр по типу, если передан
+      },
       select: {
         id: true,
         fileName: true,
         fileType: true,
         fileSize: true,
-        fileKey: true, // Временно включаем для получения URL
+        fileKey: true,
       },
       skip,
       take,
     });
 
-    // Добавляем URL для каждого файла
     const filesWithUrls = await Promise.all(
       files.map(async (file) => {
         const url = await this.fileService.getPresignedUrl(file.fileKey);
@@ -175,7 +179,7 @@ export class FileManagementService {
           fileName: file.fileName,
           fileType: file.fileType,
           fileSize: file.fileSize,
-          url, // Добавляем URL
+          url,
         };
       }),
     );

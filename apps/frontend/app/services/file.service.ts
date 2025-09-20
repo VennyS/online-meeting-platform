@@ -8,10 +8,12 @@ interface UploadFileResponse {
 export interface IFile {
   id: number;
   fileName: string;
-  fileType: string;
+  fileType: FileType;
   fileSize: number;
   url: string;
 }
+
+export type FileType = "VIDEO" | "AUDIO" | "TEXT" | "PDF";
 
 export const fileService = {
   async uploadFiles(shortId: string, files: File[]): Promise<string[]> {
@@ -40,9 +42,14 @@ export const fileService = {
     return response.data.urls;
   },
 
-  async listFiles(shortId: string, skip = 0, take = 10): Promise<IFile[]> {
+  async listFiles(
+    shortId: string,
+    skip = 0,
+    take = 10,
+    type?: FileType
+  ): Promise<IFile[]> {
     const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
-      params: { skip, take },
+      params: { skip, take, type },
     });
     return response.data;
   },
