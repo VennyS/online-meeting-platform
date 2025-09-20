@@ -115,7 +115,8 @@ export type RoomWSMessage =
         x: number;
         y: number;
       }
-    >;
+    >
+  | WSMessage<"presentation_finished", {}>;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -139,4 +140,5 @@ export type RoomWSSendMessage =
         x: number;
         y: number;
       }
-    >;
+    >
+  | WSMessage<"presentation_finished", {}>;

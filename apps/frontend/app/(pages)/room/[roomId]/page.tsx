@@ -54,7 +54,7 @@ const RoomContent = ({
   );
 
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
-  const user = useUser();
+  const { user } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
   const {
@@ -64,8 +64,16 @@ const RoomContent = ({
     changePage,
     changeZoom,
     changeScroll,
+    finishPresentation,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
+
+  const showPresentationButton =
+    local.permissions.permissions.canStartPresentation &&
+    user &&
+    files.length > 0 &&
+    (!presentation ||
+      (!!presentation && String(user.id) === presentation.authorId));
 
   useEffect(() => {
     if (!room) return;
@@ -101,6 +109,15 @@ const RoomContent = ({
         if (screenTrackPub?.track) {
           local.participant.unpublishTrack(screenTrackPub.track);
         }
+      }
+
+      if (
+        !local.permissions.permissions.canStartPresentation &&
+        presentation &&
+        user &&
+        presentation.authorId === String(user.id)
+      ) {
+        finishPresentation();
       }
     }
   }, [local.permissions.permissions.canShareScreen, local.participant]);
@@ -169,7 +186,7 @@ const RoomContent = ({
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        {!!user.user && <Chat roomName={roomId} user={user.user} />}
+        {!!user && <Chat roomName={roomId} user={user} />}
       </div>
 
       <div
@@ -200,10 +217,12 @@ const RoomContent = ({
             leave: false,
           }}
         />
-        {local.permissions.permissions.canStartPresentation && (
+        {showPresentationButton && (
           <button
             onClick={() => {
-              handleChangeOpenPanel("files");
+              !presentation
+                ? handleChangeOpenPanel("files")
+                : finishPresentation();
             }}
           >
             {!presentation ? "Транслировать презентацию" : "Стоп"}

@@ -245,4 +245,16 @@ export class WaitingRoomGateway
       this.connections.get(roomId)!,
     );
   }
+
+  @SubscribeMessage('presentation_finished')
+  async finishPresentation(@ConnectedSocket() ws: WebSocket) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    await this.waitingRoomService.broadcastPresentationFinished(
+      this.connections.get(roomId)!,
+    );
+  }
 }

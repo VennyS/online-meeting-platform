@@ -239,4 +239,14 @@ export class WaitingRoomService {
       if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
   }
+
+  async broadcastPresentationFinished(roomConnections: Map<string, any>) {
+    const msg = JSON.stringify({
+      event: 'presentation_finished',
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
+  }
 }

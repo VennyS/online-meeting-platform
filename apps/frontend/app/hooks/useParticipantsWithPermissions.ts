@@ -29,6 +29,7 @@ export interface ParticipantsWithPermissions {
   changePage: (newPage: number) => void;
   changeZoom: (newZoom: number) => void;
   changeScroll: (position: { x: number; y: number }) => void;
+  finishPresentation: () => void;
 }
 
 type Presentation = {
@@ -123,6 +124,10 @@ export function useParticipantsWithPermissions(
       x: position.x,
       y: position.y,
     });
+  }
+
+  function finishPresentation() {
+    sendMessage("presentation_finished", {});
   }
 
   useEffect(() => {
@@ -231,6 +236,10 @@ export function useParticipantsWithPermissions(
           });
           break;
         }
+
+        case "presentation_finished": {
+          setPresentation(undefined);
+        }
       }
     };
   }, [ws, localUserId]);
@@ -272,5 +281,6 @@ export function useParticipantsWithPermissions(
     changePage,
     changeZoom,
     changeScroll,
+    finishPresentation,
   };
 }
