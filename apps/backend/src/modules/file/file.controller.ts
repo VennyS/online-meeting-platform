@@ -84,8 +84,8 @@ export class FileController {
       },
     },
   })
-  @Post(':shortId')
-  @UseInterceptors(FilesInterceptor('file', 10))
+  @Post(':shortId/batch')
+  @UseInterceptors(FilesInterceptor('files', 10))
   @UseGuards(AuthGuard({ required: true }))
   async loadFiles(
     @Param('shortId', RoomByShortIdPipe) room: Room,

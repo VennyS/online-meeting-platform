@@ -33,7 +33,6 @@ const PresentationList = ({ files, onClick }: PresentationListProps) => {
             <div key={file.id} className="file-item">
               <div className="file-info">
                 <h3 className="file-name">{file.fileName}</h3>
-                <p className="file-type">Тип: {file.fileType}</p>
                 <p className="file-size">
                   Размер: {formatFileSize(file.fileSize)}
                 </p>
