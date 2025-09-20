@@ -69,6 +69,8 @@ export class WaitingRoomGateway
         this.connections.get(roomId)!,
       );
 
+      await this.waitingRoomService.sendPresentationsStateToClient(roomId, ws);
+
       this.logger.log(`✅ ${userId} joined room ${roomId}`);
     } catch (error) {
       this.logger.error('Connection error:', error);
@@ -194,12 +196,6 @@ export class WaitingRoomGateway
     }
 
     const { roomId, userId } = info;
-    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
-      this.logger.warn(
-        `User ${userId} not authorized to start presentation in room ${roomId}`,
-      );
-      return;
-    }
 
     const presentation: IPresentation = {
       presentationId: uuidv4(),

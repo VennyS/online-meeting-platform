@@ -173,6 +173,36 @@ export class WaitingRoomService {
   }
 
   // --- Презентация ---
+  async sendPresentationsStateToClient(
+    roomId: string,
+    ws: WebSocket,
+  ): Promise<void> {
+    const presentations = await this.redis.getPresentations(roomId);
+
+    const msg = JSON.stringify({
+      event: 'presentations_state',
+      data: {
+        presentations: presentations.map((p) => ({
+          presentationId: p.presentationId,
+          url: p.url,
+          authorId: p.authorId,
+          currentPage: p.currentPage,
+          zoom: p.zoom,
+          scroll: p.scroll,
+        })),
+      },
+    });
+
+    if (ws.readyState === ws.OPEN) {
+      ws.send(msg);
+      this.logger.log(`Sent presentations state for room ${roomId} to client`);
+    } else {
+      this.logger.warn(
+        `Failed to send presentations state for room ${roomId}: WebSocket is not open`,
+      );
+    }
+  }
+
   async broadcastStartingPresentation(
     roomId: string,
     presentation: IPresentation,

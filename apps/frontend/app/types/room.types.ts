@@ -123,7 +123,20 @@ export type RoomWSMessage =
         y: number;
       }
     >
-  | WSMessage<"presentation_finished", { presentationId: string }>;
+  | WSMessage<"presentation_finished", { presentationId: string }>
+  | WSMessage<
+      "presentations_state",
+      {
+        presentations: Array<{
+          presentationId: string;
+          url: string;
+          authorId: string;
+          currentPage: number;
+          zoom: number;
+          scroll: { x: number; y: number };
+        }>;
+      }
+    >;
 
 export type RoomWSSendMessage =
   | WSMessage<

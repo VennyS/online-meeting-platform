@@ -190,6 +190,16 @@ export function useParticipantsWithPermissions(
           }));
           break;
 
+        case "presentations_state":
+          setPresentations((prev) => {
+            const newPresentations = new Map();
+            data.presentations.forEach((p: Presentation) => {
+              newPresentations.set(p.presentationId, p);
+            });
+            return newPresentations;
+          });
+          break;
+
         case "presentation_started":
           setPresentations((prev) => {
             const newPresentations = new Map(prev);
