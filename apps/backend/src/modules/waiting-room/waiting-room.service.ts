@@ -211,7 +211,12 @@ export class WaitingRoomService {
     presentation: IPresentation,
     roomConnections: Map<string, any>,
   ): Promise<void> {
-    // Сохраняем презентацию в Redis
+    await this.broadcastPresentationFinishedByUserId(
+      roomId,
+      presentation.authorId,
+      roomConnections,
+    );
+
     await this.redis.setPresentation(roomId, presentation);
 
     // Формируем сообщение для клиентов
@@ -360,7 +365,7 @@ export class WaitingRoomService {
     y: number,
     roomConnections: Map<string, any>,
   ): Promise<void> {
-    // Обновляем только scroll в Redis
+    // Получаем презентацию из Redis
     const presentation = await this.redis.getPresentation(
       roomId,
       presentationId,
@@ -371,10 +376,11 @@ export class WaitingRoomService {
       );
       return;
     }
-    presentation.scroll = { x, y };
-    await this.redis.setPresentation(roomId, presentation);
 
-    // Формируем сообщение
+    const updatedPresentation = { ...presentation, scroll: { x, y } };
+
+    await this.redis.setPresentation(roomId, updatedPresentation);
+
     const msg = JSON.stringify({
       event: 'presentation_scroll_changed',
       data: {
@@ -384,7 +390,6 @@ export class WaitingRoomService {
       },
     });
 
-    // Рассылаем сообщение
     for (const conn of roomConnections.values()) {
       if (conn.ws.readyState === conn.ws.OPEN) {
         conn.ws.send(msg);

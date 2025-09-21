@@ -15,7 +15,8 @@ export interface ParticipantsWithPermissions {
   remote: ParticipantWithPermissions[];
   permissionsMap: Record<RoomRole, UserPermissions>;
   waitingGuests: IWaitingGuest[];
-  presentations: Map<string, Presentation>;
+  localPresentation?: [string, Presentation];
+  remotePresentations: Map<string, Presentation>;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -317,12 +318,23 @@ export function useParticipantsWithPermissions(
     };
   });
 
+  const localPresentation: [string, Presentation] | undefined = Array.from(
+    presentations.entries()
+  ).find(([, presentation]) => presentation.authorId === String(localUserId));
+
+  const remotePresentations: Map<string, Presentation> = new Map(
+    Array.from(presentations.entries()).filter(
+      ([, presentation]) => presentation.authorId !== String(localUserId)
+    )
+  );
+
   return {
     local,
     remote,
     permissionsMap,
     waitingGuests,
-    presentations,
+    localPresentation,
+    remotePresentations,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
