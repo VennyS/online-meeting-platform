@@ -99,29 +99,20 @@ export type RoomWSMessage =
         currentPage: number;
         zoom: number;
         scroll: { x: number; y: number };
+        mode: "presentationWithCamera" | "presentationOnly";
       }
     >
   | WSMessage<
       "presentation_page_changed",
-      {
-        presentationId: string;
-        page: number;
-      }
+      { presentationId: string; page: number }
     >
   | WSMessage<
       "presentation_zoom_changed",
-      {
-        presentationId: string;
-        zoom: number;
-      }
+      { presentationId: string; zoom: number }
     >
   | WSMessage<
       "presentation_scroll_changed",
-      {
-        presentationId: string;
-        x: number;
-        y: number;
-      }
+      { presentationId: string; x: number; y: number }
     >
   | WSMessage<"presentation_finished", { presentationId: string }>
   | WSMessage<
@@ -134,7 +125,15 @@ export type RoomWSMessage =
           currentPage: number;
           zoom: number;
           scroll: { x: number; y: number };
+          mode: "presentationWithCamera" | "presentationOnly";
         }>;
+      }
+    >
+  | WSMessage<
+      "presentation_mode_changed",
+      {
+        presentationId: string;
+        mode: "presentationWithCamera" | "presentationOnly";
       }
     >;
 
@@ -146,24 +145,30 @@ export type RoomWSSendMessage =
   | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
   | WSMessage<"guest_join_request", { name: string }>
-  | WSMessage<"presentation_started", { url: string }>
+  | WSMessage<
+      "presentation_started",
+      {
+        url: string;
+        mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >
   | WSMessage<
       "presentation_page_changed",
       { presentationId: string; page: number }
     >
   | WSMessage<
       "presentation_zoom_changed",
-      {
-        presentationId: string;
-        zoom: number;
-      }
+      { presentationId: string; zoom: number }
     >
   | WSMessage<
       "presentation_scroll_changed",
+      { presentationId: string; x: number; y: number }
+    >
+  | WSMessage<"presentation_finished", { presentationId: string }>
+  | WSMessage<
+      "presentation_mode_changed",
       {
         presentationId: string;
-        x: number;
-        y: number;
+        mode: "presentationWithCamera" | "presentationOnly";
       }
-    >
-  | WSMessage<"presentation_finished", { presentationId: string }>;
+    >;

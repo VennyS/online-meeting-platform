@@ -4,7 +4,10 @@ import { RedisService } from '../../common/modules/redis/redis.service';
 import { WebSocket } from 'ws';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
-import { IPresentation } from './interfaces/presentation.interface';
+import {
+  IPresentation,
+  PresentationMode,
+} from './interfaces/presentation.interface';
 
 @Injectable()
 export class WaitingRoomService {
@@ -312,6 +315,41 @@ export class WaitingRoomService {
     }
     this.logger.log(
       `Broadcasted zoom change to ${newZoom} for presentation ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationModeChanged(
+    roomId: string,
+    presentationId: string,
+    mode: 'presentationWithCamera' | 'presentationOnly',
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Обновляем режим в Redis
+    const presentation = await this.redis.getPresentation(
+      roomId,
+      presentationId,
+    );
+    if (presentation) {
+      await this.redis.setPresentation(roomId, { ...presentation, mode });
+    }
+
+    // Формируем сообщение для клиентов
+    const msg = JSON.stringify({
+      event: 'presentation_mode_changed',
+      data: {
+        presentationId,
+        mode,
+      },
+    });
+
+    // Рассылаем сообщение всем активным соединениям
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted presentation mode change to ${mode} for ${presentationId} in room ${roomId}`,
     );
   }
 

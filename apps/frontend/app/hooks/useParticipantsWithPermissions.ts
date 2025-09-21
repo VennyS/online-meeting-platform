@@ -24,15 +24,24 @@ export interface ParticipantsWithPermissions {
   updateUserRole: (targetUserId: string, newRole: RoomRole) => void;
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
-  startPresentation: (url: string) => void;
+  startPresentation: (
+    url: string,
+    mode?: "presentationWithCamera" | "presentationOnly"
+  ) => void;
   changePage: (presentationId: string, newPage: number) => void;
   changeZoom: (presentationId: string, newZoom: number) => void;
   changeScroll: (
     presentationId: string,
     position: { x: number; y: number }
   ) => void;
+  changePresentationMode: (
+    presentationId: string,
+    mode: "presentationWithCamera" | "presentationOnly"
+  ) => void;
   finishPresentation: (presentationId: string) => void;
 }
+
+export type PresentationMode = "presentationWithCamera" | "presentationOnly";
 
 type Presentation = {
   presentationId: string;
@@ -41,6 +50,7 @@ type Presentation = {
   currentPage: number;
   zoom: number;
   scroll: { x: number; y: number };
+  mode: PresentationMode;
 };
 
 type ParticipantWithPermissions = {
@@ -107,13 +117,13 @@ export function useParticipantsWithPermissions(
     sendMessage("host_approval", { guestId, approved: false });
   }
 
-  function startPresentation(url: string) {
-    presentations.forEach((p, id) => {
-      if (p.authorId === String(localUserId)) {
-        finishPresentation(id);
-      }
-    });
-    sendMessage("presentation_started", { url });
+  function startPresentation(
+    url: string,
+    mode:
+      | "presentationWithCamera"
+      | "presentationOnly" = "presentationWithCamera"
+  ) {
+    sendMessage("presentation_started", { url, mode });
   }
 
   function changePage(presentationId: string, newPage: number) {
@@ -133,6 +143,13 @@ export function useParticipantsWithPermissions(
       x: position.x,
       y: position.y,
     });
+  }
+
+  function changePresentationMode(
+    presentationId: string,
+    mode: "presentationWithCamera" | "presentationOnly"
+  ) {
+    sendMessage("presentation_mode_changed", { presentationId, mode });
   }
 
   function finishPresentation(presentationId: string) {
@@ -210,6 +227,7 @@ export function useParticipantsWithPermissions(
               currentPage: data.currentPage,
               zoom: data.zoom,
               scroll: data.scroll,
+              mode: data.mode || "presentationWithCamera",
             });
             return newPresentations;
           });
@@ -219,7 +237,6 @@ export function useParticipantsWithPermissions(
           setPresentations((prev) => {
             const presentation = prev.get(data.presentationId);
             if (!presentation) return prev;
-
             return new Map(prev).set(data.presentationId, {
               ...presentation,
               currentPage: data.page,
@@ -231,7 +248,6 @@ export function useParticipantsWithPermissions(
           setPresentations((prev) => {
             const presentation = prev.get(data.presentationId);
             if (!presentation) return prev;
-
             return new Map(prev).set(data.presentationId, {
               ...presentation,
               zoom: data.zoom,
@@ -249,13 +265,20 @@ export function useParticipantsWithPermissions(
           setPresentations((prev) => {
             const presentation = prev.get(data.presentationId);
             if (!presentation) return prev;
-
             return new Map(prev).set(data.presentationId, {
               ...presentation,
-              scroll: {
-                x: data.x,
-                y: data.y,
-              },
+              scroll: { x: data.x, y: data.y },
+            });
+          });
+          break;
+
+        case "presentation_mode_changed":
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              mode: data.mode,
             });
           });
           break;
@@ -299,7 +322,7 @@ export function useParticipantsWithPermissions(
     remote,
     permissionsMap,
     waitingGuests,
-    presentations, // Изменено с presentation на presentations
+    presentations,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -308,6 +331,7 @@ export function useParticipantsWithPermissions(
     changePage,
     changeZoom,
     changeScroll,
+    changePresentationMode,
     finishPresentation,
   };
 }

@@ -10,6 +10,7 @@ import {
   RoomAudioRenderer,
   useRoomContext,
   useTracks,
+  VideoTrack,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { LocalParticipant, RoomEvent, Track } from "livekit-client";
@@ -29,6 +30,7 @@ import { getWebSocketUrl } from "@/app/config/websocketUrl";
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
+import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -37,7 +39,6 @@ const PDFViewer = dynamic(
   }
 );
 
-// Room Content Component
 const RoomContent = ({
   roomId,
   roomName,
@@ -65,11 +66,15 @@ const RoomContent = ({
     changeZoom,
     changeScroll,
     finishPresentation,
+    changePresentationMode,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
   const [activePresentationId, setActivePresentationId] = useState<
     string | null
   >(null);
+  const [presentationMode, setPresentationMode] = useState<PresentationMode>(
+    "presentationWithCamera"
+  );
 
   const showPresentationButton =
     local.permissions.permissions.canStartPresentation &&
@@ -85,7 +90,6 @@ const RoomContent = ({
     if (!room) return;
 
     const handleMessage = () => {
-      // если чат не открыт → увеличиваем счетчик
       if (openedRightPanel !== "chat") {
         setUnreadCount((prev) => prev + 1);
       }
@@ -104,10 +108,8 @@ const RoomContent = ({
   useEffect(() => {
     if (!local.participant) return;
 
-    // проверяем что это локальный участник
     if (local.participant instanceof LocalParticipant) {
       if (!local.permissions.permissions.canShareScreen) {
-        // выключаем стрим, если он идет
         const screenTrackPub = Array.from(
           local.participant.trackPublications.values()
         ).find((pub) => pub.source === "screen_share");
@@ -125,7 +127,6 @@ const RoomContent = ({
           (p) => p.authorId === String(user.id)
         )
       ) {
-        // Завершаем все презентации пользователя, если права отозваны
         presentations.forEach((p, id) => {
           if (p.authorId === String(user.id)) {
             finishPresentation(id);
@@ -160,7 +161,7 @@ const RoomContent = ({
     };
 
     handleFetchFiles();
-  }, []);
+  }, [roomId]);
 
   useEffect(() => {
     if (presentations.size > 0 && !activePresentationId) {
@@ -181,6 +182,15 @@ const RoomContent = ({
     ? presentations.get(activePresentationId)
     : null;
 
+  // Фильтруем трек камеры ведущего
+  const presenterCameraTrack = activePresentation
+    ? tracks.find(
+        (track) =>
+          track.source === Track.Source.Camera &&
+          track.participant.identity === activePresentation.authorId
+      )
+    : null;
+
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
@@ -188,30 +198,50 @@ const RoomContent = ({
       <div className={styles.gridContainer}>
         {activePresentation ? (
           <div className={styles.presentationMain}>
-            <PDFViewer
-              key={activePresentation.url}
-              isAuthor={
-                activePresentation.authorId === local.participant.identity
-              }
-              pdfUrl={activePresentation.url}
-              onPageChange={(newPage) =>
-                changePage(activePresentationId!, newPage)
-              }
-              onZoomChange={(newZoom) =>
-                changeZoom(activePresentationId!, newZoom)
-              }
-              currentPage={activePresentation.currentPage}
-              zoom={activePresentation.zoom}
-              onScrollChange={(position) =>
-                changeScroll(activePresentationId!, position)
-              }
-              scrollPosition={activePresentation.scroll}
-            />
-            <div className={styles.participantsStrip}>
-              <GridLayout tracks={tracks}>
-                <ParticipantTile />
-              </GridLayout>
+            <div className={styles.presentationWrapper}>
+              <PDFViewer
+                key={activePresentation.url}
+                isAuthor={
+                  activePresentation.authorId === local.participant.identity
+                }
+                pdfUrl={activePresentation.url}
+                onPageChange={(newPage) =>
+                  changePage(activePresentationId!, newPage)
+                }
+                onZoomChange={(newZoom) =>
+                  changeZoom(activePresentationId!, newZoom)
+                }
+                currentPage={activePresentation.currentPage}
+                zoom={activePresentation.zoom}
+                onScrollChange={(position) =>
+                  changeScroll(activePresentationId!, position)
+                }
+                scrollPosition={activePresentation.scroll}
+              />
+              {presentationMode === "presentationWithCamera" &&
+                presenterCameraTrack &&
+                presenterCameraTrack.publication && (
+                  <div className={styles.presenterCamera}>
+                    <VideoTrack trackRef={presenterCameraTrack} />
+                  </div>
+                )}
             </div>
+            {presentationMode === "presentationWithCamera" && (
+              <div className={styles.participantsStrip}>
+                <GridLayout
+                  tracks={tracks.filter((t) => t !== presenterCameraTrack)}
+                >
+                  <ParticipantTile />
+                </GridLayout>
+              </div>
+            )}
+            {presentationMode === "presentationOnly" && (
+              <div className={styles.participantsStrip}>
+                <GridLayout tracks={tracks}>
+                  <ParticipantTile />
+                </GridLayout>
+              </div>
+            )}
           </div>
         ) : (
           <GridLayout tracks={tracks}>
@@ -234,7 +264,6 @@ const RoomContent = ({
       >
         {!!user && <Chat roomName={roomId} user={user} />}
       </div>
-
       <div
         className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "files",
@@ -274,6 +303,22 @@ const RoomContent = ({
             }}
           >
             {!activePresentation ? "Транслировать презентацию" : "Стоп"}
+          </button>
+        )}
+        {activePresentation && (
+          <button
+            onClick={() =>
+              changePresentationMode(
+                activePresentationId!,
+                activePresentation.mode === "presentationWithCamera"
+                  ? "presentationOnly"
+                  : "presentationWithCamera"
+              )
+            }
+          >
+            {activePresentation.mode === "presentationWithCamera"
+              ? "Только презентация"
+              : "Презентация с камерой"}
           </button>
         )}
         <button onClick={() => handleChangeOpenPanel("participants")}>

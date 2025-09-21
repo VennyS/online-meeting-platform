@@ -192,7 +192,8 @@ export class WaitingRoomGateway
 
   @SubscribeMessage('presentation_started')
   async startPresentation(
-    @MessageBody() data: { url: string },
+    @MessageBody()
+    data: { url: string; mode?: 'presentationWithCamera' | 'presentationOnly' },
     @ConnectedSocket() ws: WebSocket,
   ) {
     const info = this.findUserBySocket(ws);
@@ -210,6 +211,7 @@ export class WaitingRoomGateway
       currentPage: 1,
       zoom: 1,
       scroll: { x: 0, y: 0 },
+      mode: data.mode || 'presentationWithCamera',
     };
 
     await this.waitingRoomService.broadcastStartingPresentation(
@@ -297,6 +299,37 @@ export class WaitingRoomGateway
       data.presentationId,
       data.x,
       data.y,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_mode_changed')
+  async changePresentationMode(
+    @MessageBody()
+    data: {
+      presentationId: string;
+      mode: 'presentationWithCamera' | 'presentationOnly';
+    },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Presentation mode change from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to change presentation mode in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationModeChanged(
+      roomId,
+      data.presentationId,
+      data.mode,
       this.connections.get(roomId)!,
     );
   }
