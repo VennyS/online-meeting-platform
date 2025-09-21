@@ -90,6 +90,12 @@ export class WaitingRoomGateway
             userId,
           );
 
+          await this.waitingRoomService.broadcastPresentationFinishedByUserId(
+            roomId,
+            userId,
+            this.connections.get(roomId)!,
+          );
+
           break;
         }
       }

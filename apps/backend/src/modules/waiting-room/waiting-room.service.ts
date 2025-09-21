@@ -383,4 +383,23 @@ export class WaitingRoomService {
       `Broadcasted presentation finish for ${presentationId} in room ${roomId}`,
     );
   }
+
+  async broadcastPresentationFinishedByUserId(
+    roomId: string,
+    userId: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const presentations = await this.redis.getPresentations(roomId);
+    const presentationId = presentations.find(
+      (p) => p.authorId === userId,
+    )?.presentationId;
+
+    if (!presentationId) return;
+
+    await this.broadcastPresentationFinished(
+      roomId,
+      presentationId,
+      roomConnections,
+    );
+  }
 }
