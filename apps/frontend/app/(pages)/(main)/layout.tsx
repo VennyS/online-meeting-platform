@@ -8,7 +8,7 @@ export default function MainLayout({
   modal,
 }: {
   children: React.ReactNode;
-  modal?: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [isModalOpened, setIsModalOpened] = useState(false);
