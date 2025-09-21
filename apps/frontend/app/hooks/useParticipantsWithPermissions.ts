@@ -1,6 +1,6 @@
 import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   IWaitingGuest,
   Permissions,
@@ -9,33 +9,68 @@ import {
   RoomWSSendMessage,
   UserPermissions,
 } from "../types/room.types";
-import React from "react";
 
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;
   remote: ParticipantWithPermissions[];
+  permissionsMap: Record<RoomRole, UserPermissions>;
+  waitingGuests: IWaitingGuest[];
+  presentations: Map<string, Presentation>;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
     value: boolean
   ) => void;
   updateUserRole: (targetUserId: string, newRole: RoomRole) => void;
-  waitingGuests: IWaitingGuest[];
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
-  permissionsMap: Record<RoomRole, UserPermissions>;
+  startPresentation: (
+    url: string,
+    mode?: "presentationWithCamera" | "presentationOnly"
+  ) => void;
+  changePage: (presentationId: string, newPage: number) => void;
+  changeZoom: (presentationId: string, newZoom: number) => void;
+  changeScroll: (
+    presentationId: string,
+    position: { x: number; y: number }
+  ) => void;
+  changePresentationMode: (
+    presentationId: string,
+    mode: "presentationWithCamera" | "presentationOnly"
+  ) => void;
+  finishPresentation: (presentationId: string) => void;
 }
+
+export type PresentationMode = "presentationWithCamera" | "presentationOnly";
+
+type Presentation = {
+  presentationId: string;
+  url: string;
+  authorId: string;
+  currentPage: number;
+  zoom: number;
+  scroll: { x: number; y: number };
+  mode: PresentationMode;
+};
 
 type ParticipantWithPermissions = {
   participant: RemoteParticipant | LocalParticipant;
   permissions: UserPermissions;
 };
 
-// ---------- Хук ----------
 const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
-  owner: { role: "owner", permissions: { canShareScreen: true } },
-  admin: { role: "admin", permissions: { canShareScreen: true } },
-  participant: { role: "participant", permissions: { canShareScreen: true } },
+  owner: {
+    role: "owner",
+    permissions: { canShareScreen: true, canStartPresentation: true },
+  },
+  admin: {
+    role: "admin",
+    permissions: { canShareScreen: true, canStartPresentation: true },
+  },
+  participant: {
+    role: "participant",
+    permissions: { canShareScreen: true, canStartPresentation: true },
+  },
 });
 
 export function useParticipantsWithPermissions(
@@ -43,21 +78,17 @@ export function useParticipantsWithPermissions(
   localUserId: number
 ): ParticipantsWithPermissions | null {
   const participants = useParticipants();
-
-  const [permissionsMap, setPermissionsMap] = React.useState<
+  const [permissionsMap, setPermissionsMap] = useState<
     Record<RoomRole, UserPermissions>
   >(getDefaultPermissions());
-
-  const [usersRoles, setUsersRoles] = React.useState<Record<string, RoomRole>>(
-    {}
+  const [usersRoles, setUsersRoles] = useState<Record<string, RoomRole>>({});
+  const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
+  const [presentations, setPresentations] = useState<Map<string, Presentation>>(
+    new Map()
   );
-
-  const [waitingGuests, setWaitingGuests] = React.useState<IWaitingGuest[]>([]);
-
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
 
-  // Универсальный отправитель сообщений
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
     data: Extract<RoomWSSendMessage, { event: E }>["data"]
@@ -78,13 +109,52 @@ export function useParticipantsWithPermissions(
     sendMessage("update_role", { targetUserId, newRole });
   }
 
-  const approveGuest = (guestId: string) => {
+  function approveGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: true });
-  };
+  }
 
-  const rejectGuest = (guestId: string) => {
+  function rejectGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: false });
-  };
+  }
+
+  function startPresentation(
+    url: string,
+    mode:
+      | "presentationWithCamera"
+      | "presentationOnly" = "presentationWithCamera"
+  ) {
+    sendMessage("presentation_started", { url, mode });
+  }
+
+  function changePage(presentationId: string, newPage: number) {
+    sendMessage("presentation_page_changed", { presentationId, page: newPage });
+  }
+
+  function changeZoom(presentationId: string, newZoom: number) {
+    sendMessage("presentation_zoom_changed", { presentationId, zoom: newZoom });
+  }
+
+  function changeScroll(
+    presentationId: string,
+    position: { x: number; y: number }
+  ) {
+    sendMessage("presentation_scroll_changed", {
+      presentationId,
+      x: position.x,
+      y: position.y,
+    });
+  }
+
+  function changePresentationMode(
+    presentationId: string,
+    mode: "presentationWithCamera" | "presentationOnly"
+  ) {
+    sendMessage("presentation_mode_changed", { presentationId, mode });
+  }
+
+  function finishPresentation(presentationId: string) {
+    sendMessage("presentation_finished", { presentationId });
+  }
 
   useEffect(() => {
     if (!ws) return;
@@ -112,7 +182,6 @@ export function useParticipantsWithPermissions(
           break;
 
         case "roles_updated":
-          // приводим ключи к строкам
           const roles: Record<string, RoomRole> = {};
           for (const [id, role] of Object.entries(data.roles)) {
             roles[String(id)] = role;
@@ -138,16 +207,92 @@ export function useParticipantsWithPermissions(
           }));
           break;
 
-        case "guest_approved":
-          // можно обработать токен если нужно
+        case "presentations_state":
+          setPresentations((prev) => {
+            const newPresentations = new Map();
+            data.presentations.forEach((p: Presentation) => {
+              newPresentations.set(p.presentationId, p);
+            });
+            return newPresentations;
+          });
           break;
 
-        case "guest_rejected":
-          // здесь просто игнорируем или делаем что-то
+        case "presentation_started":
+          setPresentations((prev) => {
+            const newPresentations = new Map(prev);
+            newPresentations.set(data.presentationId, {
+              presentationId: data.presentationId,
+              url: data.url,
+              authorId: data.authorId,
+              currentPage: data.currentPage,
+              zoom: data.zoom,
+              scroll: data.scroll,
+              mode: data.mode || "presentationWithCamera",
+            });
+            return newPresentations;
+          });
+          break;
+
+        case "presentation_page_changed":
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              currentPage: data.page,
+            });
+          });
+          break;
+
+        case "presentation_zoom_changed":
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              zoom: data.zoom,
+            });
+          });
+          break;
+
+        case "presentation_scroll_changed":
+          if (
+            presentations.get(data.presentationId)?.authorId ===
+            String(localUserId)
+          ) {
+            break;
+          }
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              scroll: { x: data.x, y: data.y },
+            });
+          });
+          break;
+
+        case "presentation_mode_changed":
+          setPresentations((prev) => {
+            const presentation = prev.get(data.presentationId);
+            if (!presentation) return prev;
+            return new Map(prev).set(data.presentationId, {
+              ...presentation,
+              mode: data.mode,
+            });
+          });
+          break;
+
+        case "presentation_finished":
+          setPresentations((prev) => {
+            const newPresentations = new Map(prev);
+            newPresentations.delete(data.presentationId);
+            return newPresentations;
+          });
           break;
       }
     };
-  }, [ws, localUserId]);
+  }, [ws, localUserId, presentations]);
 
   if (!localParticipant) return null;
 
@@ -175,11 +320,18 @@ export function useParticipantsWithPermissions(
   return {
     local,
     remote,
+    permissionsMap,
+    waitingGuests,
+    presentations,
     updateRolePermissions,
     updateUserRole,
-    waitingGuests,
     approveGuest,
     rejectGuest,
-    permissionsMap,
+    startPresentation,
+    changePage,
+    changeZoom,
+    changeScroll,
+    changePresentationMode,
+    finishPresentation,
   };
 }

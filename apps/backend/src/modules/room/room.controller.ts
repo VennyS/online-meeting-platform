@@ -13,7 +13,6 @@ import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/createRoomDto';
 import { RoomByShortIdPipe } from 'src/common/pipes/room.pipe';
 import type { Room } from '@prisma/client';
-import { LivekitService } from '../../common/modules/livekit/livekit.service';
 import { Prequisites } from './interfaces/prequisites.interface';
 import { PostMessageDto } from './dto/postMessageDto';
 import { PostMessageResponseDto } from './dto/postMessageResponseDto';

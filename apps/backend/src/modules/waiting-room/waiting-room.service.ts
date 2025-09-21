@@ -4,6 +4,10 @@ import { RedisService } from '../../common/modules/redis/redis.service';
 import { WebSocket } from 'ws';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
+import {
+  IPresentation,
+  PresentationMode,
+} from './interfaces/presentation.interface';
 
 @Injectable()
 export class WaitingRoomService {
@@ -169,5 +173,271 @@ export class WaitingRoomService {
     for (const conn of roomConnections.values()) {
       if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
     }
+  }
+
+  // --- Презентация ---
+  async sendPresentationsStateToClient(
+    roomId: string,
+    ws: WebSocket,
+  ): Promise<void> {
+    const presentations = await this.redis.getPresentations(roomId);
+
+    const msg = JSON.stringify({
+      event: 'presentations_state',
+      data: {
+        presentations: presentations.map((p) => ({
+          presentationId: p.presentationId,
+          url: p.url,
+          authorId: p.authorId,
+          currentPage: p.currentPage,
+          zoom: p.zoom,
+          scroll: p.scroll,
+        })),
+      },
+    });
+
+    if (ws.readyState === ws.OPEN) {
+      ws.send(msg);
+      this.logger.log(`Sent presentations state for room ${roomId} to client`);
+    } else {
+      this.logger.warn(
+        `Failed to send presentations state for room ${roomId}: WebSocket is not open`,
+      );
+    }
+  }
+
+  async broadcastStartingPresentation(
+    roomId: string,
+    presentation: IPresentation,
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Сохраняем презентацию в Redis
+    await this.redis.setPresentation(roomId, presentation);
+
+    // Формируем сообщение для клиентов
+    const msg = JSON.stringify({
+      event: 'presentation_started',
+      data: {
+        presentationId: presentation.presentationId,
+        url: presentation.url,
+        authorId: presentation.authorId,
+        currentPage: presentation.currentPage,
+        zoom: presentation.zoom,
+        scroll: presentation.scroll,
+      },
+    });
+
+    // Рассылаем сообщение всем активным соединениям
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted presentation start for ${presentation.presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationPageChanged(
+    roomId: string,
+    presentationId: string,
+    newPage: number,
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Обновляем только currentPage в Redis
+    const presentation = await this.redis.getPresentation(
+      roomId,
+      presentationId,
+    );
+    if (!presentation) {
+      this.logger.warn(
+        `Presentation ${presentationId} not found in room ${roomId}`,
+      );
+      return;
+    }
+    presentation.currentPage = newPage;
+    await this.redis.setPresentation(roomId, presentation);
+
+    // Формируем сообщение
+    const msg = JSON.stringify({
+      event: 'presentation_page_changed',
+      data: {
+        presentationId,
+        page: newPage,
+      },
+    });
+
+    // Рассылаем сообщение
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted page change to ${newPage} for presentation ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationZoomChanged(
+    roomId: string,
+    presentationId: string,
+    newZoom: number,
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Обновляем только zoom в Redis
+    const presentation = await this.redis.getPresentation(
+      roomId,
+      presentationId,
+    );
+    if (!presentation) {
+      this.logger.warn(
+        `Presentation ${presentationId} not found in room ${roomId}`,
+      );
+      return;
+    }
+    presentation.zoom = newZoom;
+    await this.redis.setPresentation(roomId, presentation);
+
+    // Формируем сообщение
+    const msg = JSON.stringify({
+      event: 'presentation_zoom_changed',
+      data: {
+        presentationId,
+        zoom: newZoom,
+      },
+    });
+
+    // Рассылаем сообщение
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted zoom change to ${newZoom} for presentation ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationModeChanged(
+    roomId: string,
+    presentationId: string,
+    mode: 'presentationWithCamera' | 'presentationOnly',
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Обновляем режим в Redis
+    const presentation = await this.redis.getPresentation(
+      roomId,
+      presentationId,
+    );
+    if (presentation) {
+      await this.redis.setPresentation(roomId, { ...presentation, mode });
+    }
+
+    // Формируем сообщение для клиентов
+    const msg = JSON.stringify({
+      event: 'presentation_mode_changed',
+      data: {
+        presentationId,
+        mode,
+      },
+    });
+
+    // Рассылаем сообщение всем активным соединениям
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted presentation mode change to ${mode} for ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationScrollChanged(
+    roomId: string,
+    presentationId: string,
+    x: number,
+    y: number,
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Обновляем только scroll в Redis
+    const presentation = await this.redis.getPresentation(
+      roomId,
+      presentationId,
+    );
+    if (!presentation) {
+      this.logger.warn(
+        `Presentation ${presentationId} not found in room ${roomId}`,
+      );
+      return;
+    }
+    presentation.scroll = { x, y };
+    await this.redis.setPresentation(roomId, presentation);
+
+    // Формируем сообщение
+    const msg = JSON.stringify({
+      event: 'presentation_scroll_changed',
+      data: {
+        presentationId,
+        x,
+        y,
+      },
+    });
+
+    // Рассылаем сообщение
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted scroll change to (${x}, ${y}) for presentation ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationFinished(
+    roomId: string,
+    presentationId: string,
+    roomConnections: Map<string, any>,
+  ): Promise<void> {
+    // Удаляем презентацию из Redis
+    await this.redis.deletePresentation(roomId, presentationId);
+
+    // Формируем сообщение
+    const msg = JSON.stringify({
+      event: 'presentation_finished',
+      data: {
+        presentationId,
+      },
+    });
+
+    // Рассылаем сообщение
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+    this.logger.log(
+      `Broadcasted presentation finish for ${presentationId} in room ${roomId}`,
+    );
+  }
+
+  async broadcastPresentationFinishedByUserId(
+    roomId: string,
+    userId: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const presentations = await this.redis.getPresentations(roomId);
+    const presentationId = presentations.find(
+      (p) => p.authorId === userId,
+    )?.presentationId;
+
+    if (!presentationId) return;
+
+    await this.broadcastPresentationFinished(
+      roomId,
+      presentationId,
+      roomConnections,
+    );
   }
 }

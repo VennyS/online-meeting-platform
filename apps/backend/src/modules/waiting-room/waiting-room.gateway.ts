@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -10,6 +11,7 @@ import {
 import { Server, WebSocket } from 'ws';
 import { Logger } from '@nestjs/common';
 import { WaitingRoomService } from './waiting-room.service';
+import { IPresentation } from './interfaces/presentation.interface';
 
 @WebSocketGateway({ path: '/waiting-room' })
 export class WaitingRoomGateway
@@ -67,6 +69,8 @@ export class WaitingRoomGateway
         this.connections.get(roomId)!,
       );
 
+      await this.waitingRoomService.sendPresentationsStateToClient(roomId, ws);
+
       this.logger.log(`✅ ${userId} joined room ${roomId}`);
     } catch (error) {
       this.logger.error('Connection error:', error);
@@ -84,6 +88,12 @@ export class WaitingRoomGateway
           await this.waitingRoomService.removeGuestFromWaitingIfPresent(
             roomId,
             userId,
+          );
+
+          await this.waitingRoomService.broadcastPresentationFinishedByUserId(
+            roomId,
+            userId,
+            this.connections.get(roomId)!,
           );
 
           break;
@@ -176,6 +186,176 @@ export class WaitingRoomGateway
     await this.waitingRoomService.handleRoleUpdate(
       roomId,
       data,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_started')
+  async startPresentation(
+    @MessageBody()
+    data: { url: string; mode?: 'presentationWithCamera' | 'presentationOnly' },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Presentation start from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+
+    const presentation: IPresentation = {
+      presentationId: uuidv4(),
+      url: data.url,
+      authorId: userId,
+      currentPage: 1,
+      zoom: 1,
+      scroll: { x: 0, y: 0 },
+      mode: data.mode || 'presentationWithCamera',
+    };
+
+    await this.waitingRoomService.broadcastStartingPresentation(
+      roomId,
+      presentation,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_page_changed')
+  async changePage(
+    @MessageBody() data: { presentationId: string; page: number },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Page change from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to change page in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationPageChanged(
+      roomId,
+      data.presentationId,
+      data.page,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_zoom_changed')
+  async changeZoom(
+    @MessageBody() data: { presentationId: string; zoom: number },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Zoom change from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to change zoom in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationZoomChanged(
+      roomId,
+      data.presentationId,
+      data.zoom,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_scroll_changed')
+  async changeScroll(
+    @MessageBody() data: { presentationId: string; x: number; y: number },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Scroll change from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to change scroll in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationScrollChanged(
+      roomId,
+      data.presentationId,
+      data.x,
+      data.y,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_mode_changed')
+  async changePresentationMode(
+    @MessageBody()
+    data: {
+      presentationId: string;
+      mode: 'presentationWithCamera' | 'presentationOnly';
+    },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Presentation mode change from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to change presentation mode in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationModeChanged(
+      roomId,
+      data.presentationId,
+      data.mode,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('presentation_finished')
+  async finishPresentation(
+    @MessageBody() data: { presentationId: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Presentation finish from unknown socket');
+      return;
+    }
+
+    const { roomId, userId } = info;
+    if (!(await this.waitingRoomService.isOwnerOrAdmin(roomId, userId))) {
+      this.logger.warn(
+        `User ${userId} not authorized to finish presentation in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.broadcastPresentationFinished(
+      roomId,
+      data.presentationId,
       this.connections.get(roomId)!,
     );
   }

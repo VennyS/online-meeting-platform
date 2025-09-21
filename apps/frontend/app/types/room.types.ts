@@ -63,6 +63,7 @@ export interface IPrequisites {
 
 export interface Permissions {
   canShareScreen?: boolean;
+  canStartPresentation?: boolean;
 }
 
 export interface UserPermissions {
@@ -88,7 +89,53 @@ export type RoomWSMessage =
     >
   | WSMessage<"guest_approved", { token: string }>
   | WSMessage<"guest_rejected", {}>
-  | WSMessage<"roles_updated", { roles: Record<string, RoomRole> }>;
+  | WSMessage<"roles_updated", { roles: Record<string, RoomRole> }>
+  | WSMessage<
+      "presentation_started",
+      {
+        presentationId: string;
+        url: string;
+        authorId: string;
+        currentPage: number;
+        zoom: number;
+        scroll: { x: number; y: number };
+        mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >
+  | WSMessage<
+      "presentation_page_changed",
+      { presentationId: string; page: number }
+    >
+  | WSMessage<
+      "presentation_zoom_changed",
+      { presentationId: string; zoom: number }
+    >
+  | WSMessage<
+      "presentation_scroll_changed",
+      { presentationId: string; x: number; y: number }
+    >
+  | WSMessage<"presentation_finished", { presentationId: string }>
+  | WSMessage<
+      "presentations_state",
+      {
+        presentations: Array<{
+          presentationId: string;
+          url: string;
+          authorId: string;
+          currentPage: number;
+          zoom: number;
+          scroll: { x: number; y: number };
+          mode: "presentationWithCamera" | "presentationOnly";
+        }>;
+      }
+    >
+  | WSMessage<
+      "presentation_mode_changed",
+      {
+        presentationId: string;
+        mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -97,4 +144,31 @@ export type RoomWSSendMessage =
     >
   | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
-  | WSMessage<"guest_join_request", { name: string }>;
+  | WSMessage<"guest_join_request", { name: string }>
+  | WSMessage<
+      "presentation_started",
+      {
+        url: string;
+        mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >
+  | WSMessage<
+      "presentation_page_changed",
+      { presentationId: string; page: number }
+    >
+  | WSMessage<
+      "presentation_zoom_changed",
+      { presentationId: string; zoom: number }
+    >
+  | WSMessage<
+      "presentation_scroll_changed",
+      { presentationId: string; x: number; y: number }
+    >
+  | WSMessage<"presentation_finished", { presentationId: string }>
+  | WSMessage<
+      "presentation_mode_changed",
+      {
+        presentationId: string;
+        mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >;

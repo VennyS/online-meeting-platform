@@ -10,6 +10,7 @@ import {
   RoomAudioRenderer,
   useRoomContext,
   useTracks,
+  VideoTrack,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { LocalParticipant, RoomEvent, Track } from "livekit-client";
@@ -26,8 +27,18 @@ import {
 } from "@/app/providers/participants.provider";
 import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
 import { getWebSocketUrl } from "@/app/config/websocketUrl";
+import { fileService, IFile } from "@/app/services/file.service";
+import dynamic from "next/dynamic";
+import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
+import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
 
-// Room Content Component
+const PDFViewer = dynamic(
+  () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
+  {
+    ssr: false,
+  }
+);
+
 const RoomContent = ({
   roomId,
   roomName,
@@ -42,19 +53,43 @@ const RoomContent = ({
     ],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
-  const [copied, setCopied] = useState(false);
-  const [manualText, setManualText] = useState<string | null>(null);
+
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
-  const user = useUser();
+  const { user } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
   const room = useRoomContext();
-  const { local } = useParticipantsContext();
+  const {
+    local,
+    presentations,
+    startPresentation,
+    changePage,
+    changeZoom,
+    changeScroll,
+    finishPresentation,
+    changePresentationMode,
+  } = useParticipantsContext();
+  const [files, setFiles] = useState<IFile[]>([]);
+  const [activePresentationId, setActivePresentationId] = useState<
+    string | null
+  >(null);
+  const [presentationMode, setPresentationMode] = useState<PresentationMode>(
+    "presentationWithCamera"
+  );
+
+  const showPresentationButton =
+    local.permissions.permissions.canStartPresentation &&
+    user &&
+    files.length > 0 &&
+    (!presentations.size ||
+      (presentations.size > 0 &&
+        Array.from(presentations.values()).some(
+          (p) => p.authorId === String(user.id)
+        )));
 
   useEffect(() => {
     if (!room) return;
 
     const handleMessage = () => {
-      // если чат не открыт → увеличиваем счетчик
       if (openedRightPanel !== "chat") {
         setUnreadCount((prev) => prev + 1);
       }
@@ -73,10 +108,8 @@ const RoomContent = ({
   useEffect(() => {
     if (!local.participant) return;
 
-    // проверяем что это локальный участник
     if (local.participant instanceof LocalParticipant) {
       if (!local.permissions.permissions.canShareScreen) {
-        // выключаем стрим, если он идет
         const screenTrackPub = Array.from(
           local.participant.trackPublications.values()
         ).find((pub) => pub.source === "screen_share");
@@ -85,24 +118,29 @@ const RoomContent = ({
           local.participant.unpublishTrack(screenTrackPub.track);
         }
       }
+
+      if (
+        !local.permissions.permissions.canStartPresentation &&
+        presentations.size > 0 &&
+        user &&
+        Array.from(presentations.values()).some(
+          (p) => p.authorId === String(user.id)
+        )
+      ) {
+        presentations.forEach((p, id) => {
+          if (p.authorId === String(user.id)) {
+            finishPresentation(id);
+          }
+        });
+      }
     }
-  }, [local.permissions.permissions.canShareScreen, local.participant]);
-
-  const generateMeetingInfo = () => {
-    const meetingDate = new Date().toLocaleString("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const meetingLink = `${window.location.origin}/room/${roomId}`;
-
-    return `Встреча: ${roomName}
-Дата: ${meetingDate} (Москва)
-Подключиться: ${meetingLink}`;
-  };
+  }, [
+    local.permissions.permissions.canShareScreen,
+    local.participant,
+    presentations,
+    user,
+    finishPresentation,
+  ]);
 
   const handleChangeOpenPanel = (panel: Panel) => {
     if (panel !== openedRightPanel) {
@@ -112,41 +150,126 @@ const RoomContent = ({
     setOpenedRightPanel(undefined);
   };
 
-  const handleCopy = async () => {
-    const text = generateMeetingInfo();
+  useEffect(() => {
+    const handleFetchFiles = async () => {
+      try {
+        const files = await fileService.listFiles(roomId, 0, 10, "PDF");
+        setFiles(files);
+      } catch (err) {
+        console.error("Error fetching files:", err);
+      }
+    };
 
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Не удалось скопировать:", err);
-      setManualText(text);
+    handleFetchFiles();
+  }, [roomId]);
+
+  useEffect(() => {
+    if (presentations.size > 0 && !activePresentationId) {
+      const userPresentation = Array.from(presentations.entries()).find(
+        ([, p]) => p.authorId === String(user?.id)
+      );
+      setActivePresentationId(
+        userPresentation
+          ? userPresentation[0]
+          : Array.from(presentations.keys())[0]
+      );
+    } else if (presentations.size === 0) {
+      setActivePresentationId(null);
     }
-  };
+  }, [presentations, user, activePresentationId]);
+
+  const activePresentation = activePresentationId
+    ? presentations.get(activePresentationId)
+    : null;
+
+  // Фильтруем трек камеры ведущего
+  const presenterCameraTrack = activePresentation
+    ? tracks.find(
+        (track) =>
+          track.source === Track.Source.Camera &&
+          track.participant.identity === activePresentation.authorId
+      )
+    : null;
 
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
-        <GridLayout tracks={tracks}>
-          <ParticipantTile />
-        </GridLayout>
+        {activePresentation ? (
+          <div className={styles.presentationMain}>
+            <div className={styles.presentationWrapper}>
+              <PDFViewer
+                key={activePresentation.url}
+                isAuthor={
+                  activePresentation.authorId === local.participant.identity
+                }
+                pdfUrl={activePresentation.url}
+                onPageChange={(newPage) =>
+                  changePage(activePresentationId!, newPage)
+                }
+                onZoomChange={(newZoom) =>
+                  changeZoom(activePresentationId!, newZoom)
+                }
+                currentPage={activePresentation.currentPage}
+                zoom={activePresentation.zoom}
+                onScrollChange={(position) =>
+                  changeScroll(activePresentationId!, position)
+                }
+                scrollPosition={activePresentation.scroll}
+              />
+              {presentationMode === "presentationWithCamera" &&
+                presenterCameraTrack &&
+                presenterCameraTrack.publication && (
+                  <div className={styles.presenterCamera}>
+                    <VideoTrack trackRef={presenterCameraTrack} />
+                  </div>
+                )}
+            </div>
+            {presentationMode === "presentationWithCamera" && (
+              <div className={styles.participantsStrip}>
+                <GridLayout
+                  tracks={tracks.filter((t) => t !== presenterCameraTrack)}
+                >
+                  <ParticipantTile />
+                </GridLayout>
+              </div>
+            )}
+            {presentationMode === "presentationOnly" && (
+              <div className={styles.participantsStrip}>
+                <GridLayout tracks={tracks}>
+                  <ParticipantTile />
+                </GridLayout>
+              </div>
+            )}
+          </div>
+        ) : (
+          <GridLayout tracks={tracks}>
+            <ParticipantTile />
+          </GridLayout>
+        )}
       </div>
+
       <div
-        className={cn(styles.participants, {
+        className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "participants",
         })}
       >
-        <ParticipantsList />
+        <ParticipantsList roomId={roomId} roomName={roomName} />
       </div>
       <div
-        className={cn(styles.chat, {
+        className={cn(styles.rightPanel, {
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        {!!user.user && <Chat roomName={roomId} user={user.user} />}
+        {!!user && <Chat roomName={roomId} user={user} />}
+      </div>
+      <div
+        className={cn(styles.rightPanel, {
+          [styles.active]: openedRightPanel === "files",
+        })}
+      >
+        <PresentationList files={files} onClick={startPresentation} />
       </div>
 
       {openedRightPanel && (
@@ -169,6 +292,35 @@ const RoomContent = ({
             leave: false,
           }}
         />
+        {showPresentationButton && (
+          <button
+            onClick={() => {
+              if (!activePresentation) {
+                handleChangeOpenPanel("files");
+              } else if (activePresentation.authorId === String(user?.id)) {
+                finishPresentation(activePresentationId!);
+              }
+            }}
+          >
+            {!activePresentation ? "Транслировать презентацию" : "Стоп"}
+          </button>
+        )}
+        {activePresentation && (
+          <button
+            onClick={() =>
+              changePresentationMode(
+                activePresentationId!,
+                activePresentation.mode === "presentationWithCamera"
+                  ? "presentationOnly"
+                  : "presentationWithCamera"
+              )
+            }
+          >
+            {activePresentation.mode === "presentationWithCamera"
+              ? "Только презентация"
+              : "Презентация с камерой"}
+          </button>
+        )}
         <button onClick={() => handleChangeOpenPanel("participants")}>
           {openedRightPanel === "participants" ? "Закрыть" : "Открыть"}
         </button>
@@ -182,22 +334,8 @@ const RoomContent = ({
             <div className={styles.notificationDot}>{unreadCount}</div>
           )}
         </button>
-        <button onClick={handleCopy}>Поделиться встречей</button>
       </div>
 
-      {copied && (
-        <div className={styles.copiedToast}>Скопировано в буфер обмена</div>
-      )}
-      {manualText && (
-        <div className={styles.manualCopy}>
-          <div>Не удалось скопировать. Скопируйте вручную:</div>
-          <textarea
-            readOnly
-            value={manualText}
-            className={styles.manualTextarea}
-          />
-        </div>
-      )}
       <RoomAudioRenderer />
     </div>
   );

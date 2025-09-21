@@ -1,1 +1,1 @@
-export type Panel = "chat" | "participants";
+export type Panel = "chat" | "participants" | "files";

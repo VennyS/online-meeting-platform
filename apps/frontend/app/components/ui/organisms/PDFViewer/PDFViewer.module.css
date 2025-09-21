@@ -1,0 +1,75 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  border: 1px solid #ccc;
+  overflow: hidden;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.controls button {
+  padding: 8px 12px;
+  margin: 0 5px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.controls button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.controls button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.pageInfo,
+.zoomInfo {
+  font-size: 14px;
+  font-weight: bold;
+  min-width: 120px;
+  text-align: center;
+}
+
+.pdfContainer {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  transition: transform 0.2s ease;
+
+  &.scrollBlock {
+    overflow: hidden;
+  }
+}
+
+/* Для предотвращения скролла при зуме */
+.pdfContainer::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pdfContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.pdfContainer::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.pdfContainer::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
