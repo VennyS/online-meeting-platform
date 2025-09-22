@@ -127,17 +127,19 @@ export class WaitingRoomService {
 
   async handleHostApproval(
     roomId: string,
-    { guestId, approved, guestName }: any,
+    { guestId, approved }: any,
     roomConnections: Map<string, any>,
   ) {
     const guestConn = roomConnections.get(guestId);
     if (!guestConn) return;
 
+    const quest = await this.redis.getWaitingGuest(roomId, guestId);
+
     if (approved) {
       const token = await createLivekitToken(
         roomId,
         guestId,
-        guestName,
+        quest!.name,
         true,
         'guest',
       );

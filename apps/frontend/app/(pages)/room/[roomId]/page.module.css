@@ -4,6 +4,7 @@
   padding: 12px;
   margin: 0;
   box-sizing: border-box;
+  overflow: hidden;
 
   video {
     border-radius: 12px;

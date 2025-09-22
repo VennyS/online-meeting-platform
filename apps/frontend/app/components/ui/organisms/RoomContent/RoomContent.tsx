@@ -7,13 +7,15 @@ import {
   GridLayout,
   ParticipantTile,
   RoomAudioRenderer,
+  TrackReference,
   useRoomContext,
   useTracks,
+  VideoTrack,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { LocalParticipant, RoomEvent, Track } from "livekit-client";
 import { useUser } from "@/app/hooks/useUser";
-import styles from "./page.module.css";
+import styles from "./RoomContent.module.css";
 import cn from "classnames";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
@@ -22,6 +24,7 @@ import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { Panel } from "./types";
+import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -122,43 +125,103 @@ export const RoomContent = ({
     handleFetchFiles();
   }, [roomId]);
 
+  const correctedTracks = tracks.filter((t) => {
+    if (t.source !== Track.Source.Camera) return true;
+    const participantInPresentation =
+      (localPresentation &&
+        localPresentation[1].authorId === t.participant.identity &&
+        localPresentation[1].mode === "presentationWithCamera") ||
+      Array.from(remotePresentations.values()).some(
+        (p) =>
+          p.authorId === t.participant.identity &&
+          p.mode === "presentationWithCamera"
+      );
+    return !participantInPresentation;
+  });
+
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
-        <GridLayout tracks={tracks}>
-          <ParticipantTile />
-        </GridLayout>
-        {localPresentation && (
-          <PDFViewer
-            isAuthor
-            key={localPresentation[1].url}
-            pdfUrl={localPresentation[1].url}
-            currentPage={localPresentation[1].currentPage}
-            zoom={localPresentation[1].zoom}
-            scrollPosition={localPresentation[1].scroll}
-            onPageChange={(page: number) => {
-              changePage(localPresentation[0], page);
-            }}
-            onZoomChange={(zoom: number) => {
-              changeZoom(localPresentation[0], zoom);
-            }}
-            onScrollChange={(position: { x: number; y: number }) => {
-              changeScroll(localPresentation[0], position);
-            }}
-          />
+        {correctedTracks && correctedTracks.length > 0 && (
+          <GridLayout tracks={correctedTracks}>
+            <ParticipantTile />
+          </GridLayout>
+        )}
+        {!!localPresentation && (
+          <div className={styles.pdfContainer}>
+            <PDFViewer
+              isAuthor
+              key={localPresentation[1].url}
+              pdfUrl={localPresentation[1].url}
+              currentPage={localPresentation[1].currentPage}
+              zoom={localPresentation[1].zoom}
+              scrollPosition={localPresentation[1].scroll}
+              onPageChange={(page: number) => {
+                changePage(localPresentation[0], page);
+              }}
+              onZoomChange={(zoom: number) => {
+                changeZoom(localPresentation[0], zoom);
+              }}
+              onScrollChange={(position: { x: number; y: number }) => {
+                changeScroll(localPresentation[0], position);
+              }}
+              mode={localPresentation[1].mode}
+              onChangePresentationMode={(mode: PresentationMode) => {
+                changePresentationMode(localPresentation[0], mode);
+              }}
+            />
+            {localPresentation![1].mode === "presentationWithCamera" && (
+              <div className={styles.presenterCamera}>
+                {(() => {
+                  const track = tracks.find(
+                    (t) =>
+                      t.source === Track.Source.Camera &&
+                      t.participant.identity === localPresentation[1].authorId
+                  );
+                  return (
+                    track?.publication && (
+                      <VideoTrack trackRef={track as TrackReference} />
+                    )
+                  );
+                })()}
+              </div>
+            )}
+          </div>
         )}
 
-        {Array.from(remotePresentations.entries()).map(([, presentation]) => (
-          <PDFViewer
-            key={presentation.url}
-            pdfUrl={presentation.url}
-            currentPage={presentation.currentPage}
-            zoom={presentation.zoom}
-            scrollPosition={presentation.scroll}
-          />
-        ))}
+        {Array.from(remotePresentations.entries()).map(
+          ([presentationId, presentation]) => (
+            <div key={presentationId} className={styles.presentationItem}>
+              <div className={styles.presentationWrapper}>
+                <PDFViewer
+                  key={presentation.url}
+                  pdfUrl={presentation.url}
+                  currentPage={presentation.currentPage}
+                  zoom={presentation.zoom}
+                  scrollPosition={presentation.scroll}
+                />
+                {presentation.mode === "presentationWithCamera" && (
+                  <div className={styles.presenterCamera}>
+                    {(() => {
+                      const track = tracks.find(
+                        (t) =>
+                          t.source === Track.Source.Camera &&
+                          t.participant.identity === presentation.authorId
+                      );
+                      return (
+                        track?.publication && (
+                          <VideoTrack trackRef={track as TrackReference} />
+                        )
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        )}
       </div>
 
       <div

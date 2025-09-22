@@ -5,6 +5,7 @@
   border: 1px solid #ccc;
   overflow: hidden;
   border-radius: 12px;
+  height: 100%;
 }
 
 .controls {
@@ -72,4 +73,18 @@
 
 .pdfContainer::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.modeToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.modeToggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }

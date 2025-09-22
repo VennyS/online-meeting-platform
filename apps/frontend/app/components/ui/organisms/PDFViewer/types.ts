@@ -1,3 +1,5 @@
+import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
+
 export type PDFViewerProps = {
   pdfUrl: string;
   currentPage?: number;
@@ -8,4 +10,6 @@ export type PDFViewerProps = {
   onZoomChange?: (zoom: number) => void;
   scrollPosition?: { x: number; y: number };
   onScrollChange?: (position: { x: number; y: number }) => void;
+  mode?: PresentationMode;
+  onChangePresentationMode?: (mode: PresentationMode) => void;
 };

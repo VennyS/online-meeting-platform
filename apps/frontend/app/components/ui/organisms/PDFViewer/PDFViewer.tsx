@@ -27,6 +27,8 @@ const PDFViewer = ({
   isAuthor = false,
   scrollPosition = { x: 0, y: 0 },
   onScrollChange,
+  mode = "presentationWithCamera",
+  onChangePresentationMode,
 }: PDFViewerProps) => {
   const [numPages, setNumPages] = useState<number>(totalPages);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +69,15 @@ const PDFViewer = ({
     if (!isAuthor) return;
 
     onZoomChange?.(Math.max(zoom - 0.25, 0.25));
+  };
+
+  const handleModeChange = () => {
+    if (!isAuthor || !onChangePresentationMode) return;
+    onChangePresentationMode(
+      mode === "presentationWithCamera"
+        ? "presentationOnly"
+        : "presentationWithCamera"
+    );
   };
 
   useEffect(() => {
@@ -122,6 +133,15 @@ const PDFViewer = ({
           <button onClick={handleZoomOut}>−</button>
           <span className={styles.zoomInfo}>{Math.round(zoom * 100)}%</span>
           <button onClick={handleZoomIn}>+</button>
+
+          <label className={styles.modeToggle}>
+            <input
+              type="checkbox"
+              checked={mode === "presentationWithCamera"}
+              onChange={handleModeChange}
+            />
+            Показывать камеру
+          </label>
         </div>
       )}
 

@@ -4,6 +4,12 @@ import { PostMessageResponseDto } from '../../../modules/room/dto/postMessageRes
 import { Message } from '../../../modules/room/interfaces/message.interface';
 import { IPresentation } from 'src/modules/waiting-room/interfaces/presentation.interface';
 
+type Guest = {
+  guestId: string;
+  name: string;
+  requestedAt: string;
+};
+
 @Injectable()
 export class RedisService {
   private readonly logger = new Logger(RedisService.name);
@@ -29,7 +35,15 @@ export class RedisService {
     await this.client.rpush(key, JSON.stringify(guestInfo));
   }
 
-  async getWaitingGuests(roomId: string) {
+  async getWaitingGuest(
+    roomId: string,
+    guestId: string,
+  ): Promise<Guest | undefined> {
+    const waitingList = await this.getWaitingGuests(roomId);
+    return waitingList.find((g) => g.guestId === guestId);
+  }
+
+  async getWaitingGuests(roomId: string): Promise<Guest[]> {
     const key = `room:${roomId}:waiting`;
     const list = await this.client.lrange(key, 0, -1);
     return list.map((item) => JSON.parse(item));

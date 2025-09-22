@@ -120,8 +120,6 @@ export class WaitingRoomGateway
     @MessageBody() data: { name: string },
     @ConnectedSocket() ws: WebSocket,
   ) {
-    this.logger.log(data);
-
     const info = this.findUserBySocket(ws);
     if (!info) return;
 
@@ -140,7 +138,7 @@ export class WaitingRoomGateway
   @SubscribeMessage('host_approval')
   async hostApproval(
     @MessageBody()
-    data: { guestId: string; approved: boolean; guestName: string },
+    data: { guestId: string; approved: boolean },
     @ConnectedSocket() ws: WebSocket,
   ) {
     const info = this.findUserBySocket(ws);
