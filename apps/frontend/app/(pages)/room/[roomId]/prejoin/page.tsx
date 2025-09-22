@@ -106,9 +106,14 @@ const PrejoinPage = () => {
     return () => clearInterval(interval);
   };
 
-  // Если пользователь уже авторизован и является владельцем - пропускаем prejoin
   useEffect(() => {
-    if (user && !user.isGuest && isRoomOwner && roomId) {
+    if (
+      user &&
+      !user.isGuest &&
+      isRoomOwner &&
+      roomId &&
+      !prequisites.isFinished
+    ) {
       handleRoomOwnerAccess();
     }
   }, [user, isRoomOwner, roomId]);
