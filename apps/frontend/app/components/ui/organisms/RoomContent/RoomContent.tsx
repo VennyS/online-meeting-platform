@@ -25,6 +25,7 @@ import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { Panel } from "./types";
 import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
+import { useRouter } from "next/navigation";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -47,6 +48,8 @@ export const RoomContent = ({
     ],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
+
+  const router = useRouter();
 
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const { user } = useUser();
@@ -75,6 +78,9 @@ export const RoomContent = ({
     };
 
     room.on(RoomEvent.DataReceived, handleMessage);
+    room.on(RoomEvent.Disconnected, () => {
+      router.replace("/404");
+    });
     return () => {
       room.off(RoomEvent.DataReceived, handleMessage);
     };

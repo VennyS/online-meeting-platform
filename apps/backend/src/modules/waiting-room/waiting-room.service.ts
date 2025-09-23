@@ -1,13 +1,14 @@
 // waiting-room.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../../common/modules/redis/redis.service';
+import {
+  BlacklistEntry,
+  RedisService,
+} from '../../common/modules/redis/redis.service';
 import { WebSocket } from 'ws';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
-import {
-  IPresentation,
-  PresentationMode,
-} from './interfaces/presentation.interface';
+import { IPresentation } from './interfaces/presentation.interface';
+import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 
 @Injectable()
 export class WaitingRoomService {
@@ -16,6 +17,7 @@ export class WaitingRoomService {
   constructor(
     private readonly redis: RedisService,
     private readonly roomRepository: RoomRepository,
+    private readonly livekit: LivekitService,
   ) {}
 
   // --- Проверка роли хоста ---
@@ -519,5 +521,11 @@ export class WaitingRoomService {
       presentationId,
       roomConnections,
     );
+  }
+
+  async addToBlacklist(roomId: string, ip: string, userId: string) {
+    await this.redis.addToBlacklist(roomId, ip, userId);
+
+    await this.livekit.removeParticipant(roomId, userId);
   }
 }

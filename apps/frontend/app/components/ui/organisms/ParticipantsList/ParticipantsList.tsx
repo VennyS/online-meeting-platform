@@ -13,12 +13,13 @@ export function ParticipantsList({
   const {
     local,
     remote,
+    waitingGuests,
+    permissionsMap,
     updateUserRole,
     updateRolePermissions,
-    waitingGuests,
     approveGuest,
     rejectGuest,
-    permissionsMap,
+    addToBlackList,
   } = useParticipantsContext();
   const [canShareScreenValue, setCanShareScreenValue] = useState<
     RoomRole | "all"
@@ -38,10 +39,6 @@ export function ParticipantsList({
     ) {
       const shareScreenValue = getPermissionValue("canShareScreen");
       const startPresentationValue = getPermissionValue("canStartPresentation");
-      console.log("Updating dropdowns:", {
-        shareScreenValue,
-        startPresentationValue,
-      });
       setCanShareScreenValue(shareScreenValue);
       setCanStartPresentationValue(startPresentationValue);
     }
@@ -108,8 +105,6 @@ export function ParticipantsList({
   };
 
   function getPermissionValue(permission: keyof Permissions): RoomRole | "all" {
-    console.log("perms: ", permissionsMap);
-
     const ownerHas = permissionsMap["owner"]?.permissions[permission];
     const adminHas = permissionsMap["admin"]?.permissions[permission];
     const participantHas =
@@ -152,6 +147,7 @@ export function ParticipantsList({
             <div key={participant.sid} className={styles.participantWrapper}>
               <p>{participant.name || participant.identity || "Аноним"}</p>
               <p>Роль: {role}</p>
+              <p>{participant.identity}</p>
 
               {local.permissions.role === "owner" &&
                 participant !== local.participant && (
@@ -169,6 +165,13 @@ export function ParticipantsList({
                       }
                     >
                       Сделать участником
+                    </button>
+                    <button
+                      onClick={() => {
+                        addToBlackList(participant.identity);
+                      }}
+                    >
+                      Исключить
                     </button>
                   </div>
                 )}

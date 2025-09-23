@@ -64,6 +64,7 @@ export class RoomService {
   async getPrequisites(
     room: Room,
     userId: number | null,
+    ip: string,
   ): Promise<Prequisites> {
     let numParticipants = 0;
     try {
@@ -80,6 +81,8 @@ export class RoomService {
       gracePeriod: 5 * 60_000,
     });
 
+    const isBlackListed = await this.redis.isInBlacklist(room.shortId, ip);
+
     const prequisites: Prequisites = {
       name: room.name,
       description: room.description,
@@ -91,6 +94,7 @@ export class RoomService {
       isOwner: userId ? room.ownerId === userId : false,
       cancelled: room.cancelled,
       isFinished: isFinished,
+      isBlackListed: isBlackListed,
     };
 
     return prequisites;

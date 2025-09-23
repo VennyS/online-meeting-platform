@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { User } from 'src/common/decorators/user.decorator';
@@ -20,6 +21,7 @@ import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { GetMessagesResponseDto } from './dto/getMessagesResponseDto';
+import type { Request } from 'express';
 
 @Controller('room')
 export class RoomController {
@@ -51,11 +53,14 @@ export class RoomController {
 
   @Get(':shortId/prequisites')
   @UseGuards(AuthGuard({ required: false }))
-  getPrequisites(
+  async getPrequisites(
     @Param('shortId', RoomByShortIdPipe) room: Room,
     @User('id') id: number | null,
+    @Req() req: Request,
   ): Promise<Prequisites> {
-    return this.roomService.getPrequisites(room, id);
+    const ip =
+      req.headers['x-forwarded-for']?.toString() || req.ip || 'unknown';
+    return this.roomService.getPrequisites(room, id, ip);
   }
 
   @Get('/:shortId/history')

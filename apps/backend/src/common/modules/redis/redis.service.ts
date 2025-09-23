@@ -4,10 +4,15 @@ import { PostMessageResponseDto } from '../../../modules/room/dto/postMessageRes
 import { Message } from '../../../modules/room/interfaces/message.interface';
 import { IPresentation } from 'src/modules/waiting-room/interfaces/presentation.interface';
 
-type Guest = {
+export type Guest = {
   guestId: string;
   name: string;
   requestedAt: string;
+};
+
+export type BlacklistEntry = {
+  userId?: string;
+  ip: string;
 };
 
 @Injectable()
@@ -180,5 +185,58 @@ export class RedisService {
     this.logger.log(
       `Deleted presentation ${presentationId} from room ${roomId}`,
     );
+  }
+
+  // --- Черный список ---
+  async addToBlacklist(
+    roomId: string,
+    ip: string,
+    userId?: string,
+  ): Promise<void> {
+    const key = `room:${roomId}:blacklist`;
+    const blacklist = await this.getBlacklist(roomId);
+    if (blacklist.some((entry) => entry.ip === ip)) {
+      this.logger.debug(`IP ${ip} already in blacklist for room ${roomId}`);
+      return;
+    }
+    const entry: BlacklistEntry = { ip, userId };
+    await this.client.rpush(key, JSON.stringify(entry));
+    this.logger.log(
+      `Added IP ${ip}${userId ? ` with userId ${userId}` : ''} to blacklist for room ${roomId}`,
+    );
+  }
+
+  async removeFromBlacklist(roomId: string, ip: string): Promise<void> {
+    const key = `room:${roomId}:blacklist`;
+    const blacklist = await this.getBlacklist(roomId);
+    const updated = blacklist.filter((entry) => entry.ip !== ip);
+    await this.client.del(key);
+    for (const entry of updated) {
+      await this.client.rpush(key, JSON.stringify(entry));
+    }
+    this.logger.log(`Removed IP ${ip} from blacklist for room ${roomId}`);
+  }
+
+  async isInBlacklist(roomId: string, ip: string): Promise<boolean> {
+    const blacklist = await this.getBlacklist(roomId);
+    const exists = blacklist.some((entry) => entry.ip === ip);
+    return exists;
+  }
+
+  async getBlacklist(roomId: string): Promise<BlacklistEntry[]> {
+    const key = `room:${roomId}:blacklist`;
+    const raw = await this.client.lrange(key, 0, -1);
+    if (!raw || raw.length === 0) {
+      this.logger.debug(`No blacklist entries found for room ${roomId}`);
+      return [];
+    }
+    try {
+      return raw.map((item) => JSON.parse(item) as BlacklistEntry);
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse blacklist for room ${roomId}: ${error.message}`,
+      );
+      return [];
+    }
   }
 }

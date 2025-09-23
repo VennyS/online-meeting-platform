@@ -61,6 +61,7 @@ export interface IPrequisites {
   isOwner: boolean;
   cancelled: boolean;
   isFinished: boolean;
+  isBlackListed: boolean;
 }
 
 export interface Permissions {
@@ -178,4 +179,5 @@ export type RoomWSSendMessage =
         presentationId: string;
         mode: "presentationWithCamera" | "presentationOnly";
       }
-    >;
+    >
+  | WSMessage<"add_to_blacklist", { userId: string }>;

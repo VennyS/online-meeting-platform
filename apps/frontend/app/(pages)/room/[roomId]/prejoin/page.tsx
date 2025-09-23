@@ -30,10 +30,10 @@ const PrejoinPage = () => {
     startAt: new Date(),
     cancelled: false,
     isFinished: false,
+    isBlackListed: false,
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRoomOwner, setIsRoomOwner] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{
@@ -53,6 +53,10 @@ const PrejoinPage = () => {
         const data = await roomService.prequisites(roomId as string);
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
+
+        if (data.isBlackListed) {
+          router.replace("/404");
+        }
 
         if (
           !data.allowEarlyJoin &&
@@ -108,6 +112,7 @@ const PrejoinPage = () => {
 
   useEffect(() => {
     if (
+      !isPrequisitesLoading &&
       user &&
       !user.isGuest &&
       isRoomOwner &&
@@ -187,8 +192,6 @@ const PrejoinPage = () => {
       console.log("WebSocket connection closed");
       setIsConnecting(false);
     };
-
-    setWs(websocket);
   };
 
   const handleApprovedAccess = (
@@ -239,14 +242,13 @@ const PrejoinPage = () => {
         } else {
           setError("Ошибка при подключении");
         }
-        return; // стопаем, если пароль неправильный
+        return;
       }
     }
 
-    // 2️⃣ Если включён waiting room — подключаемся к WS
     if (prequisites.waitingRoomEnabled) {
       connectWebSocket(userId, userName, false);
-      return; // дальше ждать одобрения хоста
+      return;
     }
 
     // 3️⃣ Если нет waiting room или пароль уже дали токен — пропускаем в комнату

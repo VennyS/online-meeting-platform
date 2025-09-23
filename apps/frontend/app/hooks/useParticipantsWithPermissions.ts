@@ -40,6 +40,7 @@ export interface ParticipantsWithPermissions {
     mode: "presentationWithCamera" | "presentationOnly"
   ) => void;
   finishPresentation: (presentationId: string) => void;
+  addToBlackList: (userId: string) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -157,6 +158,10 @@ export function useParticipantsWithPermissions(
     sendMessage("presentation_finished", { presentationId });
   }
 
+  function addToBlackList(userId: string) {
+    sendMessage("add_to_blacklist", { userId });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -184,7 +189,6 @@ export function useParticipantsWithPermissions(
           }, {} as Record<RoomRole, UserPermissions>);
 
           setPermissionsMap(newPermissionsMap);
-          console.log("perms: ", permissionsMap);
           break;
 
         case "role_updated":
@@ -357,5 +361,6 @@ export function useParticipantsWithPermissions(
     changeScroll,
     changePresentationMode,
     finishPresentation,
+    addToBlackList,
   };
 }

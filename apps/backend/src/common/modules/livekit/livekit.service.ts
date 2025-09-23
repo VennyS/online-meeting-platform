@@ -18,4 +18,17 @@ export class LivekitService {
       return [];
     }
   }
+
+  async removeParticipant(roomName: string, identity: string): Promise<void> {
+    try {
+      await this.client.removeParticipant(roomName, identity);
+      this.logger.log(`Participant ${identity} removed from room ${roomName}`);
+    } catch (error) {
+      this.logger.error(
+        `Error removing participant ${identity} from ${roomName}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
 }

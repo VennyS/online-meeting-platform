@@ -24,7 +24,7 @@ export class WaitingRoomGateway
 
   private connections = new Map<
     string,
-    Map<string, { ws: WebSocket; isHost: boolean }>
+    Map<string, { ws: WebSocket; isHost: boolean; ip: string }>
   >();
 
   constructor(private readonly waitingRoomService: WaitingRoomService) {}
@@ -41,11 +41,12 @@ export class WaitingRoomGateway
       }
 
       const isHost = await this.waitingRoomService.isHost(roomId, userId);
+      const ip = ws._socket.remoteAddress || 'unknown';
 
       if (!this.connections.has(roomId)) {
         this.connections.set(roomId, new Map());
       }
-      this.connections.get(roomId)!.set(userId, { ws, isHost });
+      this.connections.get(roomId)!.set(userId, { ws, isHost, ip });
 
       ws.send(
         JSON.stringify({
@@ -72,7 +73,7 @@ export class WaitingRoomGateway
 
       await this.waitingRoomService.sendPresentationsStateToClient(roomId, ws);
 
-      this.logger.log(`✅ ${userId} joined room ${roomId}`);
+      this.logger.log(`✅ ${userId} joined room ${roomId} with IP ${ip}`);
     } catch (error) {
       this.logger.error('Connection error:', error);
       ws.close(1011, 'Server error');
@@ -356,6 +357,53 @@ export class WaitingRoomGateway
       roomId,
       data.presentationId,
       this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('add_to_blacklist')
+  async addToBlackList(
+    @MessageBody() data: { userId: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Add to blacklist attempt from unknown socket');
+      return;
+    }
+
+    const { roomId, userId: requestUserId } = info;
+    if (
+      !(await this.waitingRoomService.isOwnerOrAdmin(roomId, requestUserId))
+    ) {
+      this.logger.warn(
+        `User ${requestUserId} not authorized to add to blacklist in room ${roomId}`,
+      );
+      return;
+    }
+
+    let targetIp;
+    if (data.userId) {
+      const targetUser = this.connections.get(roomId)?.get(data.userId);
+      if (targetUser) {
+        targetIp = targetUser.ws._socket.remoteAddress || targetIp;
+      } else {
+        this.logger.warn(
+          `User ${data.userId} not found in room ${roomId} for blacklisting`,
+        );
+        return;
+      }
+    }
+
+    if (!targetIp || targetIp === 'unknown') {
+      this.logger.warn('No valid IP address provided for blacklisting');
+      return;
+    }
+
+    await this.waitingRoomService.addToBlacklist(roomId, targetIp, data.userId);
+    this.logger.log(
+      `User ${data.userId} added IP ${targetIp}${
+        data.userId ? ` with userId ${data.userId}` : ''
+      } to blacklist for room ${roomId}`,
     );
   }
 }
