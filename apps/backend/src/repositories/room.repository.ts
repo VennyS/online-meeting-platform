@@ -37,6 +37,8 @@ export class RoomRepository {
         createdAt: true,
         updatedAt: true,
         cancelled: true,
+        canShareScreen: true,
+        canStartPresentation: true,
       },
     });
   }
@@ -64,6 +66,8 @@ export class RoomRepository {
         waitingRoomEnabled: newRoom.waitingRoomEnabled,
         allowEarlyJoin: newRoom.allowEarlyJoin ?? true,
         timeZone: newRoom.timeZone || 'Europe/Moscow',
+        canShareScreen: newRoom.canShareScreen,
+        canStartPresentation: newRoom.сanStartPresentation,
       },
     });
 
@@ -71,7 +75,11 @@ export class RoomRepository {
     return rest;
   }
 
-  async update(shortId: string, data: PatchRoomDto, passwordHash?: string) {
+  async update(
+    shortId: string,
+    data: Omit<PatchRoomDto, 'password'>,
+    passwordHash?: string,
+  ) {
     return this.prisma.room.update({
       where: { shortId },
       data: {

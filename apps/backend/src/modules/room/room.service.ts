@@ -22,7 +22,7 @@ export class RoomService {
     private readonly redis: RedisService,
   ) {}
   async getAllByUserId(userId: number): Promise<Omit<Room, 'passwordHash'>[]> {
-    return this.roomRepo.getAllByUserId(userId);
+    return await this.roomRepo.getAllByUserId(userId);
   }
 
   async create(
@@ -51,13 +51,14 @@ export class RoomService {
       throw new ForbiddenException('You are not allowed to update this room');
     }
 
-    var passwordHash: string | undefined;
+    const { password, ...rest } = patchRoomDto;
 
-    if (patchRoomDto.password) {
-      passwordHash = await bcrypt.hash(patchRoomDto.password, 10);
+    let passwordHash: string | undefined;
+    if (password) {
+      passwordHash = await bcrypt.hash(password, 10);
     }
 
-    return await this.roomRepo.update(room.shortId, patchRoomDto, passwordHash);
+    return await this.roomRepo.update(room.shortId, rest, passwordHash);
   }
 
   async getPrequisites(

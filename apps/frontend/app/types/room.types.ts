@@ -10,6 +10,8 @@ export interface CreateRoomDto {
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
   timeZone?: string;
+  canShareScreen?: RoomRole | "all";
+  canSharePresentation?: RoomRole | "all";
 }
 
 export interface UpdateRoomDto {
@@ -72,6 +74,7 @@ export interface UserPermissions {
 }
 
 export type RoomRole = "owner" | "admin" | "participant";
+export type Role = Omit<RoomRole, "participant"> & "all";
 
 type WSMessage<E extends string, D> = {
   event: E;
@@ -83,6 +86,10 @@ export type RoomWSMessage =
   | WSMessage<"waiting_queue_updated", { guests: IWaitingGuest[] }>
   | WSMessage<"new_guest_waiting", { guest: IWaitingGuest }>
   | WSMessage<"role_updated", { role: RoomRole; userId: string | number }>
+  | WSMessage<
+      "permissions_init",
+      { role: RoomRole; permissions: Permissions }[]
+    >
   | WSMessage<
       "permissions_updated",
       { role: RoomRole; permissions: Partial<Permissions> }

@@ -7,6 +7,7 @@ import { useUser } from "@/app/hooks/useUser";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
 import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
 import { fileService } from "@/app/services/file.service";
+import { Permissions, RoomRole } from "@/app/types/room.types";
 
 export default function CreateRoomModal() {
   const router = useRouter();
@@ -24,6 +25,27 @@ export default function CreateRoomModal() {
   const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(false);
   const [allowEarlyJoin, setAllowEarlyJoin] = useState(true);
   const [isConnectInstantly, setIsConnectInstantly] = useState(true);
+
+  const [canShareScreen, setcanShareScreen] = useState<RoomRole | "all">("all");
+  const [canSharePresentation, setCanSharePresentation] = useState<
+    RoomRole | "all"
+  >("all");
+
+  const roleOptions: { label: string; value: RoomRole | "all" }[] = [
+    { label: "Только владелец", value: "owner" },
+    { label: "Владелец и админ", value: "admin" },
+    { label: "Все", value: "all" },
+  ];
+
+  const handlePermissionChange = (
+    permission: keyof Permissions,
+    value: RoomRole | "all"
+  ) => {
+    if (permission === "canShareScreen") {
+      setcanShareScreen(value);
+    }
+    setCanSharePresentation(value);
+  };
 
   const [files, setFiles] = useState<File[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -81,6 +103,8 @@ export default function CreateRoomModal() {
         waitingRoomEnabled,
         allowEarlyJoin,
         timeZone: "Europe/Moscow",
+        canShareScreen: canShareScreen,
+        canSharePresentation: canSharePresentation,
       });
 
       await handleUploadFiles(room.shortId);
@@ -225,6 +249,48 @@ export default function CreateRoomModal() {
             Сразу же подключится
           </label>
         </div>
+
+        <h2>Права</h2>
+        <div>
+          <label>Может делиться экраном:</label>
+          <select
+            title="canShareScreen dropdown"
+            value={canShareScreen}
+            onChange={(e) =>
+              handlePermissionChange(
+                "canShareScreen",
+                e.target.value as RoomRole | "all"
+              )
+            }
+          >
+            {roleOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label>Может делиться презентацией:</label>
+          <select
+            title="canStartPresentation dropdown"
+            value={canSharePresentation}
+            onChange={(e) =>
+              handlePermissionChange(
+                "canStartPresentation",
+                e.target.value as RoomRole | "all"
+              )
+            }
+          >
+            {roleOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <h2>Загрузить PDF файлы в комнату</h2>
         <div>
           <label htmlFor="files">Выберите PDF файлы:</label>

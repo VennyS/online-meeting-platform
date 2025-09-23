@@ -19,7 +19,6 @@ import { PostMessageResponseDto } from './dto/postMessageResponseDto';
 import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
-import { Message } from './interfaces/message.interface';
 import { GetMessagesResponseDto } from './dto/getMessagesResponseDto';
 
 @Controller('room')
@@ -47,7 +46,7 @@ export class RoomController {
     @Body() body: PatchRoomDto,
     @User('id') id: number,
   ) {
-    this.roomService.patch(room, body, id);
+    return this.roomService.patch(room, body, id);
   }
 
   @Get(':shortId/prequisites')

@@ -21,19 +21,22 @@ model Room {
   passwordHash         String?
   waitingRoomEnabled   Boolean   @default(false)
   allowEarlyJoin       Boolean   @default(true)
-  ownerId              Int       // ID владельца комнаты из внешнего сервиса
+  ownerId              Int
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   cancelled            Boolean   @default(false)
 
+  canShareScreen       PermissionLevel @default(ALL)
+  canStartPresentation       PermissionLevel @default(ALL)
+
   allowedParticipants  AllowedParticipant[]
-  files                File[]            // Файлы, связанные с комнатой
+  files                File[]
 }
 
 model AllowedParticipant {
   id        Int      @id @default(autoincrement())
   roomId    Int
-  userId    Int      // ID пользователя из внешнего сервиса
+  userId    Int
   createdAt DateTime @default(now())
 
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -44,19 +47,19 @@ model AllowedParticipant {
 model File {
   id           Int       @id @default(autoincrement())
   roomId       Int
-  userId       Int       // ID пользователя из внешнего сервиса
-  fileKey      String    // Путь в MinIO (например, "rooms/123/user/456/video.mp4")
-  fileType     FileType  // Enum для типов файлов
-  fileName     String    // Оригинальное имя файла
-  fileSize     Int?      // Размер файла в байтах
-  mimeType     String?   // MIME-тип (например, "video/mp4")
+  userId       Int
+  fileKey      String
+  fileType     FileType
+  fileName     String
+  fileSize     Int?
+  mimeType     String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   room         Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
-  @@index([roomId]) // Для быстрого поиска файлов по комнате
-  @@index([userId]) // Для быстрого поиска файлов по пользователю
+  @@index([roomId])
+  @@index([userId])
 }
 
 enum FileType {
@@ -64,4 +67,10 @@ enum FileType {
   AUDIO
   TEXT
   PDF
+}
+
+enum PermissionLevel {
+  OWNER
+  ADMIN
+  ALL
 }

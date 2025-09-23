@@ -70,7 +70,7 @@ const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
   },
   participant: {
     role: "participant",
-    permissions: { canShareScreen: true, canStartPresentation: true },
+    permissions: { canShareScreen: false, canStartPresentation: false },
   },
 });
 
@@ -173,6 +173,18 @@ export function useParticipantsWithPermissions(
               permissions: data.permissions,
             },
           }));
+          break;
+
+        case "permissions_init":
+          const newPermissionsMap = message.data.reduce<
+            Record<RoomRole, UserPermissions>
+          >((acc, { role, permissions }) => {
+            acc[role] = { role, permissions };
+            return acc;
+          }, {} as Record<RoomRole, UserPermissions>);
+
+          setPermissionsMap(newPermissionsMap);
+          console.log("perms: ", permissionsMap);
           break;
 
         case "role_updated":

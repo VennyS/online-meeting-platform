@@ -22,7 +22,6 @@ export class WaitingRoomGateway
 
   private readonly logger = new Logger(WaitingRoomGateway.name);
 
-  // roomId -> Map<userId, { ws, isHost }>
   private connections = new Map<
     string,
     Map<string, { ws: WebSocket; isHost: boolean }>
@@ -54,6 +53,8 @@ export class WaitingRoomGateway
           data: { role: isHost ? 'owner' : 'participant' },
         }),
       );
+
+      await this.waitingRoomService.initPermissions(roomId, ws);
 
       if (isHost) {
         await this.waitingRoomService.sendInitToHost(roomId, ws);
