@@ -147,7 +147,6 @@ export function ParticipantsList({
             <div key={participant.sid} className={styles.participantWrapper}>
               <p>{participant.name || participant.identity || "Аноним"}</p>
               <p>Роль: {role}</p>
-              <p>{participant.identity}</p>
 
               {local.permissions.role === "owner" &&
                 participant !== local.participant && (
@@ -168,7 +167,10 @@ export function ParticipantsList({
                     </button>
                     <button
                       onClick={() => {
-                        addToBlackList(participant.identity);
+                        addToBlackList(
+                          participant.identity,
+                          participant.name || "unkown"
+                        );
                       }}
                     >
                       Исключить
@@ -178,6 +180,10 @@ export function ParticipantsList({
             </div>
           );
         })}
+
+        <details>
+          <summary>Чёрный список</summary>
+        </details>
       </div>
 
       {/* Управление правами */}

@@ -180,4 +180,4 @@ export type RoomWSSendMessage =
         mode: "presentationWithCamera" | "presentationOnly";
       }
     >
-  | WSMessage<"add_to_blacklist", { userId: string }>;
+  | WSMessage<"add_to_blacklist", { userId: string; name: string }>;

@@ -523,8 +523,13 @@ export class WaitingRoomService {
     );
   }
 
-  async addToBlacklist(roomId: string, ip: string, userId: string) {
-    await this.redis.addToBlacklist(roomId, ip, userId);
+  async addToBlacklist(
+    roomId: string,
+    ip: string,
+    userId: string,
+    name: string,
+  ) {
+    await this.redis.addToBlacklist(roomId, ip, name, userId);
 
     await this.livekit.removeParticipant(roomId, userId);
   }

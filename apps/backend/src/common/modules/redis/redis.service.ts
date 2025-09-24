@@ -13,6 +13,7 @@ export type Guest = {
 export type BlacklistEntry = {
   userId?: string;
   ip: string;
+  name: string;
 };
 
 @Injectable()
@@ -191,6 +192,7 @@ export class RedisService {
   async addToBlacklist(
     roomId: string,
     ip: string,
+    name: string,
     userId?: string,
   ): Promise<void> {
     const key = `room:${roomId}:blacklist`;
@@ -199,7 +201,7 @@ export class RedisService {
       this.logger.debug(`IP ${ip} already in blacklist for room ${roomId}`);
       return;
     }
-    const entry: BlacklistEntry = { ip, userId };
+    const entry: BlacklistEntry = { ip, userId, name };
     await this.client.rpush(key, JSON.stringify(entry));
     this.logger.log(
       `Added IP ${ip}${userId ? ` with userId ${userId}` : ''} to blacklist for room ${roomId}`,

@@ -40,7 +40,7 @@ export interface ParticipantsWithPermissions {
     mode: "presentationWithCamera" | "presentationOnly"
   ) => void;
   finishPresentation: (presentationId: string) => void;
-  addToBlackList: (userId: string) => void;
+  addToBlackList: (userId: string, username: string) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -158,8 +158,8 @@ export function useParticipantsWithPermissions(
     sendMessage("presentation_finished", { presentationId });
   }
 
-  function addToBlackList(userId: string) {
-    sendMessage("add_to_blacklist", { userId });
+  function addToBlackList(userId: string, username: string) {
+    sendMessage("add_to_blacklist", { userId, name: username });
   }
 
   useEffect(() => {

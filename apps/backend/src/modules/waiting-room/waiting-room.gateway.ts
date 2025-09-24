@@ -362,7 +362,7 @@ export class WaitingRoomGateway
 
   @SubscribeMessage('add_to_blacklist')
   async addToBlackList(
-    @MessageBody() data: { userId: string },
+    @MessageBody() data: { userId: string; name: string },
     @ConnectedSocket() ws: WebSocket,
   ) {
     const info = this.findUserBySocket(ws);
@@ -399,7 +399,12 @@ export class WaitingRoomGateway
       return;
     }
 
-    await this.waitingRoomService.addToBlacklist(roomId, targetIp, data.userId);
+    await this.waitingRoomService.addToBlacklist(
+      roomId,
+      targetIp,
+      data.userId,
+      data.name,
+    );
     this.logger.log(
       `User ${data.userId} added IP ${targetIp}${
         data.userId ? ` with userId ${data.userId}` : ''
