@@ -2,6 +2,7 @@ import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
 import { useEffect, useState } from "react";
 import {
+  BlacklistEntry,
   IWaitingGuest,
   Permissions,
   RoomRole,
@@ -17,6 +18,7 @@ export interface ParticipantsWithPermissions {
   waitingGuests: IWaitingGuest[];
   localPresentation?: [string, Presentation];
   remotePresentations: Map<string, Presentation>;
+  blacklist: BlacklistEntry[];
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -41,6 +43,7 @@ export interface ParticipantsWithPermissions {
   ) => void;
   finishPresentation: (presentationId: string) => void;
   addToBlackList: (userId: string, username: string) => void;
+  removeFromBlackList: (ip: string) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -88,6 +91,8 @@ export function useParticipantsWithPermissions(
   const [presentations, setPresentations] = useState<Map<string, Presentation>>(
     new Map()
   );
+  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
+
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
 
@@ -117,6 +122,10 @@ export function useParticipantsWithPermissions(
 
   function rejectGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: false });
+  }
+
+  function removeFromBlackList(ip: string) {
+    sendMessage("remove_from_blacklist", { ip });
   }
 
   function startPresentation(
@@ -170,6 +179,11 @@ export function useParticipantsWithPermissions(
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "init_host":
+          setBlacklist(data.blacklist);
+          setWaitingGuests(data.guests);
+          break;
+
         case "permissions_updated":
           setPermissionsMap((prev) => ({
             ...prev,
@@ -307,6 +321,10 @@ export function useParticipantsWithPermissions(
             return newPresentations;
           });
           break;
+
+        case "blacklist_updated": {
+          setBlacklist(data.blacklist);
+        }
       }
     };
   }, [ws, localUserId, presentations]);
@@ -351,6 +369,7 @@ export function useParticipantsWithPermissions(
     waitingGuests,
     localPresentation,
     remotePresentations,
+    blacklist,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -362,5 +381,6 @@ export function useParticipantsWithPermissions(
     changePresentationMode,
     finishPresentation,
     addToBlackList,
+    removeFromBlackList,
   };
 }

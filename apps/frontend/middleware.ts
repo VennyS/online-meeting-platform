@@ -13,17 +13,10 @@ export async function middleware(req: NextRequest) {
 
   console.log("[MIDDLEWARE] Запрос:", pathname);
 
-  // 0. prejoin — всегда пропускаем
-  if (pathname.includes("/prejoin")) {
+  if (pathname.includes("/prejoin") || pathname.startsWith("/room/")) {
     return NextResponse.next();
   }
 
-  // 1. Проверка страниц комнаты
-  if (pathname.startsWith("/room/")) {
-    return NextResponse.next();
-  }
-
-  // 2. Всё остальное — стандартная проверка авторизации
   const token = req.cookies.get(CookiesEnum.ACCESS_TOKEN)?.value;
 
   if (!token) {

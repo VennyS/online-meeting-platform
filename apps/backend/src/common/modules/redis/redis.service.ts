@@ -55,13 +55,19 @@ export class RedisService {
     return list.map((item) => JSON.parse(item));
   }
 
-  async removeGuestFromWaiting(roomId: string, guestId: string) {
+  async removeGuestFromWaiting(
+    roomId: string,
+    guestId: string,
+  ): Promise<Guest[]> {
     const waitingList = await this.getWaitingGuests(roomId);
     const updated = waitingList.filter((g) => g.guestId !== guestId);
+
     await this.client.del(`room:${roomId}:waiting`);
     for (const guest of updated) {
       await this.client.rpush(`room:${roomId}:waiting`, JSON.stringify(guest));
     }
+
+    return updated;
   }
 
   // --- Роли ---

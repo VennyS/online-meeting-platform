@@ -106,11 +106,11 @@ export class WaitingRoomGateway
 
   private findUserBySocket(
     ws: WebSocket,
-  ): { roomId: string; userId: string } | null {
+  ): { roomId: string; userId: string; isHost: boolean } | null {
     for (const [roomId, users] of this.connections.entries()) {
       for (const [userId, conn] of users.entries()) {
         if (conn.ws === ws) {
-          return { roomId, userId };
+          return { roomId, userId, isHost: conn.isHost };
         }
       }
     }
@@ -371,10 +371,8 @@ export class WaitingRoomGateway
       return;
     }
 
-    const { roomId, userId: requestUserId } = info;
-    if (
-      !(await this.waitingRoomService.isOwnerOrAdmin(roomId, requestUserId))
-    ) {
+    const { roomId, userId: requestUserId, isHost } = info;
+    if (!isHost) {
       this.logger.warn(
         `User ${requestUserId} not authorized to add to blacklist in room ${roomId}`,
       );
@@ -404,11 +402,34 @@ export class WaitingRoomGateway
       targetIp,
       data.userId,
       data.name,
+      ws,
     );
     this.logger.log(
       `User ${data.userId} added IP ${targetIp}${
         data.userId ? ` with userId ${data.userId}` : ''
       } to blacklist for room ${roomId}`,
     );
+  }
+
+  @SubscribeMessage('remove_from_blacklist')
+  async removeFromBlacklist(
+    @MessageBody() data: { ip: string },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Add to blacklist attempt from unknown socket');
+      return;
+    }
+
+    const { roomId, userId: requestUserId, isHost } = info;
+    if (!isHost) {
+      this.logger.warn(
+        `User ${requestUserId} not authorized to add to blacklist in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.waitingRoomService.removeFromBlacklist(roomId, data.ip, ws);
   }
 }

@@ -74,6 +74,12 @@ export interface UserPermissions {
   permissions: Permissions;
 }
 
+export interface BlacklistEntry {
+  userId: string | undefined;
+  ip: string;
+  name: string;
+}
+
 export type RoomRole = "owner" | "admin" | "participant";
 export type Role = Omit<RoomRole, "participant"> & "all";
 
@@ -84,6 +90,10 @@ type WSMessage<E extends string, D> = {
 
 export type RoomWSMessage =
   | WSMessage<"init", { role: RoomRole }>
+  | WSMessage<
+      "init_host",
+      { guests: IWaitingGuest[]; blacklist: BlacklistEntry[] }
+    >
   | WSMessage<"waiting_queue_updated", { guests: IWaitingGuest[] }>
   | WSMessage<"new_guest_waiting", { guest: IWaitingGuest }>
   | WSMessage<"role_updated", { role: RoomRole; userId: string | number }>
@@ -143,6 +153,12 @@ export type RoomWSMessage =
         presentationId: string;
         mode: "presentationWithCamera" | "presentationOnly";
       }
+    >
+  | WSMessage<
+      "blacklist_updated",
+      {
+        blacklist: BlacklistEntry[];
+      }
     >;
 
 export type RoomWSSendMessage =
@@ -180,4 +196,10 @@ export type RoomWSSendMessage =
         mode: "presentationWithCamera" | "presentationOnly";
       }
     >
-  | WSMessage<"add_to_blacklist", { userId: string; name: string }>;
+  | WSMessage<"add_to_blacklist", { userId: string; name: string }>
+  | WSMessage<
+      "remove_from_blacklist",
+      {
+        ip: string;
+      }
+    >;

@@ -79,7 +79,7 @@ export const RoomContent = ({
 
     room.on(RoomEvent.DataReceived, handleMessage);
     room.on(RoomEvent.Disconnected, () => {
-      router.replace("/404");
+      // router.replace("/404");
     });
     return () => {
       room.off(RoomEvent.DataReceived, handleMessage);

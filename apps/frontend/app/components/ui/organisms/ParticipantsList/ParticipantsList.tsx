@@ -15,11 +15,13 @@ export function ParticipantsList({
     remote,
     waitingGuests,
     permissionsMap,
+    blacklist,
     updateUserRole,
     updateRolePermissions,
     approveGuest,
     rejectGuest,
     addToBlackList,
+    removeFromBlackList,
   } = useParticipantsContext();
   const [canShareScreenValue, setCanShareScreenValue] = useState<
     RoomRole | "all"
@@ -183,6 +185,20 @@ export function ParticipantsList({
 
         <details>
           <summary>Чёрный список</summary>
+          {blacklist.map((e) => {
+            return (
+              <div key={e.ip + e.name}>
+                <p>{e.name}</p>
+                <button
+                  onClick={() => {
+                    removeFromBlackList(e.ip);
+                  }}
+                >
+                  Вернуть
+                </button>
+              </div>
+            );
+          })}
         </details>
       </div>
 
