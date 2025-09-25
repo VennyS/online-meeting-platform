@@ -9,13 +9,16 @@ import styles from "./page.module.css";
 import { LiveKitRoom } from "@livekit/components-react";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
+import { useWebSocket } from "@/app/hooks/useWebSocket";
 
 export default function MeetingRoom() {
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState<string>("");
   const { token, setToken, user } = useUser();
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const { ws, connect } = useWebSocket();
   const router = useRouter();
+
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
   useEffect(() => {
     if (!token) {
@@ -26,13 +29,8 @@ export default function MeetingRoom() {
   // WebSocket для хоста
   useEffect(() => {
     if (!roomId || !user) return;
-
-    const websocket = new WebSocket(getWebSocketUrl(roomId as string, user.id));
-
-    setWs(websocket);
+    connect(roomId as string, user.id, fullName);
   }, [roomId, user]);
-
-  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
   useEffect(() => {
     if (!roomId || !user || user.isGuest) return;

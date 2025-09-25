@@ -12,7 +12,7 @@ import {
   RoomWSSendMessage,
 } from "@/app/types/room.types";
 import { AxiosError } from "axios";
-import { getWebSocketUrl } from "@/app/config/websocketUrl";
+import { useWebSocket } from "@/app/hooks/useWebSocket";
 
 const PrejoinPage = () => {
   const { roomId } = useParams();
@@ -43,6 +43,7 @@ const PrejoinPage = () => {
     seconds: number;
   } | null>(null);
   const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
+  const { connect } = useWebSocket();
 
   useEffect(() => {
     const checkPrerequisites = async () => {
@@ -135,22 +136,17 @@ const PrejoinPage = () => {
     }
   };
 
-  const connectWebSocket = (
-    userId: number,
-    userName: string,
-    isHost: boolean = false
-  ) => {
+  const connectWebSocket = (userId: number, userName: string) => {
     setIsConnecting(true);
+    const ws = connect(roomId as string, userId, userName);
 
-    const websocket = new WebSocket(
-      getWebSocketUrl(roomId as string, userId, isHost)
-    );
+    if (!ws) return;
 
-    websocket.onopen = () => {
+    ws.onopen = () => {
       console.log("✅ Connected to WebSocket");
     };
 
-    websocket.onmessage = (event: MessageEvent) => {
+    ws.onmessage = (event: MessageEvent) => {
       console.log("📨 Message from server:", event.data);
 
       const message: RoomWSMessage = JSON.parse(event.data);
@@ -158,13 +154,11 @@ const PrejoinPage = () => {
 
       switch (evt) {
         case "init":
-          if (!isHost) {
-            const joinRequest: RoomWSSendMessage = {
-              event: "guest_join_request",
-              data: { name: userName },
-            };
-            websocket.send(JSON.stringify(joinRequest));
-          }
+          const joinRequest: RoomWSSendMessage = {
+            event: "guest_join_request",
+            data: { name: userName },
+          };
+          ws.send(JSON.stringify(joinRequest));
           break;
 
         case "guest_approved":
@@ -182,13 +176,13 @@ const PrejoinPage = () => {
       }
     };
 
-    websocket.onerror = (error) => {
+    ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       setError("Ошибка подключения");
       setIsConnecting(false);
     };
 
-    websocket.onclose = () => {
+    ws.onclose = () => {
       console.log("WebSocket connection closed");
       setIsConnecting(false);
     };
@@ -247,7 +241,7 @@ const PrejoinPage = () => {
     }
 
     if (prequisites.waitingRoomEnabled) {
-      connectWebSocket(userId, userName, false);
+      connectWebSocket(userId, userName);
       return;
     }
 
