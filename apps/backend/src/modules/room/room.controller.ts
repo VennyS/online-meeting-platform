@@ -41,6 +41,12 @@ export class RoomController {
     return this.roomService.create(query);
   }
 
+  @Get('/:shortId/reports')
+  @UseGuards(AuthGuard({ required: true }))
+  getMeetingReport(@Param('shortId', RoomByShortIdPipe) room: Room) {
+    return this.roomService.getReports(room);
+  }
+
   @Patch('/:shortId')
   @UseGuards(AuthGuard({ required: true }))
   patchRoom(

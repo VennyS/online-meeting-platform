@@ -13,6 +13,7 @@ import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { PostMessageResponseDto } from './dto/postMessageResponseDto';
+import { GetMeetingReportsDto } from './dto/getMeetingReportDto';
 
 @Injectable()
 export class RoomService {
@@ -134,5 +135,9 @@ export class RoomService {
         room.id,
       ),
     };
+  }
+
+  async getReports(room: Room): Promise<GetMeetingReportsDto> {
+    return await this.roomRepo.getReports(room.id);
   }
 }

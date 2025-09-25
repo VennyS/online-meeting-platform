@@ -24,7 +24,10 @@ export class WaitingRoomGateway
 
   private connections = new Map<
     string,
-    Map<string, { ws: WebSocket; isHost: boolean; ip: string }>
+    Map<
+      string,
+      { ws: WebSocket; isHost: boolean; ip: string; username: string }
+    >
   >();
 
   constructor(private readonly waitingRoomService: WaitingRoomService) {}
@@ -34,9 +37,10 @@ export class WaitingRoomGateway
       const url = new URL(req.url, `http://${req.headers.host}`);
       const roomId = url.searchParams.get('roomId');
       const userId = url.searchParams.get('userId');
+      const username = url.searchParams.get('username');
 
-      if (!roomId || !userId) {
-        ws.close(1008, 'Need roomId and userId');
+      if (!roomId || !userId || !username) {
+        ws.close(1008, 'Need roomId, username and userId');
         return;
       }
 
@@ -46,7 +50,7 @@ export class WaitingRoomGateway
       if (!this.connections.has(roomId)) {
         this.connections.set(roomId, new Map());
       }
-      this.connections.get(roomId)!.set(userId, { ws, isHost, ip });
+      this.connections.get(roomId)!.set(userId, { ws, isHost, ip, username });
 
       ws.send(
         JSON.stringify({
@@ -56,6 +60,7 @@ export class WaitingRoomGateway
       );
 
       await this.waitingRoomService.initPermissions(roomId, ws);
+      await this.waitingRoomService.joinAnalytics(roomId, userId, username, ip);
 
       if (isHost) {
         await this.waitingRoomService.sendInitToHost(roomId, ws);
@@ -87,6 +92,8 @@ export class WaitingRoomGateway
           users.delete(userId);
           this.logger.log(`❌ ${userId} left room ${roomId}`);
 
+          await this.waitingRoomService.leaveAnalytics(roomId, userId);
+
           await this.waitingRoomService.removeGuestFromWaitingIfPresent(
             roomId,
             userId,
@@ -97,6 +104,11 @@ export class WaitingRoomGateway
             userId,
             this.connections.get(roomId)!,
           );
+
+          if (users.size === 0) {
+            await this.waitingRoomService.saveAndClearAnalytics(roomId);
+            this.connections.delete(roomId);
+          }
 
           break;
         }

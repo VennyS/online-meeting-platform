@@ -561,4 +561,28 @@ export class WaitingRoomService {
 
     ws.send(JSON.stringify(message));
   }
+
+  async joinAnalytics(
+    roomId: string,
+    userId: string,
+    username: string,
+    ip: string,
+  ) {
+    await this.redis.logJoin(roomId, userId, username, ip);
+    await this.redis.setActiveParticipant(roomId, userId, Date.now());
+  }
+
+  async leaveAnalytics(roomId: string, userId: string) {
+    await this.redis.logLeave(roomId, userId);
+    await this.redis.removeActiveParticipant(roomId, userId);
+  }
+
+  async saveAndClearAnalytics(roomId: string) {
+    const analytics = await this.redis.getMeetingAnalytics(roomId);
+    const room = await this.roomRepository.findByShortId(roomId);
+    if (room) {
+      await this.roomRepository.bulkSaveMeetingAnalytics(room.id, analytics);
+    }
+    await this.redis.clearAnalytics(roomId);
+  }
 }
