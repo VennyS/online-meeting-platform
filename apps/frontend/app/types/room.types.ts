@@ -10,8 +10,8 @@ export interface CreateRoomDto {
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
   timeZone?: string;
-  canShareScreen?: RoomRole | "all";
-  canSharePresentation?: RoomRole | "all";
+  canShareScreen?: Role;
+  сanStartPresentation?: Role;
 }
 
 export interface UpdateRoomDto {
@@ -42,6 +42,31 @@ export interface IRoom {
   allowEarlyJoin: boolean;
   cancelled: boolean;
   timeZone: string;
+}
+
+export interface MeetingReports {
+  sessions: MeetingReport[];
+}
+
+export interface MeetingReport {
+  id: number;
+  roomId: number;
+  startTime: string;
+  endTime?: string;
+  duration?: number;
+  participants: Participant[];
+}
+
+export interface Participant {
+  id: number;
+  userId: number;
+  name: string;
+  sessions: ParticipantSession[];
+}
+
+export interface ParticipantSession {
+  joinTime: string;
+  leaveTime?: string;
 }
 
 export interface IWaitingGuest {
@@ -81,7 +106,7 @@ export interface BlacklistEntry {
 }
 
 export type RoomRole = "owner" | "admin" | "participant";
-export type Role = Omit<RoomRole, "participant"> & "all";
+export type Role = "OWNER" | "ADMIN" | "ALL";
 
 type WSMessage<E extends string, D> = {
   event: E;
