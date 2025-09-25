@@ -4,6 +4,7 @@ import {
   CreateRoomDto,
   IPrequisites,
   IRoom,
+  MeetingReports,
   UpdateRoomDto,
 } from "../types/room.types";
 
@@ -52,6 +53,13 @@ export const roomService = {
 
   async updateRoom(shortId: string, data: UpdateRoomDto) {
     const response = await axiosClassic.patch<IRoom>(`/room/${shortId}`, data);
+    return response.data;
+  },
+
+  async getMeetingReports(shortId: string) {
+    const response = await axiosClassic.get<MeetingReports>(
+      `/room/${shortId}/reports`
+    );
     return response.data;
   },
 };
