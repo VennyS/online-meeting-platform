@@ -1,0 +1,15 @@
+.background {
+  background: rgba(0, 0, 0, 0.17);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background: rgba(2, 1, 1, 1);
+  padding: 20;
+  border-radius: 12;
+  min-width: 300;
+}
