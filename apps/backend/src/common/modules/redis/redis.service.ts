@@ -3,6 +3,11 @@ import Redis from 'ioredis';
 import { PostMessageResponseDto } from '../../../modules/room/dto/postMessageResponseDto';
 import { Message } from '../../../modules/room/interfaces/message.interface';
 import { IPresentation } from 'src/modules/waiting-room/interfaces/presentation.interface';
+import {
+  BulkMeetingAnalyticsDto,
+  BulkMeetingSessionDto,
+  BulkParticipantDto,
+} from 'src/repositories/room.repository';
 
 export type Guest = {
   guestId: string;
@@ -15,6 +20,22 @@ export type BlacklistEntry = {
   ip: string;
   name: string;
 };
+
+export interface AnalyticsJoinEvent {
+  type: 'join';
+  userId: string;
+  name: string;
+  ip: string;
+  ts: number;
+}
+
+export interface AnalyticsLeaveEvent {
+  type: 'leave';
+  userId: string;
+  ts: number;
+}
+
+export type AnalyticsEvent = AnalyticsJoinEvent | AnalyticsLeaveEvent;
 
 @Injectable()
 export class RedisService {
@@ -246,5 +267,168 @@ export class RedisService {
       );
       return [];
     }
+  }
+
+  async logJoin(roomId: string, userId: string, name: string, ip: string) {
+    const key = `room:${roomId}:analytics:events`;
+    const event: AnalyticsJoinEvent = {
+      type: 'join',
+      userId,
+      name,
+      ip,
+      ts: Date.now(),
+    };
+    await this.client.rpush(key, JSON.stringify(event));
+    await this.client.expire(key, 60 * 60 * 24); // 1 день TTL
+    this.logger.log(`Logged join event for user ${userId} in room ${roomId}`);
+  }
+
+  async logLeave(roomId: string, userId: string) {
+    const key = `room:${roomId}:analytics:events`;
+    const event: AnalyticsLeaveEvent = {
+      type: 'leave',
+      userId,
+      ts: Date.now(),
+    };
+    await this.client.rpush(key, JSON.stringify(event));
+    await this.client.expire(key, 60 * 60 * 24); // 1 день TTL
+    this.logger.log(`Logged leave event for user ${userId} in room ${roomId}`);
+  }
+
+  async setActiveParticipant(roomId: string, userId: string, joinedAt: number) {
+    await this.client.hset(
+      `room:${roomId}:analytics:active`,
+      userId,
+      String(joinedAt),
+    );
+    this.logger.log(`Set active participant ${userId} in room ${roomId}`);
+  }
+
+  async removeActiveParticipant(roomId: string, userId: string) {
+    await this.client.hdel(`room:${roomId}:analytics:active`, userId);
+    this.logger.log(`Removed active participant ${userId} from room ${roomId}`);
+  }
+
+  async getActiveParticipants(roomId: string): Promise<Record<string, string>> {
+    const active = await this.client.hgetall(`room:${roomId}:analytics:active`);
+    this.logger.debug(`Retrieved active participants for room ${roomId}`);
+    return active;
+  }
+
+  async getAnalyticsEvents(roomId: string): Promise<AnalyticsEvent[]> {
+    const key = `room:${roomId}:analytics:events`;
+    const list = await this.client.lrange(key, 0, -1);
+    if (!list || list.length === 0) {
+      this.logger.debug(`No analytics events found for room ${roomId}`);
+      return [];
+    }
+    try {
+      return list.map((item) => JSON.parse(item) as AnalyticsEvent);
+    } catch (error) {
+      this.logger.error(
+        `Failed to parse analytics events for room ${roomId}: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
+  async clearAnalytics(roomId: string) {
+    const keys = [
+      `room:${roomId}:analytics:events`,
+      `room:${roomId}:analytics:active`,
+    ];
+    await this.client.del(keys);
+    this.logger.log(`Cleared all analytics for room ${roomId}`);
+  }
+
+  async getMeetingAnalytics(roomId: string): Promise<BulkMeetingAnalyticsDto> {
+    const events = await this.getAnalyticsEvents(roomId);
+    const activeParticipants = await this.getActiveParticipants(roomId);
+
+    // Группируем события по сессиям (предполагаем одну сессию для простоты, можно расширить)
+    const sessions: BulkMeetingSessionDto[] = [];
+    const participantMap = new Map<string, BulkParticipantDto>();
+    let sessionStartTime: string | undefined;
+
+    // Обрабатываем события для построения сессий
+    for (const event of events) {
+      if (event.type === 'join') {
+        if (!sessionStartTime) {
+          sessionStartTime = new Date(event.ts).toISOString();
+        }
+
+        if (!participantMap.has(event.userId)) {
+          participantMap.set(event.userId, {
+            userId: parseInt(event.userId, 10),
+            name: event.name,
+            sessions: [],
+          });
+        }
+
+        participantMap.get(event.userId)!.sessions.push({
+          joinTime: new Date(event.ts).toISOString(),
+          leaveTime: undefined,
+        });
+      } else if (event.type === 'leave') {
+        const participant = participantMap.get(event.userId);
+        if (participant) {
+          const lastSession = participant.sessions.find((s) => !s.leaveTime);
+          if (lastSession) {
+            lastSession.leaveTime = new Date(event.ts).toISOString();
+          }
+        }
+      }
+    }
+
+    // Добавляем активных участников, у которых нет leave события
+    for (const [userId, joinedAt] of Object.entries(activeParticipants)) {
+      if (!participantMap.has(userId)) {
+        participantMap.set(userId, {
+          userId: parseInt(userId, 10),
+          name: `Unknown_${userId}`, // Имя может быть неизвестным, если join событие потеряно
+          sessions: [],
+        });
+      }
+      const participant = participantMap.get(userId)!;
+      if (!participant.sessions.some((s) => !s.leaveTime)) {
+        participant.sessions.push({
+          joinTime: new Date(parseInt(joinedAt, 10)).toISOString(),
+          leaveTime: undefined,
+        });
+      }
+    }
+
+    // Формируем сессию, если есть участники
+    if (participantMap.size > 0 && sessionStartTime) {
+      const participants = Array.from(participantMap.values());
+      let endTime: string | undefined;
+      let duration: number | undefined;
+
+      // Определяем endTime как максимальное leaveTime или текущее время, если есть активные участники
+      const leaveTimes = participants
+        .flatMap((p) => p.sessions.map((s) => s.leaveTime))
+        .filter((t): t is string => !!t)
+        .map((t) => new Date(t).getTime());
+
+      if (
+        Object.keys(activeParticipants).length === 0 &&
+        leaveTimes.length > 0
+      ) {
+        const maxLeaveTime = Math.max(...leaveTimes);
+        endTime = new Date(maxLeaveTime).toISOString();
+        duration = Math.floor(
+          (maxLeaveTime - new Date(sessionStartTime).getTime()) / 60000,
+        );
+      }
+
+      sessions.push({
+        startTime: sessionStartTime,
+        endTime,
+        duration,
+        participants,
+      });
+    }
+
+    return { sessions };
   }
 }
