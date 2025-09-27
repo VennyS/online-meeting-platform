@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { User } from 'src/common/decorators/user.decorator';
@@ -21,11 +22,16 @@ import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { GetMessagesResponseDto } from './dto/getMessagesResponseDto';
-import type { Request } from 'express';
+import type { Response, Request } from 'express';
+import { Workbook } from 'exceljs';
+import { ReportExportService } from 'src/common/services/report.meeting.service';
 
 @Controller('room')
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly exportService: ReportExportService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard({ required: true }))
@@ -41,12 +47,6 @@ export class RoomController {
     return this.roomService.create(query);
   }
 
-  @Get('/:shortId/reports')
-  @UseGuards(AuthGuard({ required: true }))
-  getMeetingReport(@Param('shortId', RoomByShortIdPipe) room: Room) {
-    return this.roomService.getReports(room);
-  }
-
   @Patch('/:shortId')
   @UseGuards(AuthGuard({ required: true }))
   patchRoom(
@@ -55,6 +55,51 @@ export class RoomController {
     @User('id') id: number,
   ) {
     return this.roomService.patch(room, body, id);
+  }
+
+  @Get('/:shortId/reports')
+  @UseGuards(AuthGuard({ required: true }))
+  getMeetingReport(@Param('shortId', RoomByShortIdPipe) room: Room) {
+    return this.roomService.getReports(room);
+  }
+
+  @Get('/:shortId/reports/excel')
+  @UseGuards(AuthGuard({ required: true }))
+  async exportReportsExcel(
+    @Param('shortId', RoomByShortIdPipe) room: Room,
+    @Res() res: Response,
+  ) {
+    const data = await this.roomService.getReports(room);
+    const buffer = await this.exportService.generateExcel(data);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="meeting_reports.xlsx"`,
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('/:shortId/reports/csv')
+  @UseGuards(AuthGuard({ required: true }))
+  async exportReportsCsv(
+    @Param('shortId', RoomByShortIdPipe) room: Room,
+    @Res() res: Response,
+  ) {
+    const data = await this.roomService.getReports(room);
+    const csvString = this.exportService.generateCsv(data);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="meeting_reports.csv"`,
+    );
+
+    res.send(csvString);
   }
 
   @Get(':shortId/prequisites')

@@ -257,6 +257,7 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
         >
           Сохранить
         </button>
+
         <Link
           href={`/room/${room.shortId}`}
           style={{
@@ -268,6 +269,7 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
         >
           Зайти
         </Link>
+
         <button
           onClick={() => setReportsOpen(true)}
           disabled={updating}
@@ -275,9 +277,33 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
             background: "blue",
             color: "white",
             padding: "5px 10px",
+            marginRight: "5px",
           }}
         >
           Показать отчёты
+        </button>
+
+        <button
+          onClick={() => roomService.downloadMeetingReportsExcel(room.shortId)}
+          style={{
+            background: "orange",
+            color: "white",
+            padding: "5px 10px",
+            marginRight: "5px",
+          }}
+        >
+          Скачать Excel
+        </button>
+
+        <button
+          onClick={() => roomService.downloadMeetingReportsCsv(room.shortId)}
+          style={{
+            background: "purple",
+            color: "white",
+            padding: "5px 10px",
+          }}
+        >
+          Скачать CSV
         </button>
       </div>
       <MeetingReportsModal
