@@ -1,13 +1,10 @@
-// waiting-room.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { RedisService } from '../../common/modules/redis/redis.service';
+import { Guest, RedisService } from '../../common/modules/redis/redis.service';
 import { WebSocket } from 'ws';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
-import {
-  IPresentation,
-  PresentationMode,
-} from './interfaces/presentation.interface';
+import { IPresentation } from './interfaces/presentation.interface';
+import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 
 @Injectable()
 export class WaitingRoomService {
@@ -16,6 +13,7 @@ export class WaitingRoomService {
   constructor(
     private readonly redis: RedisService,
     private readonly roomRepository: RoomRepository,
+    private readonly livekit: LivekitService,
   ) {}
 
   // --- Проверка роли хоста ---
@@ -33,11 +31,12 @@ export class WaitingRoomService {
   async sendInitToHost(roomId: string, ws: WebSocket) {
     const guests = await this.getWaitingGuests(roomId);
     const permissions = await this.redis.getPermissions(roomId);
+    const blacklist = await this.redis.getBlacklist(roomId);
 
     ws.send(
       JSON.stringify({
         event: 'init_host',
-        data: { guests, permissions },
+        data: { guests, permissions, blacklist },
       }),
     );
   }
@@ -97,24 +96,100 @@ export class WaitingRoomService {
     }
   }
 
+  async initPermissions(roomId: string, ws: WebSocket) {
+    // Получаем пермишены из Redis
+    let permissions: Record<string, any> | null =
+      await this.redis.getPermissions(roomId);
+
+    // Если в Redis нет данных или объект пустой, подтягиваем из Prisma
+    if (!permissions || Object.keys(permissions).length === 0) {
+      const requestedRoom = await this.roomRepository.findByShortId(roomId);
+
+      if (!requestedRoom) {
+        ws.send(
+          JSON.stringify({
+            event: 'permissions_error',
+            data: { message: `Room ${roomId} not found` },
+          }),
+        );
+        return;
+      }
+
+      // Формируем объект permissions из данных комнаты
+      permissions = {
+        canShareScreen: requestedRoom.canShareScreen,
+        canStartPresentation: requestedRoom.canStartPresentation,
+      };
+    }
+
+    // Определяем роли и их права
+    const roles = ['owner', 'admin', 'participant'] as const;
+    const rolePermissions = roles.map((role) => {
+      const perms: Record<string, boolean> = {
+        canShareScreen: false,
+        canStartPresentation: false,
+      };
+
+      // Логика для canShareScreen
+      if (permissions!.canShareScreen === 'ALL') {
+        perms.canShareScreen = true;
+      } else if (
+        permissions!.canShareScreen === 'ADMIN' &&
+        (role === 'owner' || role === 'admin')
+      ) {
+        perms.canShareScreen = true;
+      } else if (permissions!.canShareScreen === 'OWNER' && role === 'owner') {
+        perms.canShareScreen = true;
+      }
+
+      // Логика для canStartPresentation
+      if (permissions!.canStartPresentation === 'ALL') {
+        perms.canStartPresentation = true;
+      } else if (
+        permissions!.canStartPresentation === 'ADMIN' &&
+        (role === 'owner' || role === 'admin')
+      ) {
+        perms.canStartPresentation = true;
+      } else if (
+        permissions!.canStartPresentation === 'OWNER' &&
+        role === 'owner'
+      ) {
+        perms.canStartPresentation = true;
+      }
+
+      return { role, permissions: perms };
+    });
+
+    // Отправляем права через WebSocket
+    ws.send(
+      JSON.stringify({
+        event: 'permissions_init',
+        data: rolePermissions,
+      }),
+    );
+  }
+
   // --- Очередь гостей ---
   async getWaitingGuests(roomId: string) {
     return await this.redis.getWaitingGuests(roomId);
   }
 
-  async removeGuestFromWaiting(roomId: string, guestId: string) {
-    await this.redis.removeGuestFromWaiting(roomId, guestId);
-  }
-
-  async removeGuestFromWaitingIfPresent(roomId: string, guestId: string) {
+  async removeGuestFromWaitingIfPresent(
+    roomId: string,
+    guestId: string,
+  ): Promise<Guest[]> {
     const waitingList = await this.getWaitingGuests(roomId);
     const isGuestInQueue = waitingList.some((g) => g.guestId === guestId);
+
     if (isGuestInQueue) {
-      await this.removeGuestFromWaiting(roomId, guestId);
+      const updated = await this.redis.removeGuestFromWaiting(roomId, guestId);
       this.logger.log(
         `🗑️ Guest ${guestId} removed from waiting queue in room ${roomId}`,
       );
+      return updated;
     }
+
+    return waitingList;
   }
 
   async handleGuestJoinRequest(roomId: string, guestId: string, name: string) {
@@ -158,8 +233,16 @@ export class WaitingRoomService {
       );
     }
 
-    // Удаляем гостя из очереди через кастомный метод
-    await this.removeGuestFromWaitingIfPresent(roomId, guestId);
+    const msg = JSON.stringify({
+      event: 'waiting_queue_updated',
+      data: {
+        quests: await this.removeGuestFromWaitingIfPresent(roomId, guestId),
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.isHost && conn.ws.readyState === conn.ws.OPEN) conn.ws.send(msg);
+    }
   }
 
   async updateWaitingQueueForAllHosts(
@@ -446,5 +529,60 @@ export class WaitingRoomService {
       presentationId,
       roomConnections,
     );
+  }
+
+  async addToBlacklist(
+    roomId: string,
+    ip: string,
+    userId: string,
+    name: string,
+    ws: WebSocket,
+  ) {
+    await this.redis.addToBlacklist(roomId, ip, name, userId);
+    await this.livekit.removeParticipant(roomId, userId);
+    await this.notifyHostAboutBlacklist(ws, roomId);
+  }
+
+  async removeFromBlacklist(roomId: string, ip: string, ws: WebSocket) {
+    await this.redis.removeFromBlacklist(roomId, ip);
+
+    await this.notifyHostAboutBlacklist(ws, roomId);
+  }
+
+  async notifyHostAboutBlacklist(ws: WebSocket, roomId: string) {
+    const blacklist = await this.redis.getBlacklist(roomId);
+
+    const message = {
+      event: 'blacklist_updated',
+      data: {
+        blacklist,
+      },
+    };
+
+    ws.send(JSON.stringify(message));
+  }
+
+  async joinAnalytics(
+    roomId: string,
+    userId: string,
+    username: string,
+    ip: string,
+  ) {
+    await this.redis.logJoin(roomId, userId, username, ip);
+    await this.redis.setActiveParticipant(roomId, userId, Date.now());
+  }
+
+  async leaveAnalytics(roomId: string, userId: string) {
+    await this.redis.logLeave(roomId, userId);
+    await this.redis.removeActiveParticipant(roomId, userId);
+  }
+
+  async saveAndClearAnalytics(roomId: string) {
+    const analytics = await this.redis.getMeetingAnalytics(roomId);
+    const room = await this.roomRepository.findByShortId(roomId);
+    if (room) {
+      await this.roomRepository.bulkSaveMeetingAnalytics(room.id, analytics);
+    }
+    await this.redis.clearAnalytics(roomId);
   }
 }

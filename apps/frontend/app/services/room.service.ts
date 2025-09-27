@@ -4,6 +4,7 @@ import {
   CreateRoomDto,
   IPrequisites,
   IRoom,
+  MeetingReports,
   UpdateRoomDto,
 } from "../types/room.types";
 
@@ -53,5 +54,45 @@ export const roomService = {
   async updateRoom(shortId: string, data: UpdateRoomDto) {
     const response = await axiosClassic.patch<IRoom>(`/room/${shortId}`, data);
     return response.data;
+  },
+
+  async getMeetingReports(shortId: string) {
+    const response = await axiosClassic.get<MeetingReports>(
+      `/room/${shortId}/reports`
+    );
+    return response.data;
+  },
+
+  async downloadMeetingReportsExcel(shortId: string) {
+    const response = await axiosClassic.get<Blob>(
+      `/room/${shortId}/reports/excel`,
+      {
+        responseType: "blob",
+      }
+    );
+    const url = window.URL.createObjectURL(response.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "meeting_reports.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  },
+
+  async downloadMeetingReportsCsv(shortId: string) {
+    const response = await axiosClassic.get<string>(
+      `/room/${shortId}/reports/csv`,
+      {
+        responseType: "text",
+      }
+    );
+    const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "meeting_reports.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   },
 };

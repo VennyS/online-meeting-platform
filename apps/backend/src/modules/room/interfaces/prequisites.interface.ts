@@ -9,4 +9,5 @@ export interface Prequisites {
   isOwner: boolean;
   cancelled: boolean;
   isFinished: boolean;
+  isBlackListed: boolean;
 }

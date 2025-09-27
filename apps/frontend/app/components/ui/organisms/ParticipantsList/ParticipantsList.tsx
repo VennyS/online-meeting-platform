@@ -1,7 +1,7 @@
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import { Permissions, RoomRole } from "@/app/types/room.types";
 import styles from "./ParticipantsList.module.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function ParticipantsList({
   roomId,
@@ -13,18 +13,38 @@ export function ParticipantsList({
   const {
     local,
     remote,
+    waitingGuests,
+    permissionsMap,
+    blacklist,
     updateUserRole,
     updateRolePermissions,
-    waitingGuests,
     approveGuest,
     rejectGuest,
-    permissionsMap,
+    addToBlackList,
+    removeFromBlackList,
   } = useParticipantsContext();
   const [canShareScreenValue, setCanShareScreenValue] = useState<
     RoomRole | "all"
   >(getPermissionValue("canShareScreen"));
+  const [canStartPresentationValue, setCanStartPresentationValue] = useState<
+    RoomRole | "all"
+  >(getPermissionValue("canStartPresentation"));
   const [copied, setCopied] = useState(false);
   const [manualText, setManualText] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Проверяем, что все роли присутствуют в permissionsMap
+    if (
+      permissionsMap.owner &&
+      permissionsMap.admin &&
+      permissionsMap.participant
+    ) {
+      const shareScreenValue = getPermissionValue("canShareScreen");
+      const startPresentationValue = getPermissionValue("canStartPresentation");
+      setCanShareScreenValue(shareScreenValue);
+      setCanStartPresentationValue(startPresentationValue);
+    }
+  }, [permissionsMap]);
 
   const generateMeetingInfo = () => {
     const meetingDate = new Date().toLocaleString("ru-RU", {
@@ -65,23 +85,24 @@ export function ParticipantsList({
   // обработка смены dropdown
   const handlePermissionChange = (
     permission: keyof Permissions,
-    value: RoomRole | "all"
+    value: RoomRole | "all",
+    set: (role: RoomRole | "all") => void
   ) => {
     if (value === "all") {
       updateRolePermissions("owner", permission, true);
       updateRolePermissions("admin", permission, true);
       updateRolePermissions("participant", permission, true);
-      setCanShareScreenValue("all");
+      set("all");
     } else if (value === "admin") {
       updateRolePermissions("owner", permission, true);
       updateRolePermissions("admin", permission, true);
       updateRolePermissions("participant", permission, false);
-      setCanShareScreenValue("admin");
+      set("admin");
     } else if (value === "owner") {
       updateRolePermissions("owner", permission, true);
       updateRolePermissions("admin", permission, false);
       updateRolePermissions("participant", permission, false);
-      setCanShareScreenValue("owner");
+      set("owner");
     }
   };
 
@@ -94,7 +115,7 @@ export function ParticipantsList({
     if (ownerHas && adminHas && participantHas) return "all";
     if (ownerHas && adminHas && !participantHas) return "admin";
     if (ownerHas && !adminHas && !participantHas) return "owner";
-    return "owner"; // дефолт
+    return "owner";
   }
 
   return (
@@ -146,11 +167,39 @@ export function ParticipantsList({
                     >
                       Сделать участником
                     </button>
+                    <button
+                      onClick={() => {
+                        addToBlackList(
+                          participant.identity,
+                          participant.name || "unkown"
+                        );
+                      }}
+                    >
+                      Исключить
+                    </button>
                   </div>
                 )}
             </div>
           );
         })}
+
+        <details>
+          <summary>Чёрный список</summary>
+          {blacklist.map((e) => {
+            return (
+              <div key={e.ip + e.name}>
+                <p>{e.name}</p>
+                <button
+                  onClick={() => {
+                    removeFromBlackList(e.ip);
+                  }}
+                >
+                  Вернуть
+                </button>
+              </div>
+            );
+          })}
+        </details>
       </div>
 
       {/* Управление правами */}
@@ -165,7 +214,8 @@ export function ParticipantsList({
               onChange={(e) =>
                 handlePermissionChange(
                   "canShareScreen",
-                  e.target.value as RoomRole | "all"
+                  e.target.value as RoomRole | "all",
+                  setCanShareScreenValue
                 )
               }
             >
@@ -181,11 +231,12 @@ export function ParticipantsList({
             <label>Может делиться презентацией:</label>
             <select
               title="canStartPresentation dropdown"
-              value={canShareScreenValue}
+              value={canStartPresentationValue}
               onChange={(e) =>
                 handlePermissionChange(
                   "canStartPresentation",
-                  e.target.value as RoomRole | "all"
+                  e.target.value as RoomRole | "all",
+                  setCanStartPresentationValue
                 )
               }
             >

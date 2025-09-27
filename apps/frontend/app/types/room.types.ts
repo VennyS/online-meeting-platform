@@ -10,6 +10,8 @@ export interface CreateRoomDto {
   waitingRoomEnabled?: boolean;
   allowEarlyJoin?: boolean;
   timeZone?: string;
+  canShareScreen?: Role;
+  сanStartPresentation?: Role;
 }
 
 export interface UpdateRoomDto {
@@ -42,6 +44,31 @@ export interface IRoom {
   timeZone: string;
 }
 
+export interface MeetingReports {
+  sessions: MeetingReport[];
+}
+
+export interface MeetingReport {
+  id: number;
+  roomId: number;
+  startTime: string;
+  endTime?: string;
+  duration?: number;
+  participants: Participant[];
+}
+
+export interface Participant {
+  id: number;
+  userId: number;
+  name: string;
+  sessions: ParticipantSession[];
+}
+
+export interface ParticipantSession {
+  joinTime: string;
+  leaveTime?: string;
+}
+
 export interface IWaitingGuest {
   guestId: string;
   name: string;
@@ -59,6 +86,7 @@ export interface IPrequisites {
   isOwner: boolean;
   cancelled: boolean;
   isFinished: boolean;
+  isBlackListed: boolean;
 }
 
 export interface Permissions {
@@ -71,7 +99,14 @@ export interface UserPermissions {
   permissions: Permissions;
 }
 
+export interface BlacklistEntry {
+  userId: string | undefined;
+  ip: string;
+  name: string;
+}
+
 export type RoomRole = "owner" | "admin" | "participant";
+export type Role = "OWNER" | "ADMIN" | "ALL";
 
 type WSMessage<E extends string, D> = {
   event: E;
@@ -80,9 +115,17 @@ type WSMessage<E extends string, D> = {
 
 export type RoomWSMessage =
   | WSMessage<"init", { role: RoomRole }>
+  | WSMessage<
+      "init_host",
+      { guests: IWaitingGuest[]; blacklist: BlacklistEntry[] }
+    >
   | WSMessage<"waiting_queue_updated", { guests: IWaitingGuest[] }>
   | WSMessage<"new_guest_waiting", { guest: IWaitingGuest }>
   | WSMessage<"role_updated", { role: RoomRole; userId: string | number }>
+  | WSMessage<
+      "permissions_init",
+      { role: RoomRole; permissions: Permissions }[]
+    >
   | WSMessage<
       "permissions_updated",
       { role: RoomRole; permissions: Partial<Permissions> }
@@ -135,6 +178,12 @@ export type RoomWSMessage =
         presentationId: string;
         mode: "presentationWithCamera" | "presentationOnly";
       }
+    >
+  | WSMessage<
+      "blacklist_updated",
+      {
+        blacklist: BlacklistEntry[];
+      }
     >;
 
 export type RoomWSSendMessage =
@@ -170,5 +219,12 @@ export type RoomWSSendMessage =
       {
         presentationId: string;
         mode: "presentationWithCamera" | "presentationOnly";
+      }
+    >
+  | WSMessage<"add_to_blacklist", { userId: string; name: string }>
+  | WSMessage<
+      "remove_from_blacklist",
+      {
+        ip: string;
       }
     >;

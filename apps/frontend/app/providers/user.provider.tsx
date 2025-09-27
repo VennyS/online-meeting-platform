@@ -45,14 +45,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           removeAccessToken();
           router.replace("https://ru.noimann.academy/");
         }
-        // Если это публичная комната, просто оставляем user = null
       } finally {
         setLoading(false);
       }
     };
 
     fetchUser();
-  }, [router, pathname]);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, setUser, loading, token, setToken }}>

@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsDate,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -8,6 +9,7 @@ import {
   IsString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PermissionLevel } from '@prisma/client';
 
 export class CreateRoomDto {
   @Type(() => Number)
@@ -57,4 +59,12 @@ export class CreateRoomDto {
   @IsString()
   @IsOptional()
   timeZone: string = 'Europe/Moscow';
+
+  @IsEnum(PermissionLevel)
+  @IsOptional()
+  canShareScreen: PermissionLevel = PermissionLevel.ALL;
+
+  @IsEnum(PermissionLevel)
+  @IsOptional()
+  сanStartPresentation: PermissionLevel = PermissionLevel.ALL;
 }

@@ -13,6 +13,7 @@ import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { PostMessageResponseDto } from './dto/postMessageResponseDto';
+import { GetMeetingReportsDto } from './dto/getMeetingReportDto';
 
 @Injectable()
 export class RoomService {
@@ -22,7 +23,7 @@ export class RoomService {
     private readonly redis: RedisService,
   ) {}
   async getAllByUserId(userId: number): Promise<Omit<Room, 'passwordHash'>[]> {
-    return this.roomRepo.getAllByUserId(userId);
+    return await this.roomRepo.getAllByUserId(userId);
   }
 
   async create(
@@ -51,18 +52,20 @@ export class RoomService {
       throw new ForbiddenException('You are not allowed to update this room');
     }
 
-    var passwordHash: string | undefined;
+    const { password, ...rest } = patchRoomDto;
 
-    if (patchRoomDto.password) {
-      passwordHash = await bcrypt.hash(patchRoomDto.password, 10);
+    let passwordHash: string | undefined;
+    if (password) {
+      passwordHash = await bcrypt.hash(password, 10);
     }
 
-    return await this.roomRepo.update(room.shortId, patchRoomDto, passwordHash);
+    return await this.roomRepo.update(room.shortId, rest, passwordHash);
   }
 
   async getPrequisites(
     room: Room,
     userId: number | null,
+    ip: string,
   ): Promise<Prequisites> {
     let numParticipants = 0;
     try {
@@ -79,6 +82,8 @@ export class RoomService {
       gracePeriod: 5 * 60_000,
     });
 
+    const isBlackListed = await this.redis.isInBlacklist(room.shortId, ip);
+
     const prequisites: Prequisites = {
       name: room.name,
       description: room.description,
@@ -90,6 +95,7 @@ export class RoomService {
       isOwner: userId ? room.ownerId === userId : false,
       cancelled: room.cancelled,
       isFinished: isFinished,
+      isBlackListed: isBlackListed,
     };
 
     return prequisites;
@@ -129,5 +135,9 @@ export class RoomService {
         room.id,
       ),
     };
+  }
+
+  async getReports(room: Room): Promise<GetMeetingReportsDto> {
+    return await this.roomRepo.getReports(room.id);
   }
 }

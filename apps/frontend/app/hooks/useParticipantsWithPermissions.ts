@@ -2,6 +2,7 @@ import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
 import { useEffect, useState } from "react";
 import {
+  BlacklistEntry,
   IWaitingGuest,
   Permissions,
   RoomRole,
@@ -17,6 +18,7 @@ export interface ParticipantsWithPermissions {
   waitingGuests: IWaitingGuest[];
   localPresentation?: [string, Presentation];
   remotePresentations: Map<string, Presentation>;
+  blacklist: BlacklistEntry[];
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -40,6 +42,8 @@ export interface ParticipantsWithPermissions {
     mode: "presentationWithCamera" | "presentationOnly"
   ) => void;
   finishPresentation: (presentationId: string) => void;
+  addToBlackList: (userId: string, username: string) => void;
+  removeFromBlackList: (ip: string) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -70,7 +74,7 @@ const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
   },
   participant: {
     role: "participant",
-    permissions: { canShareScreen: true, canStartPresentation: true },
+    permissions: { canShareScreen: false, canStartPresentation: false },
   },
 });
 
@@ -87,6 +91,8 @@ export function useParticipantsWithPermissions(
   const [presentations, setPresentations] = useState<Map<string, Presentation>>(
     new Map()
   );
+  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
+
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
 
@@ -116,6 +122,10 @@ export function useParticipantsWithPermissions(
 
   function rejectGuest(guestId: string) {
     sendMessage("host_approval", { guestId, approved: false });
+  }
+
+  function removeFromBlackList(ip: string) {
+    sendMessage("remove_from_blacklist", { ip });
   }
 
   function startPresentation(
@@ -157,6 +167,10 @@ export function useParticipantsWithPermissions(
     sendMessage("presentation_finished", { presentationId });
   }
 
+  function addToBlackList(userId: string, username: string) {
+    sendMessage("add_to_blacklist", { userId, name: username });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -165,6 +179,11 @@ export function useParticipantsWithPermissions(
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "init_host":
+          setBlacklist(data.blacklist);
+          setWaitingGuests(data.guests);
+          break;
+
         case "permissions_updated":
           setPermissionsMap((prev) => ({
             ...prev,
@@ -173,6 +192,17 @@ export function useParticipantsWithPermissions(
               permissions: data.permissions,
             },
           }));
+          break;
+
+        case "permissions_init":
+          const newPermissionsMap = message.data.reduce<
+            Record<RoomRole, UserPermissions>
+          >((acc, { role, permissions }) => {
+            acc[role] = { role, permissions };
+            return acc;
+          }, {} as Record<RoomRole, UserPermissions>);
+
+          setPermissionsMap(newPermissionsMap);
           break;
 
         case "role_updated":
@@ -291,6 +321,10 @@ export function useParticipantsWithPermissions(
             return newPresentations;
           });
           break;
+
+        case "blacklist_updated": {
+          setBlacklist(data.blacklist);
+        }
       }
     };
   }, [ws, localUserId, presentations]);
@@ -335,6 +369,7 @@ export function useParticipantsWithPermissions(
     waitingGuests,
     localPresentation,
     remotePresentations,
+    blacklist,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -345,5 +380,7 @@ export function useParticipantsWithPermissions(
     changeScroll,
     changePresentationMode,
     finishPresentation,
+    addToBlackList,
+    removeFromBlackList,
   };
 }

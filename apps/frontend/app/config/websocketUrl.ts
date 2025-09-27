@@ -1,7 +1,7 @@
 export const getWebSocketUrl = (
   roomName: string,
   userId: string | number,
-  isHost?: boolean
+  username: string
 ): string => {
   // Получаем базовый URL из переменной окружения
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -19,7 +19,7 @@ export const getWebSocketUrl = (
   const searchParams = new URLSearchParams({
     roomId: roomName,
     userId: userId.toString(),
-    isHost: String(isHost),
+    username: username,
   });
 
   return `${wsBaseUrl}?${searchParams.toString()}`;

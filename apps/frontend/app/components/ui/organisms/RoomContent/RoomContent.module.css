@@ -68,15 +68,18 @@
   pointer-events: auto;
 }
 
+.closePanelButton {
+  display: none; /* по умолчанию скрыта */
+}
+
 @media (max-width: 800px) {
   .container.open {
     grid-template-columns: 1fr 1fr; /* при открытии списка */
   }
 }
 
-@media (max-width: 768px) {
-  .participants,
-  .chat {
+@media (max-width: 1032px) {
+  .rightPanel {
     position: fixed; /* всплывающие сверху */
     top: 0;
     right: 0;
@@ -91,19 +94,12 @@
     transition: transform 0.3s ease, opacity 0.3s ease;
   }
 
-  .participants.active,
-  .chat.active {
+  .rightPanel.active {
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0); /* выезжаем */
   }
-}
 
-.closePanelButton {
-  display: none; /* по умолчанию скрыта */
-}
-
-@media (max-width: 768px) {
   .closePanelButton {
     display: block;
     position: fixed;

@@ -12,7 +12,7 @@ import {
   RoomWSSendMessage,
 } from "@/app/types/room.types";
 import { AxiosError } from "axios";
-import { getWebSocketUrl } from "@/app/config/websocketUrl";
+import { useWebSocket } from "@/app/hooks/useWebSocket";
 
 const PrejoinPage = () => {
   const { roomId } = useParams();
@@ -30,10 +30,10 @@ const PrejoinPage = () => {
     startAt: new Date(),
     cancelled: false,
     isFinished: false,
+    isBlackListed: false,
   });
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRoomOwner, setIsRoomOwner] = useState(false);
   const [timeLeft, setTimeLeft] = useState<{
@@ -43,6 +43,7 @@ const PrejoinPage = () => {
     seconds: number;
   } | null>(null);
   const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
+  const { connect } = useWebSocket();
 
   useEffect(() => {
     const checkPrerequisites = async () => {
@@ -53,6 +54,10 @@ const PrejoinPage = () => {
         const data = await roomService.prequisites(roomId as string);
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
+
+        if (data.isBlackListed) {
+          router.replace("/404");
+        }
 
         if (
           !data.allowEarlyJoin &&
@@ -108,6 +113,7 @@ const PrejoinPage = () => {
 
   useEffect(() => {
     if (
+      !isPrequisitesLoading &&
       user &&
       !user.isGuest &&
       isRoomOwner &&
@@ -130,22 +136,17 @@ const PrejoinPage = () => {
     }
   };
 
-  const connectWebSocket = (
-    userId: number,
-    userName: string,
-    isHost: boolean = false
-  ) => {
+  const connectWebSocket = (userId: number, userName: string) => {
     setIsConnecting(true);
+    const ws = connect(roomId as string, userId, userName);
 
-    const websocket = new WebSocket(
-      getWebSocketUrl(roomId as string, userId, isHost)
-    );
+    if (!ws) return;
 
-    websocket.onopen = () => {
+    ws.onopen = () => {
       console.log("✅ Connected to WebSocket");
     };
 
-    websocket.onmessage = (event: MessageEvent) => {
+    ws.onmessage = (event: MessageEvent) => {
       console.log("📨 Message from server:", event.data);
 
       const message: RoomWSMessage = JSON.parse(event.data);
@@ -153,13 +154,11 @@ const PrejoinPage = () => {
 
       switch (evt) {
         case "init":
-          if (!isHost) {
-            const joinRequest: RoomWSSendMessage = {
-              event: "guest_join_request",
-              data: { name: userName },
-            };
-            websocket.send(JSON.stringify(joinRequest));
-          }
+          const joinRequest: RoomWSSendMessage = {
+            event: "guest_join_request",
+            data: { name: userName },
+          };
+          ws.send(JSON.stringify(joinRequest));
           break;
 
         case "guest_approved":
@@ -177,18 +176,16 @@ const PrejoinPage = () => {
       }
     };
 
-    websocket.onerror = (error) => {
+    ws.onerror = (error) => {
       console.error("WebSocket error:", error);
       setError("Ошибка подключения");
       setIsConnecting(false);
     };
 
-    websocket.onclose = () => {
+    ws.onclose = () => {
       console.log("WebSocket connection closed");
       setIsConnecting(false);
     };
-
-    setWs(websocket);
   };
 
   const handleApprovedAccess = (
@@ -239,14 +236,13 @@ const PrejoinPage = () => {
         } else {
           setError("Ошибка при подключении");
         }
-        return; // стопаем, если пароль неправильный
+        return;
       }
     }
 
-    // 2️⃣ Если включён waiting room — подключаемся к WS
     if (prequisites.waitingRoomEnabled) {
-      connectWebSocket(userId, userName, false);
-      return; // дальше ждать одобрения хоста
+      connectWebSocket(userId, userName);
+      return;
     }
 
     // 3️⃣ Если нет waiting room или пароль уже дали токен — пропускаем в комнату
