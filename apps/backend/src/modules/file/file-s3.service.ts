@@ -41,7 +41,11 @@ export class S3FileService implements IFileService {
     };
 
     await this.s3.putObject(params).promise();
-    return `${this.configService.get<string>('MINIO_ENDPOINT')}/${this.bucket}/${key}`;
+    return await this.s3.getSignedUrlPromise('getObject', {
+      Bucket: this.bucket,
+      Key: key,
+      Expires: 3600,
+    });
   }
 
   async download(key: string): Promise<Buffer> {
