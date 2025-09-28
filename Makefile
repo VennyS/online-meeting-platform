@@ -1,7 +1,8 @@
+
 .PHONY: dev, frontend, go-back
 
 dev:
-	docker-compose up backend-test livekit postgres minio redis -d &
+	docker-compose up backend-test livekit postgres minio redis egress -d &
 	cd apps/frontend && npm run dev
 
 go-back:

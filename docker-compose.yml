@@ -54,11 +54,23 @@ services:
       - "7880:7880/tcp"
       - "7881-7885:7881-7885/udp"
       - "7882:7882/tcp"
-    env_file:
-      - ./infrastructure/livekit/.env
     command: ["--config", "/infrastructure/livekit/livekit.yaml"]
     volumes:
       - ./infrastructure/livekit:/infrastructure/livekit
+
+  egress:
+    image: livekit/egress:latest
+    restart: unless-stopped
+    container_name: livekit-egress
+    environment:
+      - EGRESS_CONFIG_FILE=/config/egress.yaml
+    volumes:
+      - ./infrastructure/egress/output:/output
+      - ./infrastructure/egress/egress.yaml:/config/egress.yaml:ro
+    command: --config /config/egress.yaml
+    depends_on:
+      - livekit
+      - redis
 
   postgres:
     image: postgres:17-alpine
