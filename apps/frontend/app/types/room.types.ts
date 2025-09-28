@@ -184,7 +184,9 @@ export type RoomWSMessage =
       {
         blacklist: BlacklistEntry[];
       }
-    >;
+    >
+  | WSMessage<"recording_started", { egressId: string }>
+  | WSMessage<"recording_finished", { egressId: string }>;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -227,4 +229,6 @@ export type RoomWSSendMessage =
       {
         ip: string;
       }
-    >;
+    >
+  | WSMessage<"recording_started", {}>
+  | WSMessage<"recording_finished", { egressId: string }>;

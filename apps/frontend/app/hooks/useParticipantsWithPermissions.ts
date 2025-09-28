@@ -19,6 +19,7 @@ export interface ParticipantsWithPermissions {
   localPresentation?: [string, Presentation];
   remotePresentations: Map<string, Presentation>;
   blacklist: BlacklistEntry[];
+  isRecording: boolean;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -44,6 +45,8 @@ export interface ParticipantsWithPermissions {
   finishPresentation: (presentationId: string) => void;
   addToBlackList: (userId: string, username: string) => void;
   removeFromBlackList: (ip: string) => void;
+  startRecording: () => void;
+  stopRecording: () => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -95,6 +98,8 @@ export function useParticipantsWithPermissions(
 
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
+  const [isRecording, setIsRecording] = useState(false);
+  const [egressId, setEgressId] = useState<string>();
 
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
@@ -171,6 +176,16 @@ export function useParticipantsWithPermissions(
     sendMessage("add_to_blacklist", { userId, name: username });
   }
 
+  function startRecording() {
+    sendMessage("recording_started", {});
+  }
+
+  function stopRecording() {
+    if (!egressId) return;
+
+    sendMessage("recording_finished", { egressId });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -217,10 +232,12 @@ export function useParticipantsWithPermissions(
           for (const [id, role] of Object.entries(data.roles)) {
             roles[String(id)] = role;
           }
+          console.log("roles", roles);
           setUsersRoles((prev) => ({
             ...prev,
             ...roles,
           }));
+
           break;
 
         case "waiting_queue_updated":
@@ -324,6 +341,18 @@ export function useParticipantsWithPermissions(
 
         case "blacklist_updated": {
           setBlacklist(data.blacklist);
+          break;
+        }
+
+        case "recording_started": {
+          setEgressId(data.egressId);
+          setIsRecording(true);
+          break;
+        }
+
+        case "recording_finished": {
+          setIsRecording(false);
+          setEgressId(undefined);
         }
       }
     };
@@ -336,7 +365,7 @@ export function useParticipantsWithPermissions(
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
     permissions: {
-      role: localRole,
+      role: "owner",
       permissions: permissionsMap[localRole]?.permissions || {},
     },
   };
@@ -370,6 +399,7 @@ export function useParticipantsWithPermissions(
     localPresentation,
     remotePresentations,
     blacklist,
+    isRecording,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -382,5 +412,7 @@ export function useParticipantsWithPermissions(
     finishPresentation,
     addToBlackList,
     removeFromBlackList,
+    startRecording,
+    stopRecording,
   };
 }

@@ -59,12 +59,15 @@ export const RoomContent = ({
     local,
     localPresentation,
     remotePresentations,
+    isRecording,
     startPresentation,
     changePage,
     changeZoom,
     changeScroll,
     finishPresentation,
     changePresentationMode,
+    startRecording,
+    stopRecording,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
@@ -289,6 +292,13 @@ export const RoomContent = ({
             <div className={styles.notificationDot}>{unreadCount}</div>
           )}
         </button>
+        {local.permissions.role === "owner" && (
+          <button
+            onClick={() => (isRecording ? stopRecording() : startRecording())}
+          >
+            Запись {isRecording ? "да" : "нет"}
+          </button>
+        )}
       </div>
 
       <RoomAudioRenderer />
