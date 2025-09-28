@@ -4,6 +4,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RoomModule } from './modules/room/room.module';
 import { WaitingRoomModule } from './modules/waiting-room/waiting-room.module';
 import { FileModule } from './modules/file/file.module';
+import { EgressModule } from './modules/egress/egress.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { FileModule } from './modules/file/file.module';
     RoomModule,
     WaitingRoomModule,
     FileModule,
+    EgressModule,
   ],
 })
 export class AppModule {}
