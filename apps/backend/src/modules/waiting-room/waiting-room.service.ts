@@ -5,6 +5,7 @@ import { RoomRepository } from 'src/repositories/room.repository';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
 import { IPresentation } from './interfaces/presentation.interface';
 import { LivekitService } from 'src/common/modules/livekit/livekit.service';
+import { RecordingService } from 'src/modules/egress/recording.service';
 
 @Injectable()
 export class WaitingRoomService {
@@ -14,6 +15,7 @@ export class WaitingRoomService {
     private readonly redis: RedisService,
     private readonly roomRepository: RoomRepository,
     private readonly livekit: LivekitService,
+    private readonly recording: RecordingService,
   ) {}
 
   // --- Проверка роли хоста ---
@@ -584,5 +586,39 @@ export class WaitingRoomService {
       await this.roomRepository.bulkSaveMeetingAnalytics(room.id, analytics);
     }
     await this.redis.clearAnalytics(roomId);
+  }
+
+  async startRecording(roomId: string, roomConnections: Map<string, any>) {
+    const egressInfo = await this.recording.startRecording(roomId);
+
+    const msg = JSON.stringify({
+      event: 'recording_started',
+      data: {
+        egressId: egressInfo.egressId,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
+  }
+
+  async stopRecording(egressId: string, roomConnections: Map<string, any>) {
+    await this.recording.stopRecording(egressId);
+
+    const msg = JSON.stringify({
+      event: 'recording_finished',
+      data: {
+        egressId: egressId,
+      },
+    });
+
+    for (const conn of roomConnections.values()) {
+      if (conn.ws.readyState === conn.ws.OPEN) {
+        conn.ws.send(msg);
+      }
+    }
   }
 }

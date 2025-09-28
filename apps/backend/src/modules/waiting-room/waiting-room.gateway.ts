@@ -129,6 +129,35 @@ export class WaitingRoomGateway
     return null;
   }
 
+  @SubscribeMessage('recording_started')
+  async startRecording(@ConnectedSocket() ws: WebSocket) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    this.waitingRoomService.startRecording(
+      roomId,
+      this.connections.get(roomId)!,
+    );
+  }
+
+  @SubscribeMessage('recording_finished')
+  async finishRecording(
+    @ConnectedSocket() ws: WebSocket,
+    @MessageBody() data: { egressId: string },
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) return;
+
+    const { roomId } = info;
+
+    this.waitingRoomService.stopRecording(
+      data.egressId,
+      this.connections.get(roomId)!,
+    );
+  }
+
   @SubscribeMessage('guest_join_request')
   async guestJoin(
     @MessageBody() data: { name: string },
