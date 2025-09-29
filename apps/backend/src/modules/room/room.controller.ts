@@ -23,7 +23,6 @@ import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { GetMessagesResponseDto } from './dto/getMessagesResponseDto';
 import type { Response, Request } from 'express';
-import { Workbook } from 'exceljs';
 import { ReportExportService } from 'src/common/services/report.meeting.service';
 
 @Controller('room')
@@ -112,23 +111,6 @@ export class RoomController {
     const ip =
       req.headers['x-forwarded-for']?.toString() || req.ip || 'unknown';
     return this.roomService.getPrequisites(room, id, ip);
-  }
-
-  @Get('/:shortId/history')
-  async getHistory(
-    @Param('shortId', RoomByShortIdPipe) room: Room,
-  ): Promise<GetMessagesResponseDto> {
-    return {
-      messages: await this.roomService.getHistory(room),
-    };
-  }
-
-  @Post('/:shortId/messages')
-  async addMessage(
-    @Param('shortId', RoomByShortIdPipe) room: Room,
-    @Body() body: PostMessageDto,
-  ): Promise<PostMessageResponseDto> {
-    return this.roomService.createMessage(room, body);
   }
 
   @Post('/:shortId/participants')

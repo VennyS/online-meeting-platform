@@ -189,7 +189,7 @@ export function useParticipantsWithPermissions(
   useEffect(() => {
     if (!ws) return;
 
-    ws.onmessage = (event: MessageEvent) => {
+    ws.addEventListener("message", (event: MessageEvent) => {
       const message: RoomWSMessage = JSON.parse(event.data);
       const { event: evt, data } = message;
 
@@ -232,7 +232,6 @@ export function useParticipantsWithPermissions(
           for (const [id, role] of Object.entries(data.roles)) {
             roles[String(id)] = role;
           }
-          console.log("roles", roles);
           setUsersRoles((prev) => ({
             ...prev,
             ...roles,
@@ -246,13 +245,6 @@ export function useParticipantsWithPermissions(
 
         case "new_guest_waiting":
           setWaitingGuests((prev) => [...prev, data.guest]);
-          break;
-
-        case "init":
-          setUsersRoles((prev) => ({
-            ...prev,
-            [String(localUserId)]: data.role,
-          }));
           break;
 
         case "presentations_state":
@@ -355,7 +347,7 @@ export function useParticipantsWithPermissions(
           setEgressId(undefined);
         }
       }
-    };
+    });
   }, [ws, localUserId, presentations]);
 
   if (!localParticipant) return null;
@@ -365,7 +357,7 @@ export function useParticipantsWithPermissions(
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
     permissions: {
-      role: "owner",
+      role: localRole,
       permissions: permissionsMap[localRole]?.permissions || {},
     },
   };

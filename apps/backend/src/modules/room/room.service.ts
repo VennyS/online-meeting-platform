@@ -101,30 +101,6 @@ export class RoomService {
     return prequisites;
   }
 
-  async getHistory(room: Room): Promise<Message[]> {
-    if (!room.showHistoryToNewbies) {
-      return [];
-    }
-
-    return this.redis.getRoomMessages(room.shortId);
-  }
-
-  async createMessage(
-    room: Room,
-    postMessageDto: PostMessageDto,
-  ): Promise<PostMessageResponseDto> {
-    const msg = {
-      id: Math.random().toString(36).slice(2, 10),
-      text: postMessageDto.text,
-      user: postMessageDto.from,
-      createdAt: new Date(),
-    };
-
-    await this.redis.postRoomMessage(room.shortId, msg);
-
-    return msg;
-  }
-
   async addAllowedParticipants(
     room: Room,
     addParticipantsDto: AddParticipantsDto,

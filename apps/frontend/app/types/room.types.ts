@@ -108,13 +108,12 @@ export interface BlacklistEntry {
 export type RoomRole = "owner" | "admin" | "participant";
 export type Role = "OWNER" | "ADMIN" | "ALL";
 
-type WSMessage<E extends string, D> = {
+export type WSMessage<E extends string, D> = {
   event: E;
   data: D;
 };
 
 export type RoomWSMessage =
-  | WSMessage<"init", { role: RoomRole }>
   | WSMessage<
       "init_host",
       { guests: IWaitingGuest[]; blacklist: BlacklistEntry[] }

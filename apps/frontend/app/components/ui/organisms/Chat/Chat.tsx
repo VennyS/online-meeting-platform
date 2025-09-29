@@ -1,52 +1,25 @@
-import { useState, useEffect } from "react";
-import { useChat, useLocalParticipant } from "@livekit/components-react";
-import { roomService } from "@/app/services/room.service";
+import { useState } from "react";
 import styles from "./Chat.module.css";
 import cn from "classnames";
-import { ChatProps } from "./types";
 import { parseMessage } from "@/app/lib/parseMessage";
+import { useChat } from "@/app/hooks/useChat";
+import { useUser } from "@/app/hooks/useUser";
 
-export const Chat = ({ roomName, user }: ChatProps) => {
-  const { send: sendLivekitMessage, chatMessages } = useChat();
-  const localParticipant = useLocalParticipant();
+export const Chat = () => {
+  const { messages, send } = useChat();
+  const { user } = useUser();
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<any[]>([]);
 
-  // Загружаем историю с бэка при монтировании
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const history = await roomService.getHistory(roomName);
-        setHistory(history);
-      } catch (err) {
-        console.error("Ошибка при получении истории:", err);
-      }
-    };
-
-    fetchHistory();
-  }, [roomName]);
-
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return `${date.getHours().toString().padStart(2, "0")}:${date
+  const formatTime = (date: string | Date) => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return `${d.getHours().toString().padStart(2, "0")}:${d
       .getMinutes()
       .toString()
       .padStart(2, "0")}`;
   };
 
-  const handleSend = async () => {
-    if (message.trim() === "") return;
-
-    // Отправка в LiveKit
-    sendLivekitMessage(message.trim());
-
-    // Отправка на бэк
-    try {
-      await roomService.sendMessage(roomName, message.trim(), user);
-    } catch (err) {
-      console.error("Ошибка при отправке сообщения на бэкенд:", err);
-    }
-
+  const handleSend = () => {
+    send(message);
     setMessage("");
   };
 
@@ -57,26 +30,12 @@ export const Chat = ({ roomName, user }: ChatProps) => {
     }
   };
 
-  // Соединяем историю + livekit сообщения
-  const allMessages = [
-    ...history,
-    ...chatMessages.map((msg) => ({
-      text: msg.message,
-      createdAt: msg.timestamp,
-      from: msg.from,
-    })),
-  ];
-
   return (
     <div className={styles.chatWrapper}>
       <ul className={styles.messagesWrapper}>
-        {allMessages.map((msg, index) => {
-          const isMine =
-            msg.user?.id === user?.id ||
-            msg.from?.sid === localParticipant.localParticipant.sid;
-          const from = isMine
-            ? "Вы"
-            : msg.user?.firstName || msg.from?.name || "Гость";
+        {messages.map((msg, index) => {
+          const isMine = msg.user.id === user?.id;
+          const from = isMine ? "Вы" : msg.user.firstName;
 
           return (
             <li
@@ -85,9 +44,9 @@ export const Chat = ({ roomName, user }: ChatProps) => {
             >
               <p className={styles.identity}>
                 {from}
-                <span>{formatTime(msg.createdAt || msg.timestamp)}</span>
+                <span>{formatTime(msg.createdAt)}</span>
               </p>
-              <span>{parseMessage(msg.text || msg.message)}</span>
+              <span>{parseMessage(msg.text)}</span>
             </li>
           );
         })}

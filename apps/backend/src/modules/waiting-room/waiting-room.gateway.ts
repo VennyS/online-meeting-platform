@@ -12,6 +12,7 @@ import { Server, WebSocket } from 'ws';
 import { Logger } from '@nestjs/common';
 import { WaitingRoomService } from './waiting-room.service';
 import { IPresentation } from './interfaces/presentation.interface';
+import { Message } from '../room/interfaces/message.interface';
 
 @WebSocketGateway({ path: '/waiting-room' })
 export class WaitingRoomGateway
@@ -26,7 +27,13 @@ export class WaitingRoomGateway
     string,
     Map<
       string,
-      { ws: WebSocket; isHost: boolean; ip: string; username: string }
+      {
+        ws: WebSocket;
+        isHost: boolean;
+        ip: string;
+        username: string;
+        showHistoryToNewbies: boolean;
+      }
     >
   >();
 
@@ -44,20 +51,16 @@ export class WaitingRoomGateway
         return;
       }
 
-      const isHost = await this.waitingRoomService.isHost(roomId, userId);
+      const { isHost, showHistoryToNewbies } =
+        await this.waitingRoomService.roomInfo(roomId, userId);
       const ip = ws._socket.remoteAddress || 'unknown';
 
       if (!this.connections.has(roomId)) {
         this.connections.set(roomId, new Map());
       }
-      this.connections.get(roomId)!.set(userId, { ws, isHost, ip, username });
-
-      ws.send(
-        JSON.stringify({
-          event: 'init',
-          data: { role: isHost ? 'owner' : 'participant' },
-        }),
-      );
+      this.connections
+        .get(roomId)!
+        .set(userId, { ws, isHost, ip, username, showHistoryToNewbies });
 
       await this.waitingRoomService.initPermissions(roomId, ws);
       await this.waitingRoomService.joinAnalytics(roomId, userId, username, ip);
@@ -77,6 +80,18 @@ export class WaitingRoomGateway
       );
 
       await this.waitingRoomService.sendPresentationsStateToClient(roomId, ws);
+
+      const roomConnections = this.connections.get(roomId)!;
+
+      const showToNewbies = [...roomConnections.values()].some(
+        (conn) => conn.showHistoryToNewbies,
+      );
+
+      await this.waitingRoomService.broadcastMessages(
+        roomId,
+        showToNewbies,
+        ws,
+      );
 
       this.logger.log(`✅ ${userId} joined room ${roomId} with IP ${ip}`);
     } catch (error) {
@@ -472,5 +487,22 @@ export class WaitingRoomGateway
     }
 
     await this.waitingRoomService.removeFromBlacklist(roomId, data.ip, ws);
+  }
+
+  @SubscribeMessage('new_message')
+  async newMessage(
+    @MessageBody()
+    data: { message: Omit<Message, 'id' | 'createdAt'> },
+    @ConnectedSocket() ws: WebSocket,
+  ) {
+    const info = this.findUserBySocket(ws);
+    if (!info) {
+      this.logger.warn('Add to blacklist attempt from unknown socket');
+      return;
+    }
+
+    const { roomId } = info;
+
+    await this.waitingRoomService.newMessage(roomId, data.message);
   }
 }

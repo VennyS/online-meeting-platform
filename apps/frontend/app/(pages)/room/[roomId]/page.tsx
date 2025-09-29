@@ -14,7 +14,7 @@ import { useWebSocket } from "@/app/hooks/useWebSocket";
 export default function MeetingRoom() {
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState<string>("");
-  const { token, setToken, user } = useUser();
+  const { token, setToken, user, loading } = useUser();
   const { ws, connect } = useWebSocket();
   const router = useRouter();
 
@@ -28,7 +28,7 @@ export default function MeetingRoom() {
 
   // WebSocket для хоста
   useEffect(() => {
-    if (!roomId || !user) return;
+    if (!roomId || !user || !token) return;
     connect(roomId as string, user.id, fullName);
   }, [roomId, user]);
 

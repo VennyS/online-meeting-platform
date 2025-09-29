@@ -49,8 +49,6 @@ export const RoomContent = ({
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
 
-  const router = useRouter();
-
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const { user } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -245,7 +243,7 @@ export const RoomContent = ({
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        {!!user && <Chat roomName={roomId} user={user} />}
+        {!!user && <Chat />}
       </div>
       <div
         className={cn(styles.rightPanel, {

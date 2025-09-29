@@ -6,6 +6,7 @@ import { createLivekitToken } from 'src/common/utils/auth.utils';
 import { IPresentation } from './interfaces/presentation.interface';
 import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 import { RecordingService } from 'src/modules/egress/recording.service';
+import { Message } from '../room/interfaces/message.interface';
 
 @Injectable()
 export class WaitingRoomService {
@@ -18,10 +19,15 @@ export class WaitingRoomService {
     private readonly recording: RecordingService,
   ) {}
 
-  // --- Проверка роли хоста ---
-  async isHost(roomId: string, userId: string): Promise<boolean> {
+  async roomInfo(
+    roomId: string,
+    userId: string,
+  ): Promise<{ isHost: boolean; showHistoryToNewbies: boolean }> {
     const room = await this.roomRepository.findByShortId(roomId);
-    return room?.ownerId.toString() === userId;
+    return {
+      isHost: room?.ownerId.toString() === userId,
+      showHistoryToNewbies: room ? room.showHistoryToNewbies : false,
+    };
   }
 
   async isOwnerOrAdmin(roomId: string, userId: string): Promise<boolean> {
@@ -620,5 +626,35 @@ export class WaitingRoomService {
         conn.ws.send(msg);
       }
     }
+  }
+
+  async broadcastMessages(
+    roomId: string,
+    showToNewbies: boolean,
+    ws: WebSocket,
+  ) {
+    var messages: Message[] = [];
+
+    if (showToNewbies) {
+      messages = await this.redis.getRoomMessages(roomId);
+    }
+
+    const msg = {
+      event: 'init_chat',
+      data: { messages: messages },
+    };
+
+    ws.send(JSON.stringify(msg));
+  }
+
+  async newMessage(roomId: string, message: Omit<Message, 'id' | 'createdAt'>) {
+    const msg = {
+      id: Math.random().toString(36).slice(2, 10),
+      text: message.text,
+      user: message.user,
+      createdAt: new Date(),
+    };
+
+    await this.redis.postRoomMessage(roomId, msg);
   }
 }
