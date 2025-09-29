@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
   RoomCompositeOptions,
-  EncodedFileOutput,
   EgressClient,
+  S3Upload,
+  EncodedFileOutput,
   EncodedFileType,
 } from 'livekit-server-sdk';
 import { FileType } from '@prisma/client';
 import { FileManagementService } from 'src/modules/file/file-management.service';
-import { mkdirSync } from 'fs';
 
 @Injectable()
 export class RecordingService {
@@ -22,16 +22,29 @@ export class RecordingService {
   }
 
   async startRecording(roomName: string) {
-    const dir = `/output/${roomName}`;
-    mkdirSync(dir, { recursive: true });
+    const s3Config = new S3Upload({
+      accessKey: process.env.MINIO_ROOT_USER!,
+      secret: process.env.MINIO_ROOT_PASSWORD!,
+      bucket: process.env.MINIO_BUCKET!,
+      endpoint: 'http://minio:9000',
+      forcePathStyle: true,
+    });
+
+    const fileKey = `recordings/${roomName}/${Date.now()}.mp4`;
 
     const fileOutput = new EncodedFileOutput({
       fileType: EncodedFileType.MP4,
-      filepath: `${dir}/${Date.now()}.mp4`,
+      filepath: fileKey,
+      output: {
+        case: 's3',
+        value: s3Config,
+      },
       disableManifest: false,
     });
 
-    this.logger.log(`Room name: ${roomName}, Filepath: ${fileOutput.filepath}`);
+    this.logger.log(
+      `Room name: ${roomName}, S3 Filepath: ${fileOutput.filepath}`,
+    );
 
     try {
       const result = await this.egressClient.startRoomCompositeEgress(
