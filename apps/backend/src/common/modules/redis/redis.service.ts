@@ -43,6 +43,22 @@ export class RedisService {
 
   constructor(private readonly client: Redis) {}
 
+  async setEgressUser(egressId: string, userId: number) {
+    const key = `egress:${egressId}`;
+    await this.client.set(key, userId.toString(), 'EX', 60 * 60 * 24); // 1 день
+  }
+
+  async getEgressUser(egressId: string): Promise<number | null> {
+    const key = `egress:${egressId}`;
+    const val = await this.client.get(key);
+    return val ? Number(val) : null;
+  }
+
+  async deleteEgressUser(egressId: string) {
+    const key = `egress:${egressId}`;
+    await this.client.del(key);
+  }
+
   // --- Сообщения комнаты ---
   async getRoomMessages(shortId: string): Promise<Message[]> {
     const key = `room:${shortId}:messages`;

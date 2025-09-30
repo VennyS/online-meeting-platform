@@ -1,7 +1,5 @@
-import { Body, Controller, Logger, Post, Req } from '@nestjs/common';
-import { Headers as NestHeaders } from '@nestjs/common';
+import { Controller, Logger, Post } from '@nestjs/common';
 import { RecordingService } from './recording.service';
-import type { Request } from 'express';
 import { LivekitWebhook } from 'src/common/decorators/livekitwebhook.decorator';
 import { WebhookEvent } from 'livekit-server-sdk';
 @Controller('livekit-webhook')
@@ -23,10 +21,12 @@ export class LivekitWebhookController {
 
       await this.recordingService.handleEgressFinished({
         roomShortId: egress.roomName,
-        filePath: file.filename,
+        fileName: file.filename,
         size: file.size ? Number(file.size) : undefined,
-        mimeType: undefined,
-        userId: 0,
+        mimeType: 'video/mp4',
+        egressId: egress.egressId,
+        startTime: egress.startedAt,
+        endTime: egress.endedAt,
       });
 
       this.logger.log(`Egress handled for room ${egress.roomName}`);

@@ -1,4 +1,3 @@
-// waiting-room.module.ts
 import { Module } from '@nestjs/common';
 import { WaitingRoomGateway } from './waiting-room.gateway';
 import { WaitingRoomService } from './waiting-room.service';

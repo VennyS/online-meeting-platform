@@ -594,8 +594,14 @@ export class WaitingRoomService {
     await this.redis.clearAnalytics(roomId);
   }
 
-  async startRecording(roomId: string, roomConnections: Map<string, any>) {
-    const egressInfo = await this.recording.startRecording(roomId);
+  async startRecording(
+    roomId: string,
+    userId: string,
+    roomConnections: Map<string, any>,
+  ) {
+    const egressInfo = await this.recording.startRecording(roomId, userId);
+
+    if (!egressInfo) return;
 
     const msg = JSON.stringify({
       event: 'recording_started',

@@ -18,7 +18,7 @@ export class FileManagementService {
   ) {}
 
   async createFileRecord(data: {
-    roomShortId: string;
+    roomId: number;
     userId: number;
     fileKey: string;
     fileType: FileType;
@@ -26,17 +26,9 @@ export class FileManagementService {
     fileSize?: number;
     mimeType?: string;
   }) {
-    const room = await this.prisma.room.findUnique({
-      where: { shortId: data.roomShortId },
-    });
-
-    if (!room) {
-      throw new Error(`Room not found: ${data.roomShortId}`);
-    }
-
     await this.prisma.file.create({
       data: {
-        roomId: room.id,
+        roomId: data.roomId,
         userId: data.userId,
         fileKey: data.fileKey,
         fileType: data.fileType,

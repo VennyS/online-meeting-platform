@@ -149,10 +149,11 @@ export class WaitingRoomGateway
     const info = this.findUserBySocket(ws);
     if (!info) return;
 
-    const { roomId } = info;
+    const { roomId, userId } = info;
 
     this.waitingRoomService.startRecording(
       roomId,
+      userId,
       this.connections.get(roomId)!,
     );
   }
