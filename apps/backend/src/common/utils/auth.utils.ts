@@ -63,3 +63,24 @@ export function createLivekitToken(
 
   return at.toJwt();
 }
+
+export function createEgressLivekitToken(roomShortId: string) {
+  const at = new AccessToken(API_KEY, API_SECRET, {
+    identity: 'egress',
+    name: 'egress',
+    metadata: JSON.stringify({
+      isEgress: true,
+    }),
+  });
+
+  at.addGrant({
+    room: roomShortId,
+    roomJoin: true,
+    recorder: true,
+    canPublish: false,
+    canSubscribe: true,
+    hidden: true,
+  });
+
+  return at.toJwt();
+}

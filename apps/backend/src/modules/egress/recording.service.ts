@@ -11,6 +11,7 @@ import { FileManagementService } from 'src/modules/file/file-management.service'
 import { RedisService } from 'src/common/modules/redis/redis.service';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { format } from 'date-fns';
+import { createEgressLivekitToken } from 'src/common/utils/auth.utils';
 
 @Injectable()
 export class RecordingService {
@@ -52,16 +53,20 @@ export class RecordingService {
       disableManifest: true,
     });
 
+    const token = await createEgressLivekitToken(room.shortId);
+
     this.logger.log(
       `Room name: ${roomName}, S3 Filepath: ${fileOutput.filepath}`,
     );
+
+    const customBaseUrl = `${process.env.RECORDING_ROUTE}/${room.shortId}/recording?livekitToken=${token}`;
 
     try {
       const result = await this.egressClient.startRoomCompositeEgress(
         roomName,
         fileOutput,
         {
-          layout: 'grid',
+          customBaseUrl: customBaseUrl,
         } as RoomCompositeOptions,
       );
 
