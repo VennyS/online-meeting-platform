@@ -4,38 +4,17 @@ services:
       context: ./apps/frontend
     ports:
       - "3000:3000"
-    env_file:
-      - ./apps/frontend/.env
 
-  backend-dev:
-    build:
-      context: ./apps/backend
-      target: development
-    container_name: backend-dev
-    ports:
-      - "3001:3001"
-      - "5555:5555"
-    env_file:
-      - ./apps/backend/.env
-    volumes:
-      - ./apps/backend:/usr/src/app
-      - /usr/src/app/node_modules
-    command: npm run start:dev
-    depends_on:
-      - postgres
-      - redis
-
-  backend-prod:
+  backend:
     build:
       context: ./apps/backend
       target: production
-    container_name: backend-prod
     ports:
       - "3001:3001"
       - "5555:5555"
     env_file:
-      - ./apps/backend/.env
-    command: node dist/main
+      - ./apps/backend/.env.production
+    command: node dist/main.js
     depends_on:
       - postgres
       - redis
