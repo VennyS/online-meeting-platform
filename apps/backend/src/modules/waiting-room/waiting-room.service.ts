@@ -7,6 +7,7 @@ import { IPresentation } from './interfaces/presentation.interface';
 import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 import { RecordingService } from 'src/modules/egress/recording.service';
 import { Message } from '../room/interfaces/message.interface';
+import { EgressInfo } from 'livekit-server-sdk';
 
 @Injectable()
 export class WaitingRoomService {
@@ -599,7 +600,12 @@ export class WaitingRoomService {
     userId: string,
     roomConnections: Map<string, any>,
   ) {
-    const egressInfo = await this.recording.startRecording(roomId, userId);
+    let egressInfo: EgressInfo | undefined;
+    try {
+      egressInfo = await this.recording.startRecording(roomId, userId);
+    } catch (e) {
+      return;
+    }
 
     if (!egressInfo) return;
 

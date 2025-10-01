@@ -92,10 +92,7 @@ export class WaitingRoomGateway
         showToNewbies,
         ws,
       );
-
-      this.logger.log(`✅ ${userId} joined room ${roomId} with IP ${ip}`);
     } catch (error) {
-      this.logger.error('Connection error:', error);
       ws.close(1011, 'Server error');
     }
   }

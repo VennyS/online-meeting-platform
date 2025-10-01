@@ -45,7 +45,7 @@ export class FileController {
     @User('id') userId: number,
     @Query('skip') skip: string = '0',
     @Query('take') take: string = '10',
-    @Query('fileType') type?: FileType,
+    @Query('type') type?: FileType,
   ) {
     try {
       const files = await this.fileService.listFiles(
