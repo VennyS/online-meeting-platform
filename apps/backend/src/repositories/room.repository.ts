@@ -95,7 +95,7 @@ export class RoomRepository {
         allowEarlyJoin: newRoom.allowEarlyJoin ?? true,
         timeZone: newRoom.timeZone || 'Europe/Moscow',
         canShareScreen: newRoom.canShareScreen,
-        canStartPresentation: newRoom.сanStartPresentation,
+        canStartPresentation: newRoom.canStartPresentation,
       },
     });
 

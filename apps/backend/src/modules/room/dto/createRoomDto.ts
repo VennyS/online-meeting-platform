@@ -66,5 +66,5 @@ export class CreateRoomDto {
 
   @IsEnum(PermissionLevel)
   @IsOptional()
-  сanStartPresentation: PermissionLevel = PermissionLevel.ALL;
+  canStartPresentation: PermissionLevel = PermissionLevel.ALL;
 }
