@@ -7,7 +7,7 @@ RUN npm ci --omit=dev
 
 COPY . .
 
-RUN npm run build
+RUN node --max_old_space_size=4096 ./node_modules/.bin/nest build
 
 RUN npx prisma generate
 
@@ -21,6 +21,5 @@ COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/prisma ./prisma
 
 ENV NODE_ENV=production
-ENV DATABASE_URL=postgres://nestuser:nestpass@db:5432/nestdb
 
 CMD ["node", "dist/main.js"]
