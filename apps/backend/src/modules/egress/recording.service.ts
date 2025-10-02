@@ -120,7 +120,7 @@ export class RecordingService {
       fileKey: fileKey,
       fileType: FileType.VIDEO,
       fileName: fileName,
-      fileSize: size,
+      fileSize: size ?? 0,
       mimeType,
     });
 

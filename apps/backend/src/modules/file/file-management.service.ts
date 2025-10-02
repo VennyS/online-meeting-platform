@@ -23,7 +23,7 @@ export class FileManagementService {
     fileKey: string;
     fileType: FileType;
     fileName: string;
-    fileSize?: number;
+    fileSize: number;
     mimeType?: string;
   }) {
     await this.prisma.file.create({
