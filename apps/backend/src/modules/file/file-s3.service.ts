@@ -33,19 +33,35 @@ export class S3FileService implements IFileService {
   }
 
   async upload(file: Express.Multer.File, key: string): Promise<string> {
+    console.log(
+      `Attempting to upload file: ${file.originalname}, size: ${file.size}, key: ${key}`,
+    );
     const params = {
       Bucket: this.bucket,
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
     };
-
-    await this.s3.putObject(params).promise();
-    return await this.s3.getSignedUrlPromise('getObject', {
-      Bucket: this.bucket,
-      Key: key,
-      Expires: 3600,
+    console.log('Upload params:', {
+      Bucket: params.Bucket,
+      Key: params.Key,
+      ContentType: params.ContentType,
+      size: file.size,
     });
+    try {
+      await this.s3.putObject(params).promise();
+      console.log(`File uploaded successfully: ${key}`);
+      const url = await this.s3.getSignedUrlPromise('getObject', {
+        Bucket: this.bucket,
+        Key: key,
+        Expires: 3600,
+      });
+      console.log(`Generated presigned URL: ${url}`);
+      return url;
+    } catch (error) {
+      console.error(`Upload error for key ${key}:`, error);
+      throw error;
+    }
   }
 
   async download(key: string): Promise<Buffer> {
