@@ -138,7 +138,7 @@ export const RoomContent = ({
       (localPresentation &&
         localPresentation[1].authorId === t.participant.identity &&
         localPresentation[1].mode === "presentationWithCamera") ||
-      Array.from(remotePresentations.values()).some(
+      Object.values(remotePresentations).some(
         (p) =>
           p.authorId === t.participant.identity &&
           p.mode === "presentationWithCamera"
@@ -198,7 +198,7 @@ export const RoomContent = ({
           </div>
         )}
 
-        {Array.from(remotePresentations.entries()).map(
+        {Object.entries(remotePresentations).map(
           ([presentationId, presentation]) => (
             <div key={presentationId} className={styles.presentationItem}>
               <div className={styles.presentationWrapper}>
