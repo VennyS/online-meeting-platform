@@ -62,11 +62,17 @@ export class S3FileService implements IFileService {
 
   async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
     try {
-      return await this.s3.getSignedUrlPromise('getObject', {
+      const url = await this.s3.getSignedUrlPromise('getObject', {
         Bucket: this.bucket,
         Key: key,
         Expires: expiresIn,
       });
+
+      const publicBase = this.configService.get<string>('MINIO_PUBLIC_URL');
+      return url.replace(
+        this.configService.get<string>('MINIO_ENDPOINT')!,
+        publicBase!,
+      );
     } catch (error) {
       throw new NotFoundException('Failed to generate presigned URL');
     }
