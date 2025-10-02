@@ -11,7 +11,7 @@ export interface CreateRoomDto {
   allowEarlyJoin?: boolean;
   timeZone?: string;
   canShareScreen?: Role;
-  сanStartPresentation?: Role;
+  canStartPresentation?: Role;
 }
 
 export interface UpdateRoomDto {
