@@ -48,9 +48,16 @@ export const fileService = {
     take = 10,
     type?: FileType
   ): Promise<IFile[]> {
-    const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
-      params: { skip, take, type },
-    });
-    return response.data;
+    try {
+      const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
+        params: { skip, take, type },
+      });
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        return [];
+      }
+      throw err;
+    }
   },
 };

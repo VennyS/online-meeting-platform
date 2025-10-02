@@ -185,3 +185,7 @@
   max-width: 100%;
   overflow: hidden;
 }
+
+.presentationItem {
+  overflow: auto;
+}

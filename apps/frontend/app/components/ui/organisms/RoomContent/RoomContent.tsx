@@ -179,22 +179,21 @@ export const RoomContent = ({
                 changePresentationMode(localPresentation[0], mode);
               }}
             />
-            {localPresentation![1].mode === "presentationWithCamera" && (
-              <div className={styles.presenterCamera}>
-                {(() => {
-                  const track = tracks.find(
-                    (t) =>
-                      t.source === Track.Source.Camera &&
-                      t.participant.identity === localPresentation[1].authorId
-                  );
-                  return (
-                    track?.publication && (
+            {localPresentation![1].mode === "presentationWithCamera" &&
+              (() => {
+                const track = tracks.find(
+                  (t) =>
+                    t.source === Track.Source.Camera &&
+                    t.participant.identity === localPresentation[1].authorId
+                );
+                return (
+                  track?.publication && (
+                    <div className={styles.presenterCamera}>
                       <VideoTrack trackRef={track as TrackReference} />
-                    )
-                  );
-                })()}
-              </div>
-            )}
+                    </div>
+                  )
+                );
+              })()}
           </div>
         )}
 
@@ -209,22 +208,21 @@ export const RoomContent = ({
                   zoom={presentation.zoom}
                   scrollPosition={presentation.scroll}
                 />
-                {presentation.mode === "presentationWithCamera" && (
-                  <div className={styles.presenterCamera}>
-                    {(() => {
-                      const track = tracks.find(
-                        (t) =>
-                          t.source === Track.Source.Camera &&
-                          t.participant.identity === presentation.authorId
-                      );
-                      return (
-                        track?.publication && (
+                {presentation.mode === "presentationWithCamera" &&
+                  (() => {
+                    const track = tracks.find(
+                      (t) =>
+                        t.source === Track.Source.Camera &&
+                        t.participant.identity === presentation.authorId
+                    );
+                    return (
+                      track?.publication && (
+                        <div className={styles.presenterCamera}>
                           <VideoTrack trackRef={track as TrackReference} />
-                        )
-                      );
-                    })()}
-                  </div>
-                )}
+                        </div>
+                      )
+                    );
+                  })()}
               </div>
             </div>
           )
