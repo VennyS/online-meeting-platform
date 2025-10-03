@@ -23,9 +23,8 @@ import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
-import { Panel } from "./types";
+import { Panel, RoomContentProps } from "./types";
 import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
-import { useRouter } from "next/navigation";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -37,10 +36,8 @@ const PDFViewer = dynamic(
 export const RoomContent = ({
   roomId,
   roomName,
-}: {
-  roomId: string;
-  roomName: string;
-}) => {
+  hideControls = false,
+}: RoomContentProps) => {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -133,7 +130,9 @@ export const RoomContent = ({
   }, [roomId]);
 
   const correctedTracks = tracks.filter((t) => {
+    if (t.participant.permissions?.hidden) return false;
     if (t.source !== Track.Source.Camera) return true;
+
     const participantInPresentation =
       (localPresentation &&
         localPresentation[1].authorId === t.participant.identity &&
@@ -260,42 +259,44 @@ export const RoomContent = ({
         </button>
       )}
 
-      <div className={styles.controls}>
-        <p>{roomName}</p>
-        <ControlBar
-          controls={{
-            microphone: true,
-            camera: true,
-            screenShare: local.permissions.permissions.canShareScreen,
-            settings: false,
-            leave: false,
-          }}
-        />
+      {!hideControls && (
+        <div className={styles.controls}>
+          <p>{roomName}</p>
+          <ControlBar
+            controls={{
+              microphone: true,
+              camera: true,
+              screenShare: local.permissions.permissions.canShareScreen,
+              settings: false,
+              leave: false,
+            }}
+          />
 
-        <button onClick={() => handleChangeOpenPanel("participants")}>
-          {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
-        </button>
-        <button onClick={() => handleChangeOpenPanel("files")}>
-          {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
-        </button>
-        <button
-          className={styles.chatButton}
-          title="чат"
-          onClick={() => handleChangeOpenPanel("chat")}
-        >
-          <ChatIcon />
-          {unreadCount > 0 && (
-            <div className={styles.notificationDot}>{unreadCount}</div>
-          )}
-        </button>
-        {local.permissions.role === "owner" && (
-          <button
-            onClick={() => (isRecording ? stopRecording() : startRecording())}
-          >
-            Запись {isRecording ? "да" : "нет"}
+          <button onClick={() => handleChangeOpenPanel("participants")}>
+            {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
           </button>
-        )}
-      </div>
+          <button onClick={() => handleChangeOpenPanel("files")}>
+            {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
+          </button>
+          <button
+            className={styles.chatButton}
+            title="чат"
+            onClick={() => handleChangeOpenPanel("chat")}
+          >
+            <ChatIcon />
+            {unreadCount > 0 && (
+              <div className={styles.notificationDot}>{unreadCount}</div>
+            )}
+          </button>
+          {local.permissions.role === "owner" && (
+            <button
+              onClick={() => (isRecording ? stopRecording() : startRecording())}
+            >
+              Запись {isRecording ? "да" : "нет"}
+            </button>
+          )}
+        </div>
+      )}
 
       <RoomAudioRenderer />
     </div>

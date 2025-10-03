@@ -1,18 +1,19 @@
 "use client";
 
 import { useWebSocket } from "@/app/hooks/useWebSocket";
+import { LiveKitRoom, useLocalParticipant } from "@livekit/components-react";
 import {
-  GridLayout,
-  LiveKitRoom,
-  ParticipantTile,
-  useTracks,
-} from "@livekit/components-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+  notFound,
+  useParams,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import React, { useEffect } from "react";
 import styles from "./page.module.css";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
-import { RoomEvent, Track } from "livekit-client";
+
+export const EGRESS_CREDENTIAL = "egress";
 
 const RecordingPage = () => {
   const router = useRouter();
@@ -42,11 +43,28 @@ const RecordingPage = () => {
         className={styles.roomContainer}
       >
         <ParticipantsProvider localUserId={egressId} ws={ws}>
-          <RoomContent roomId={roomShortId as string} roomName="recording" />
+          <RecordingPageContent roomShortId={roomShortId as string} />
         </ParticipantsProvider>
       </LiveKitRoom>
     </main>
   );
+};
+
+const RecordingPageContent = ({ roomShortId }: { roomShortId: string }) => {
+  const localInfo = useLocalParticipant();
+
+  useEffect(() => {
+    const identity = localInfo.localParticipant.identity;
+    const name = localInfo.localParticipant.name;
+
+    if (!identity) return;
+
+    if (identity !== EGRESS_CREDENTIAL && name !== EGRESS_CREDENTIAL) {
+      notFound();
+    }
+  }, [localInfo]);
+
+  return <RoomContent roomId={roomShortId} roomName="recording" hideControls />;
 };
 
 export default RecordingPage;
