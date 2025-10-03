@@ -6,19 +6,18 @@ import {
   Param,
   Post,
   Query,
-  UnauthorizedException,
-  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileManagementService } from './file-management.service';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { User } from 'src/common/decorators/user.decorator';
 import { RoomByShortIdPipe } from 'src/common/pipes/room.pipe';
-import type { FileType, Room } from '@prisma/client';
+import type { Room } from '@prisma/client';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { ListFilesQueryDto } from './dto/listFilesQueryDto';
 
 @Controller('file')
 export class FileController {
@@ -43,17 +42,15 @@ export class FileController {
   async listFiles(
     @Param('shortId', RoomByShortIdPipe) room: Room,
     @User('id') userId: number,
-    @Query('skip') skip: string = '0',
-    @Query('take') take: string = '10',
-    @Query('type') type?: FileType,
+    @Query() query: ListFilesQueryDto,
   ) {
     try {
       const files = await this.fileService.listFiles(
         room.id,
         userId,
-        Number(skip),
-        Number(take),
-        type,
+        query.skip,
+        query.take,
+        query.type,
       );
       return files;
     } catch (error) {

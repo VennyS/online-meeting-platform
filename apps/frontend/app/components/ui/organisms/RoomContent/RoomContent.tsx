@@ -122,7 +122,7 @@ export const RoomContent = ({
   useEffect(() => {
     const handleFetchFiles = async () => {
       try {
-        const files = await fileService.listFiles(roomId, 0, 10, "PDF");
+        const files = await fileService.list(roomId, 0, 10, "PDF");
         setFiles(files);
       } catch (err) {
         console.error("Error fetching files:", err);

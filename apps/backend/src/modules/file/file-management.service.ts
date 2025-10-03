@@ -161,7 +161,7 @@ export class FileManagementService {
     userId: number,
     skip = 0,
     take = 10,
-    type?: FileType,
+    types: FileType[] = [],
   ): Promise<any[]> {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
@@ -180,7 +180,7 @@ export class FileManagementService {
     const files = await this.prisma.file.findMany({
       where: {
         roomId,
-        ...(type ? { fileType: type } : {}),
+        ...(types.length > 0 ? { fileType: { in: types } } : {}),
       },
       select: {
         id: true,
