@@ -42,6 +42,8 @@ export interface IRoom {
   allowEarlyJoin: boolean;
   cancelled: boolean;
   timeZone: string;
+  haveFiles: boolean;
+  haveReports: boolean;
 }
 
 export interface MeetingReports {

@@ -7,13 +7,11 @@ import { LivekitService } from '../../common/modules/livekit/livekit.service';
 import { isMeetingFinished } from 'src/common/utils/room.utils';
 import { Prequisites } from './interfaces/prequisites.interface';
 import { RedisService } from '../../common/modules/redis/redis.service';
-import { Message } from './interfaces/message.interface';
-import { PostMessageDto } from './dto/postMessageDto';
 import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
-import { PostMessageResponseDto } from './dto/postMessageResponseDto';
 import { GetMeetingReportsDto } from './dto/getMeetingReportDto';
+import { GetDto } from './dto/getDto';
 
 @Injectable()
 export class RoomService {
@@ -22,13 +20,12 @@ export class RoomService {
     private readonly livekit: LivekitService,
     private readonly redis: RedisService,
   ) {}
-  async getAllByUserId(userId: number): Promise<Omit<Room, 'passwordHash'>[]> {
+
+  async getAllByUserId(userId: number): Promise<GetDto[]> {
     return await this.roomRepo.getAllByUserId(userId);
   }
 
-  async create(
-    createRoomDto: CreateRoomDto,
-  ): Promise<Omit<Room, 'passwordHash'>> {
+  async create(createRoomDto: CreateRoomDto): Promise<GetDto> {
     let shortId: string;
     while (true) {
       shortId = Math.random().toString(36).slice(2, 10);
