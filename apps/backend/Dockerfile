@@ -7,7 +7,7 @@ RUN npm ci --omit=dev
 
 COPY . .
 
-RUN node --max_old_space_size=4096 ./node_modules/.bin/nest build
+RUN node --max_old_space_size=4096 ./node_modules/@nestjs/cli/bin/nest.js build
 
 RUN npx prisma generate
 
