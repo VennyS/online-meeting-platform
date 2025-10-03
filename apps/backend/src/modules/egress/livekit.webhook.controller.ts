@@ -1,7 +1,7 @@
 import { Controller, Logger, Post } from '@nestjs/common';
 import { RecordingService } from './recording.service';
 import { LivekitWebhook } from 'src/common/decorators/livekitwebhook.decorator';
-import { WebhookEvent } from 'livekit-server-sdk';
+import { EgressStatus, WebhookEvent } from 'livekit-server-sdk';
 @Controller('livekit-webhook')
 export class LivekitWebhookController {
   private readonly logger = new Logger(LivekitWebhookController.name);
@@ -18,6 +18,11 @@ export class LivekitWebhookController {
 
       const file = egress.fileResults?.[0];
       if (!file) return { ok: false, reason: 'no file info' };
+
+      if (egress.status != EgressStatus.EGRESS_COMPLETE) {
+        this.logger.log('failed:', egress.status);
+        return { ok: false, reason: `${egress.status}` };
+      }
 
       await this.recordingService.handleEgressFinished({
         roomShortId: egress.roomName,

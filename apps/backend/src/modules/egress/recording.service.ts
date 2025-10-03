@@ -112,12 +112,10 @@ export class RecordingService {
     const room = await this.roomRepo.findByShortId(roomShortId);
     if (!room) return;
 
-    const fileKey = `rooms/${room.id}/user/${userId}/${Date.now()}.mp4`;
-
     await this.fileManagementService.createFileRecord({
       roomId: room.id,
       userId: userId ?? 0,
-      fileKey: fileKey,
+      fileKey: fileName,
       fileType: FileType.VIDEO,
       fileName: fileName,
       fileSize: size ?? 0,
@@ -159,6 +157,6 @@ export class RecordingService {
 
     await this.redis.deleteEgressUser(event.egressId);
 
-    this.logger.log(`Recording saved to DB: ${fileKey}`);
+    this.logger.log(`Recording saved to DB: ${fileName}`);
   }
 }
