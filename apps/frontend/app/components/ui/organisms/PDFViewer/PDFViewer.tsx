@@ -122,7 +122,7 @@ const PDFViewer = ({
         />
       </Document>
     ),
-    [pdfUrl, currentPage, zoom] // только эти зависимости
+    [pdfUrl, currentPage, zoom]
   );
 
   return (

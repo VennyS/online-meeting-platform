@@ -449,6 +449,15 @@ export const MeetingFilesModal = ({
     fetchFiles();
   }, [shortId, isOpen]);
 
+  const handleDelete = async (fileId: number) => {
+    try {
+      await fileService.delete(fileId);
+      setFiles((prev) => (prev ? prev.filter((f) => f.id !== fileId) : prev));
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -460,9 +469,42 @@ export const MeetingFilesModal = ({
       {files &&
         files.map((file: IFile) => (
           <div key={file.id} style={{ marginBottom: 12 }}>
-            <h4>{file.fileName}</h4>
+            <input
+              type="text"
+              value={file.fileName}
+              onChange={(e) => {
+                const newName = e.target.value;
+                setFiles((prev) =>
+                  prev
+                    ? prev.map((f) =>
+                        f.id === file.id ? { ...f, fileName: newName } : f
+                      )
+                    : prev
+                );
+              }}
+            />
             <p>Тип: {file.fileType}</p>
             <p>Размер: {formatFileSize(file.fileSize)}</p>
+            <button onClick={() => handleDelete(file.id)}>Удалить</button>
+            <button
+              onClick={async () => {
+                try {
+                  const updated = await fileService.patch(
+                    file.id,
+                    file.fileName
+                  );
+                  setFiles((prev) =>
+                    prev
+                      ? prev.map((f) => (f.id === file.id ? updated : f))
+                      : prev
+                  );
+                } catch (err) {
+                  alert("Не удалось обновить имя файла");
+                }
+              }}
+            >
+              Обновить
+            </button>
             <button
               onClick={async () => {
                 try {
