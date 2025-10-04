@@ -1,6 +1,6 @@
 import { useParticipants } from "@livekit/components-react";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BlacklistEntry,
   IWaitingGuest,
@@ -17,8 +17,9 @@ export interface ParticipantsWithPermissions {
   permissionsMap: Record<RoomRole, UserPermissions>;
   waitingGuests: IWaitingGuest[];
   localPresentation?: [string, Presentation];
-  remotePresentations: Map<string, Presentation>;
+  remotePresentations: Record<string, Presentation>;
   blacklist: BlacklistEntry[];
+  isRecording: boolean;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -44,6 +45,8 @@ export interface ParticipantsWithPermissions {
   finishPresentation: (presentationId: string) => void;
   addToBlackList: (userId: string, username: string) => void;
   removeFromBlackList: (ip: string) => void;
+  startRecording: () => void;
+  stopRecording: () => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -88,13 +91,15 @@ export function useParticipantsWithPermissions(
   >(getDefaultPermissions());
   const [usersRoles, setUsersRoles] = useState<Record<string, RoomRole>>({});
   const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
-  const [presentations, setPresentations] = useState<Map<string, Presentation>>(
-    new Map()
-  );
+  const [presentations, setPresentations] = useState<
+    Record<string, Presentation>
+  >({});
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
 
   const localParticipant = participants.find((p) => p.isLocal);
   const remoteParticipants = participants.filter((p) => !p.isLocal);
+  const [isRecording, setIsRecording] = useState(false);
+  const [egressId, setEgressId] = useState<string>();
 
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
@@ -171,10 +176,19 @@ export function useParticipantsWithPermissions(
     sendMessage("add_to_blacklist", { userId, name: username });
   }
 
+  function startRecording() {
+    sendMessage("recording_started", {});
+  }
+
+  function stopRecording() {
+    if (!egressId) return;
+    sendMessage("recording_finished", { egressId });
+  }
+
   useEffect(() => {
     if (!ws) return;
 
-    ws.onmessage = (event: MessageEvent) => {
+    ws.addEventListener("message", (event: MessageEvent) => {
       const message: RoomWSMessage = JSON.parse(event.data);
       const { event: evt, data } = message;
 
@@ -201,7 +215,6 @@ export function useParticipantsWithPermissions(
             acc[role] = { role, permissions };
             return acc;
           }, {} as Record<RoomRole, UserPermissions>);
-
           setPermissionsMap(newPermissionsMap);
           break;
 
@@ -231,27 +244,20 @@ export function useParticipantsWithPermissions(
           setWaitingGuests((prev) => [...prev, data.guest]);
           break;
 
-        case "init":
-          setUsersRoles((prev) => ({
-            ...prev,
-            [String(localUserId)]: data.role,
-          }));
-          break;
-
         case "presentations_state":
           setPresentations((prev) => {
-            const newPresentations = new Map();
+            const newPresentations: Record<string, Presentation> = {};
             data.presentations.forEach((p: Presentation) => {
-              newPresentations.set(p.presentationId, p);
+              newPresentations[p.presentationId] = p;
             });
             return newPresentations;
           });
           break;
 
         case "presentation_started":
-          setPresentations((prev) => {
-            const newPresentations = new Map(prev);
-            newPresentations.set(data.presentationId, {
+          setPresentations((prev) => ({
+            ...prev,
+            [data.presentationId]: {
               presentationId: data.presentationId,
               url: data.url,
               authorId: data.authorId,
@@ -259,79 +265,115 @@ export function useParticipantsWithPermissions(
               zoom: data.zoom,
               scroll: data.scroll,
               mode: data.mode || "presentationWithCamera",
-            });
-            return newPresentations;
-          });
+            },
+          }));
           break;
 
         case "presentation_page_changed":
           setPresentations((prev) => {
-            const presentation = prev.get(data.presentationId);
-            if (!presentation) return prev;
-            return new Map(prev).set(data.presentationId, {
-              ...presentation,
-              currentPage: data.page,
-            });
+            const presentation = prev[data.presentationId];
+            if (!presentation || presentation.currentPage === data.page) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [data.presentationId]: {
+                ...presentation,
+                currentPage: data.page,
+              },
+            };
           });
           break;
 
         case "presentation_zoom_changed":
           setPresentations((prev) => {
-            const presentation = prev.get(data.presentationId);
-            if (!presentation) return prev;
-            return new Map(prev).set(data.presentationId, {
-              ...presentation,
-              zoom: data.zoom,
-            });
+            const presentation = prev[data.presentationId];
+            if (!presentation || presentation.zoom === data.zoom) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [data.presentationId]: {
+                ...presentation,
+                zoom: data.zoom,
+              },
+            };
           });
           break;
 
         case "presentation_scroll_changed":
           if (
-            presentations.get(data.presentationId)?.authorId ===
-            String(localUserId)
+            !presentations ||
+            Object.values(presentations).length === 0 ||
+            presentations[data.presentationId]?.authorId ===
+              localParticipant?.identity
           ) {
             break;
           }
+
           setPresentations((prev) => {
-            const presentation = prev.get(data.presentationId);
-            if (!presentation) return prev;
-            return new Map(prev).set(data.presentationId, {
-              ...presentation,
-              scroll: { x: data.x, y: data.y },
-            });
+            const presentation = prev[data.presentationId];
+            if (
+              !presentation ||
+              (presentation.scroll.x === data.x &&
+                presentation.scroll.y === data.y)
+            ) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [data.presentationId]: {
+                ...presentation,
+                scroll: { x: data.x, y: data.y },
+              },
+            };
           });
           break;
 
         case "presentation_mode_changed":
           setPresentations((prev) => {
-            const presentation = prev.get(data.presentationId);
-            if (!presentation) return prev;
-            return new Map(prev).set(data.presentationId, {
-              ...presentation,
-              mode: data.mode,
-            });
+            const presentation = prev[data.presentationId];
+            if (!presentation || presentation.mode === data.mode) {
+              return prev;
+            }
+            return {
+              ...prev,
+              [data.presentationId]: {
+                ...presentation,
+                mode: data.mode,
+              },
+            };
           });
           break;
 
         case "presentation_finished":
           setPresentations((prev) => {
-            const newPresentations = new Map(prev);
-            newPresentations.delete(data.presentationId);
+            const newPresentations = { ...prev };
+            delete newPresentations[data.presentationId];
             return newPresentations;
           });
           break;
 
-        case "blacklist_updated": {
+        case "blacklist_updated":
           setBlacklist(data.blacklist);
-        }
+          break;
+
+        case "recording_started":
+          setEgressId(data.egressId);
+          setIsRecording(true);
+          break;
+
+        case "recording_finished":
+          setIsRecording(false);
+          setEgressId(undefined);
+          break;
       }
-    };
+    });
   }, [ws, localUserId, presentations]);
 
   if (!localParticipant) return null;
 
-  const localRole = usersRoles[String(localUserId)] || "participant";
+  const localRole = usersRoles[localParticipant?.identity] || "participant";
 
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
@@ -352,14 +394,24 @@ export function useParticipantsWithPermissions(
     };
   });
 
-  const localPresentation: [string, Presentation] | undefined = Array.from(
-    presentations.entries()
-  ).find(([, presentation]) => presentation.authorId === String(localUserId));
+  const localPresentation = useMemo(
+    () =>
+      Object.entries(presentations).find(
+        ([, presentation]) =>
+          presentation.authorId === localParticipant?.identity
+      ),
+    [presentations, localParticipant?.identity]
+  );
 
-  const remotePresentations: Map<string, Presentation> = new Map(
-    Array.from(presentations.entries()).filter(
-      ([, presentation]) => presentation.authorId !== String(localUserId)
-    )
+  const remotePresentations: Record<string, Presentation> = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(presentations).filter(
+          ([, presentation]) =>
+            presentation.authorId !== localParticipant?.identity
+        )
+      ),
+    [presentations, localParticipant?.identity]
   );
 
   return {
@@ -370,6 +422,7 @@ export function useParticipantsWithPermissions(
     localPresentation,
     remotePresentations,
     blacklist,
+    isRecording,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -382,5 +435,7 @@ export function useParticipantsWithPermissions(
     finishPresentation,
     addToBlackList,
     removeFromBlackList,
+    startRecording,
+    stopRecording,
   };
 }

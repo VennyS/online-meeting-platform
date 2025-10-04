@@ -1,5 +1,14 @@
 "use client";
 
+const base =
+  typeof window !== "undefined"
+    ? window.location.origin
+    : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost";
+
+if (!(URL as any).parse) {
+  (URL as any).parse = (str: string) => new URL(str, base);
+}
+
 import React, {
   useState,
   useCallback,

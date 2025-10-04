@@ -16,6 +16,8 @@ import { toDateTimeLocalString } from "@/app/lib/toDateTimeLocalString";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
 import Link from "next/link";
 import Modal from "../../atoms/Modal/Modal";
+import { fileService, IFile } from "@/app/services/file.service";
+import { formatFileSize } from "@/app/lib/formatFileSize";
 
 export default function RoomList({
   fetchMode = "user",
@@ -97,6 +99,7 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
   });
 
   const [isReportsOpen, setReportsOpen] = useState(false);
+  const [isFilesOpen, setIsFilesOpen] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -270,47 +273,42 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
           Зайти
         </Link>
 
-        <button
-          onClick={() => setReportsOpen(true)}
-          disabled={updating}
-          style={{
-            background: "blue",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Показать отчёты
-        </button>
+        {room.haveReports && (
+          <>
+            <button
+              onClick={() => setReportsOpen(true)}
+              disabled={updating}
+              style={{
+                background: "blue",
+                color: "white",
+                padding: "5px 10px",
+                marginRight: "5px",
+              }}
+            >
+              Показать отчёты
+            </button>
+          </>
+        )}
 
-        <button
-          onClick={() => roomService.downloadMeetingReportsExcel(room.shortId)}
-          style={{
-            background: "orange",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Скачать Excel
-        </button>
-
-        <button
-          onClick={() => roomService.downloadMeetingReportsCsv(room.shortId)}
-          style={{
-            background: "purple",
-            color: "white",
-            padding: "5px 10px",
-          }}
-        >
-          Скачать CSV
-        </button>
+        {room.haveFiles && (
+          <button onClick={() => setIsFilesOpen(true)}>Файлы</button>
+        )}
       </div>
-      <MeetingReportsModal
-        shortId={room.shortId}
-        isOpen={isReportsOpen}
-        onClose={() => setReportsOpen(false)}
-      />
+      {room.haveReports && (
+        <MeetingReportsModal
+          shortId={room.shortId}
+          isOpen={isReportsOpen}
+          onClose={() => setReportsOpen(false)}
+        />
+      )}
+
+      {room.haveFiles && (
+        <MeetingFilesModal
+          shortId={room.shortId}
+          isOpen={isFilesOpen}
+          onClose={() => setIsFilesOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -349,8 +347,33 @@ export const MeetingReportsModal = ({
       <button onClick={onClose}>Закрыть</button>
       {loading && <p>Загрузка...</p>}
       {error && <p>{error}</p>}
-      {reports && reports.sessions.length === 0 && (
+      {reports && reports.sessions.length === 0 ? (
         <p>Нет доступных отчётов о встречах</p>
+      ) : (
+        <>
+          <button
+            onClick={() => roomService.downloadMeetingReportsExcel(shortId)}
+            style={{
+              background: "orange",
+              color: "white",
+              padding: "5px 10px",
+              marginRight: "5px",
+            }}
+          >
+            Скачать Excel
+          </button>
+
+          <button
+            onClick={() => roomService.downloadMeetingReportsCsv(shortId)}
+            style={{
+              background: "purple",
+              color: "white",
+              padding: "5px 10px",
+            }}
+          >
+            Скачать CSV
+          </button>
+        </>
       )}
       {reports &&
         reports.sessions.map((session: MeetingReport) => (
@@ -387,6 +410,81 @@ export const MeetingReportsModal = ({
                 </li>
               ))}
             </ul>
+          </div>
+        ))}
+    </Modal>
+  );
+};
+
+interface MeetingFilesModalProps {
+  shortId: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const MeetingFilesModal = ({
+  shortId,
+  isOpen,
+  onClose,
+}: MeetingFilesModalProps) => {
+  const [files, setFiles] = useState<IFile[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchFiles = async () => {
+      setLoading(true);
+      try {
+        const data = await fileService.list(shortId, 0, 50);
+        setFiles(data);
+      } catch (err) {
+        setError("Не удалось загрузить файлы встречи");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFiles();
+  }, [shortId, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal onClose={onClose}>
+      <button onClick={onClose}>Закрыть</button>
+      {loading && <p>Загрузка...</p>}
+      {error && <p>{error}</p>}
+      {files && files.length === 0 && <p>Файлы отсутствуют</p>}
+      {files &&
+        files.map((file: IFile) => (
+          <div key={file.id} style={{ marginBottom: 12 }}>
+            <h4>{file.fileName}</h4>
+            <p>Тип: {file.fileType}</p>
+            <p>Размер: {formatFileSize(file.fileSize)}</p>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch(file.url);
+                  if (!res.ok) throw new Error("Ошибка скачивания");
+                  const blob = await res.blob();
+                  const downloadUrl = window.URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = downloadUrl;
+                  a.download = file.fileName;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  window.URL.revokeObjectURL(downloadUrl);
+                } catch (err) {
+                  console.error(err);
+                  alert("Не удалось скачать файл");
+                }
+              }}
+            >
+              Скачать
+            </button>
           </div>
         ))}
     </Modal>

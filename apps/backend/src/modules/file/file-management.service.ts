@@ -17,6 +17,28 @@ export class FileManagementService {
     @Inject('IFileService') private fileService: IFileService,
   ) {}
 
+  async createFileRecord(data: {
+    roomId: number;
+    userId: number;
+    fileKey: string;
+    fileType: FileType;
+    fileName: string;
+    fileSize: number;
+    mimeType?: string;
+  }) {
+    await this.prisma.file.create({
+      data: {
+        roomId: data.roomId,
+        userId: data.userId,
+        fileKey: data.fileKey,
+        fileType: data.fileType,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+      },
+    });
+  }
+
   async uploadFile(
     roomId: number,
     userId: number,
@@ -139,7 +161,7 @@ export class FileManagementService {
     userId: number,
     skip = 0,
     take = 10,
-    type?: FileType,
+    types: FileType[] = [],
   ): Promise<any[]> {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
@@ -158,7 +180,7 @@ export class FileManagementService {
     const files = await this.prisma.file.findMany({
       where: {
         roomId,
-        ...(type ? { fileType: type } : {}), // <-- фильтр по типу, если передан
+        ...(types.length > 0 ? { fileType: { in: types } } : {}),
       },
       select: {
         id: true,

@@ -1,43 +1,25 @@
-# -------- Development Stage --------
-FROM node:20-alpine AS development
-
-WORKDIR /usr/src/app
-
-# Устанавливаем зависимости (копируем только package*.json для кэша)
-COPY package*.json ./
-RUN npm ci
-
-# Копируем весь код
-COPY . .
-
-# Открываем порт
-EXPOSE 3000
-
-# Запуск с hot-reload
-CMD ["npm", "run", "start:dev"]
-
-# -------- Production Build Stage --------
 FROM node:20-alpine AS build
-
-WORKDIR /usr/src/app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-# -------- Production Runtime Stage --------
-FROM node:20-alpine AS production
 
 WORKDIR /usr/src/app
 
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Копируем только собранный билд
+COPY . .
+
+RUN node --max_old_space_size=4096 ./node_modules/@nestjs/cli/bin/nest.js build
+
+RUN npx prisma generate
+
+FROM node:20-alpine AS production
+
+WORKDIR /usr/src/app
+
+COPY --from=build /usr/src/app/package*.json ./
 COPY --from=build /usr/src/app/dist ./dist
+COPY --from=build /usr/src/app/node_modules ./node_modules
+COPY --from=build /usr/src/app/prisma ./prisma
 
-EXPOSE 3000
+ENV NODE_ENV=production
 
-CMD ["node", "dist/main"]
+CMD ["node", "dist/main.js"]

@@ -42,15 +42,40 @@ export const fileService = {
     return response.data.urls;
   },
 
-  async listFiles(
+  async list(
     shortId: string,
     skip = 0,
     take = 10,
-    type?: FileType
+    types?: FileType | FileType[]
   ): Promise<IFile[]> {
-    const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
-      params: { skip, take, type },
-    });
-    return response.data;
+    try {
+      // если пришёл один тип, преобразуем его в массив
+      const normalizedTypes = Array.isArray(types)
+        ? types
+        : types
+        ? [types]
+        : [];
+
+      const response = await axiosClassic.get<IFile[]>(`/file/${shortId}`, {
+        params: {
+          skip,
+          take,
+          type: normalizedTypes,
+        },
+        paramsSerializer: (params) =>
+          new URLSearchParams(
+            Object.entries(params).flatMap(([key, value]) =>
+              Array.isArray(value) ? value.map((v) => [key, v]) : [[key, value]]
+            )
+          ).toString(),
+      });
+
+      return response.data;
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        return [];
+      }
+      throw err;
+    }
   },
 };

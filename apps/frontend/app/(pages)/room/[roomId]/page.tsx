@@ -1,6 +1,5 @@
 "use client";
 
-import { getWebSocketUrl } from "@/app/config/websocketUrl";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { useParams, useRouter } from "next/navigation";
@@ -26,9 +25,8 @@ export default function MeetingRoom() {
     }
   }, [token, user, roomId, router]);
 
-  // WebSocket для хоста
   useEffect(() => {
-    if (!roomId || !user) return;
+    if (!roomId || !user || !token) return;
     connect(roomId as string, user.id, fullName);
   }, [roomId, user]);
 

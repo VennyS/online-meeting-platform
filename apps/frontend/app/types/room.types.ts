@@ -11,7 +11,7 @@ export interface CreateRoomDto {
   allowEarlyJoin?: boolean;
   timeZone?: string;
   canShareScreen?: Role;
-  сanStartPresentation?: Role;
+  canStartPresentation?: Role;
 }
 
 export interface UpdateRoomDto {
@@ -42,6 +42,8 @@ export interface IRoom {
   allowEarlyJoin: boolean;
   cancelled: boolean;
   timeZone: string;
+  haveFiles: boolean;
+  haveReports: boolean;
 }
 
 export interface MeetingReports {
@@ -108,13 +110,12 @@ export interface BlacklistEntry {
 export type RoomRole = "owner" | "admin" | "participant";
 export type Role = "OWNER" | "ADMIN" | "ALL";
 
-type WSMessage<E extends string, D> = {
+export type WSMessage<E extends string, D> = {
   event: E;
   data: D;
 };
 
 export type RoomWSMessage =
-  | WSMessage<"init", { role: RoomRole }>
   | WSMessage<
       "init_host",
       { guests: IWaitingGuest[]; blacklist: BlacklistEntry[] }
@@ -184,7 +185,9 @@ export type RoomWSMessage =
       {
         blacklist: BlacklistEntry[];
       }
-    >;
+    >
+  | WSMessage<"recording_started", { egressId: string }>
+  | WSMessage<"recording_finished", { egressId: string }>;
 
 export type RoomWSSendMessage =
   | WSMessage<
@@ -227,4 +230,6 @@ export type RoomWSSendMessage =
       {
         ip: string;
       }
-    >;
+    >
+  | WSMessage<"recording_started", {}>
+  | WSMessage<"recording_finished", { egressId: string }>;

@@ -16,15 +16,12 @@ import { CreateRoomDto } from './dto/createRoomDto';
 import { RoomByShortIdPipe } from 'src/common/pipes/room.pipe';
 import type { Room } from '@prisma/client';
 import { Prequisites } from './interfaces/prequisites.interface';
-import { PostMessageDto } from './dto/postMessageDto';
-import { PostMessageResponseDto } from './dto/postMessageResponseDto';
 import { AddParticipantsDto } from './dto/addParticipantsDto';
 import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
-import { GetMessagesResponseDto } from './dto/getMessagesResponseDto';
 import type { Response, Request } from 'express';
-import { Workbook } from 'exceljs';
 import { ReportExportService } from 'src/common/services/report.meeting.service';
+import { GetDto } from './dto/getDto';
 
 @Controller('room')
 export class RoomController {
@@ -35,15 +32,13 @@ export class RoomController {
 
   @Get()
   @UseGuards(AuthGuard({ required: true }))
-  getRoomsByUserId(@User('id') id: number) {
+  getRoomsByUserId(@User('id') id: number): Promise<GetDto[]> {
     return this.roomService.getAllByUserId(id);
   }
 
   @Post()
   @UseGuards(AuthGuard({ required: true }))
-  createRoom(
-    @Body() query: CreateRoomDto,
-  ): Promise<Omit<Room, 'passwordHash'>> {
+  createRoom(@Body() query: CreateRoomDto): Promise<GetDto> {
     return this.roomService.create(query);
   }
 
@@ -53,7 +48,7 @@ export class RoomController {
     @Param('shortId', RoomByShortIdPipe) room: Room,
     @Body() body: PatchRoomDto,
     @User('id') id: number,
-  ) {
+  ): Promise<GetDto> {
     return this.roomService.patch(room, body, id);
   }
 
@@ -112,23 +107,6 @@ export class RoomController {
     const ip =
       req.headers['x-forwarded-for']?.toString() || req.ip || 'unknown';
     return this.roomService.getPrequisites(room, id, ip);
-  }
-
-  @Get('/:shortId/history')
-  async getHistory(
-    @Param('shortId', RoomByShortIdPipe) room: Room,
-  ): Promise<GetMessagesResponseDto> {
-    return {
-      messages: await this.roomService.getHistory(room),
-    };
-  }
-
-  @Post('/:shortId/messages')
-  async addMessage(
-    @Param('shortId', RoomByShortIdPipe) room: Room,
-    @Body() body: PostMessageDto,
-  ): Promise<PostMessageResponseDto> {
-    return this.roomService.createMessage(room, body);
   }
 
   @Post('/:shortId/participants')

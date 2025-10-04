@@ -143,7 +143,11 @@ const PrejoinPage = () => {
     if (!ws) return;
 
     ws.onopen = () => {
-      console.log("✅ Connected to WebSocket");
+      const joinRequest: RoomWSSendMessage = {
+        event: "guest_join_request",
+        data: { name: userName },
+      };
+      ws.send(JSON.stringify(joinRequest));
     };
 
     ws.onmessage = (event: MessageEvent) => {
@@ -153,14 +157,6 @@ const PrejoinPage = () => {
       const { event: evt, data } = message;
 
       switch (evt) {
-        case "init":
-          const joinRequest: RoomWSSendMessage = {
-            event: "guest_join_request",
-            data: { name: userName },
-          };
-          ws.send(JSON.stringify(joinRequest));
-          break;
-
         case "guest_approved":
           handleApprovedAccess(userId, userName, data.token);
           break;

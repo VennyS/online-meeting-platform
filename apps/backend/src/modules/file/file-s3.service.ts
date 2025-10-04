@@ -33,15 +33,35 @@ export class S3FileService implements IFileService {
   }
 
   async upload(file: Express.Multer.File, key: string): Promise<string> {
+    console.log(
+      `Attempting to upload file: ${file.originalname}, size: ${file.size}, key: ${key}`,
+    );
     const params = {
       Bucket: this.bucket,
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
     };
-
-    await this.s3.putObject(params).promise();
-    return `${this.configService.get<string>('MINIO_ENDPOINT')}/${this.bucket}/${key}`;
+    console.log('Upload params:', {
+      Bucket: params.Bucket,
+      Key: params.Key,
+      ContentType: params.ContentType,
+      size: file.size,
+    });
+    try {
+      await this.s3.putObject(params).promise();
+      console.log(`File uploaded successfully: ${key}`);
+      const url = await this.s3.getSignedUrlPromise('getObject', {
+        Bucket: this.bucket,
+        Key: key,
+        Expires: 3600,
+      });
+      console.log(`Generated presigned URL: ${url}`);
+      return url;
+    } catch (error) {
+      console.error(`Upload error for key ${key}:`, error);
+      throw error;
+    }
   }
 
   async download(key: string): Promise<Buffer> {
@@ -58,11 +78,17 @@ export class S3FileService implements IFileService {
 
   async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
     try {
-      return await this.s3.getSignedUrlPromise('getObject', {
+      const url = await this.s3.getSignedUrlPromise('getObject', {
         Bucket: this.bucket,
         Key: key,
         Expires: expiresIn,
       });
+
+      const publicBase = this.configService.get<string>('MINIO_PUBLIC_URL');
+      return url.replace(
+        this.configService.get<string>('MINIO_ENDPOINT')!,
+        publicBase!,
+      );
     } catch (error) {
       throw new NotFoundException('Failed to generate presigned URL');
     }

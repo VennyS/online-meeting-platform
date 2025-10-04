@@ -28,7 +28,7 @@ export default function CreateRoomModal() {
   const [isConnectInstantly, setIsConnectInstantly] = useState(true);
 
   const [canShareScreen, setcanShareScreen] = useState<Role>("ALL");
-  const [сanStartPresentation, setCanSharePresentation] = useState<Role>("ALL");
+  const [canStartPresentation, setCanSharePresentation] = useState<Role>("ALL");
 
   const roleOptions: { label: string; value: Role }[] = [
     { label: "Только владелец", value: "OWNER" },
@@ -103,7 +103,7 @@ export default function CreateRoomModal() {
         allowEarlyJoin,
         timeZone: "Europe/Moscow",
         canShareScreen: canShareScreen,
-        сanStartPresentation: сanStartPresentation,
+        canStartPresentation: canStartPresentation,
       });
 
       await handleUploadFiles(room.shortId);
@@ -251,8 +251,8 @@ export default function CreateRoomModal() {
       <div>
         <label>Может делиться презентацией:</label>
         <select
-          title="сanStartPresentation dropdown"
-          value={сanStartPresentation}
+          title="canStartPresentation dropdown"
+          value={canStartPresentation}
           onChange={(e) =>
             handlePermissionChange(
               "canStartPresentation",

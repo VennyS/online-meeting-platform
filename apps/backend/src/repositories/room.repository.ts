@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { Room } from '@prisma/client';
 import { AddParticipantsDto } from 'src/modules/room/dto/addParticipantsDto';
 import { CreateRoomDto } from 'src/modules/room/dto/createRoomDto';
+import { GetDto } from 'src/modules/room/dto/getDto';
 import {
   GetMeetingReportsDto,
   MeetingReportDto,
@@ -45,30 +45,44 @@ export class RoomRepository {
     return !this.findByShortId(shortId);
   }
 
-  getAllByUserId(userId: number) {
-    return this.prisma.room.findMany({
-      orderBy: { startAt: 'desc' },
-      where: { ownerId: userId },
-      select: {
-        id: true,
-        shortId: true,
-        name: true,
-        description: true,
-        startAt: true,
-        timeZone: true,
-        durationMinutes: true,
-        isPublic: true,
-        showHistoryToNewbies: true,
-        waitingRoomEnabled: true,
-        allowEarlyJoin: true,
-        ownerId: true,
-        createdAt: true,
-        updatedAt: true,
-        cancelled: true,
-        canShareScreen: true,
-        canStartPresentation: true,
-      },
-    });
+  async getAllByUserId(userId: number): Promise<GetDto[]> {
+    return this.prisma.room
+      .findMany({
+        orderBy: { startAt: 'desc' },
+        where: { ownerId: userId },
+        select: {
+          id: true,
+          shortId: true,
+          name: true,
+          description: true,
+          startAt: true,
+          timeZone: true,
+          durationMinutes: true,
+          isPublic: true,
+          showHistoryToNewbies: true,
+          waitingRoomEnabled: true,
+          allowEarlyJoin: true,
+          ownerId: true,
+          createdAt: true,
+          updatedAt: true,
+          cancelled: true,
+          canShareScreen: true,
+          canStartPresentation: true,
+          _count: {
+            select: {
+              files: true,
+              sessions: true,
+            },
+          },
+        },
+      })
+      .then((rooms) =>
+        rooms.map(({ _count, ...room }) => ({
+          ...room,
+          haveFiles: _count.files > 0,
+          haveReports: _count.sessions > 0,
+        })),
+      );
   }
 
   findAllowedParticipant(roomId: number, userId: number) {
@@ -79,7 +93,7 @@ export class RoomRepository {
 
   async create(
     newRoom: CreateRoomDto & { shortId: string; passwordHash: string },
-  ): Promise<Omit<Room, 'passwordHash'>> {
+  ): Promise<GetDto> {
     const room = await this.prisma.room.create({
       data: {
         shortId: newRoom.shortId,
@@ -95,26 +109,54 @@ export class RoomRepository {
         allowEarlyJoin: newRoom.allowEarlyJoin ?? true,
         timeZone: newRoom.timeZone || 'Europe/Moscow',
         canShareScreen: newRoom.canShareScreen,
-        canStartPresentation: newRoom.сanStartPresentation,
+        canStartPresentation: newRoom.canStartPresentation,
+      },
+      include: {
+        _count: {
+          select: {
+            files: true,
+            sessions: true,
+          },
+        },
       },
     });
 
-    const { passwordHash, ...rest } = room;
-    return rest;
+    const { passwordHash, _count, ...rest } = room;
+    return {
+      ...rest,
+      haveFiles: _count.files > 0,
+      haveReports: _count.sessions > 0,
+    };
   }
 
   async update(
     shortId: string,
     data: Omit<PatchRoomDto, 'password'>,
     passwordHash?: string,
-  ) {
-    return this.prisma.room.update({
+  ): Promise<GetDto> {
+    const room = await this.prisma.room.update({
       where: { shortId },
       data: {
         ...data,
         passwordHash,
       },
+      include: {
+        _count: {
+          select: {
+            files: true,
+            sessions: true,
+          },
+        },
+      },
     });
+
+    const { passwordHash: _, _count, ...rest } = room;
+
+    return {
+      ...rest,
+      haveFiles: _count.files > 0,
+      haveReports: _count.sessions > 0,
+    };
   }
 
   async addAllowedParticipants(

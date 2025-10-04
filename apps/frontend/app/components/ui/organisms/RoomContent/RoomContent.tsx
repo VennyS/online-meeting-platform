@@ -23,9 +23,8 @@ import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
-import { Panel } from "./types";
+import { Panel, RoomContentProps } from "./types";
 import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
-import { useRouter } from "next/navigation";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -37,10 +36,8 @@ const PDFViewer = dynamic(
 export const RoomContent = ({
   roomId,
   roomName,
-}: {
-  roomId: string;
-  roomName: string;
-}) => {
+  hideControls = false,
+}: RoomContentProps) => {
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -48,8 +45,6 @@ export const RoomContent = ({
     ],
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
-
-  const router = useRouter();
 
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const { user } = useUser();
@@ -59,12 +54,15 @@ export const RoomContent = ({
     local,
     localPresentation,
     remotePresentations,
+    isRecording,
     startPresentation,
     changePage,
     changeZoom,
     changeScroll,
     finishPresentation,
     changePresentationMode,
+    startRecording,
+    stopRecording,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
@@ -121,7 +119,7 @@ export const RoomContent = ({
   useEffect(() => {
     const handleFetchFiles = async () => {
       try {
-        const files = await fileService.listFiles(roomId, 0, 10, "PDF");
+        const files = await fileService.list(roomId, 0, 10, "PDF");
         setFiles(files);
       } catch (err) {
         console.error("Error fetching files:", err);
@@ -132,12 +130,14 @@ export const RoomContent = ({
   }, [roomId]);
 
   const correctedTracks = tracks.filter((t) => {
+    if (t.participant.permissions?.hidden) return false;
     if (t.source !== Track.Source.Camera) return true;
+
     const participantInPresentation =
       (localPresentation &&
         localPresentation[1].authorId === t.participant.identity &&
         localPresentation[1].mode === "presentationWithCamera") ||
-      Array.from(remotePresentations.values()).some(
+      Object.values(remotePresentations).some(
         (p) =>
           p.authorId === t.participant.identity &&
           p.mode === "presentationWithCamera"
@@ -178,26 +178,25 @@ export const RoomContent = ({
                 changePresentationMode(localPresentation[0], mode);
               }}
             />
-            {localPresentation![1].mode === "presentationWithCamera" && (
-              <div className={styles.presenterCamera}>
-                {(() => {
-                  const track = tracks.find(
-                    (t) =>
-                      t.source === Track.Source.Camera &&
-                      t.participant.identity === localPresentation[1].authorId
-                  );
-                  return (
-                    track?.publication && (
+            {localPresentation![1].mode === "presentationWithCamera" &&
+              (() => {
+                const track = tracks.find(
+                  (t) =>
+                    t.source === Track.Source.Camera &&
+                    t.participant.identity === localPresentation[1].authorId
+                );
+                return (
+                  track?.publication && (
+                    <div className={styles.presenterCamera}>
                       <VideoTrack trackRef={track as TrackReference} />
-                    )
-                  );
-                })()}
-              </div>
-            )}
+                    </div>
+                  )
+                );
+              })()}
           </div>
         )}
 
-        {Array.from(remotePresentations.entries()).map(
+        {Object.entries(remotePresentations).map(
           ([presentationId, presentation]) => (
             <div key={presentationId} className={styles.presentationItem}>
               <div className={styles.presentationWrapper}>
@@ -208,22 +207,21 @@ export const RoomContent = ({
                   zoom={presentation.zoom}
                   scrollPosition={presentation.scroll}
                 />
-                {presentation.mode === "presentationWithCamera" && (
-                  <div className={styles.presenterCamera}>
-                    {(() => {
-                      const track = tracks.find(
-                        (t) =>
-                          t.source === Track.Source.Camera &&
-                          t.participant.identity === presentation.authorId
-                      );
-                      return (
-                        track?.publication && (
+                {presentation.mode === "presentationWithCamera" &&
+                  (() => {
+                    const track = tracks.find(
+                      (t) =>
+                        t.source === Track.Source.Camera &&
+                        t.participant.identity === presentation.authorId
+                    );
+                    return (
+                      track?.publication && (
+                        <div className={styles.presenterCamera}>
                           <VideoTrack trackRef={track as TrackReference} />
-                        )
-                      );
-                    })()}
-                  </div>
-                )}
+                        </div>
+                      )
+                    );
+                  })()}
               </div>
             </div>
           )
@@ -242,7 +240,7 @@ export const RoomContent = ({
           [styles.active]: openedRightPanel === "chat",
         })}
       >
-        {!!user && <Chat roomName={roomId} user={user} />}
+        {!!user && <Chat />}
       </div>
       <div
         className={cn(styles.rightPanel, {
@@ -261,35 +259,44 @@ export const RoomContent = ({
         </button>
       )}
 
-      <div className={styles.controls}>
-        <p>{roomName}</p>
-        <ControlBar
-          controls={{
-            microphone: true,
-            camera: true,
-            screenShare: local.permissions.permissions.canShareScreen,
-            settings: false,
-            leave: false,
-          }}
-        />
+      {!hideControls && (
+        <div className={styles.controls}>
+          <p>{roomName}</p>
+          <ControlBar
+            controls={{
+              microphone: true,
+              camera: true,
+              screenShare: local.permissions.permissions.canShareScreen,
+              settings: false,
+              leave: false,
+            }}
+          />
 
-        <button onClick={() => handleChangeOpenPanel("participants")}>
-          {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
-        </button>
-        <button onClick={() => handleChangeOpenPanel("files")}>
-          {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
-        </button>
-        <button
-          className={styles.chatButton}
-          title="чат"
-          onClick={() => handleChangeOpenPanel("chat")}
-        >
-          <ChatIcon />
-          {unreadCount > 0 && (
-            <div className={styles.notificationDot}>{unreadCount}</div>
+          <button onClick={() => handleChangeOpenPanel("participants")}>
+            {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
+          </button>
+          <button onClick={() => handleChangeOpenPanel("files")}>
+            {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
+          </button>
+          <button
+            className={styles.chatButton}
+            title="чат"
+            onClick={() => handleChangeOpenPanel("chat")}
+          >
+            <ChatIcon />
+            {unreadCount > 0 && (
+              <div className={styles.notificationDot}>{unreadCount}</div>
+            )}
+          </button>
+          {local.permissions.role === "owner" && (
+            <button
+              onClick={() => (isRecording ? stopRecording() : startRecording())}
+            >
+              Запись {isRecording ? "да" : "нет"}
+            </button>
           )}
-        </button>
-      </div>
+        </div>
+      )}
 
       <RoomAudioRenderer />
     </div>

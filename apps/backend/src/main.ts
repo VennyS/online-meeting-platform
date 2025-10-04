@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { WsAdapter } from '@nestjs/platform-ws';
+import rawBody from 'raw-body';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,6 +20,15 @@ async function bootstrap() {
   );
 
   app.useWebSocketAdapter(new WsAdapter(app));
+
+  app.use('/livekit-webhook', async (req, res, next) => {
+    try {
+      (req as any).rawBody = await rawBody(req);
+      next();
+    } catch (err) {
+      next(err);
+    }
+  });
 
   app.enableCors({
     origin: process.env.ORIGIN || 'http://localhost:3000',
