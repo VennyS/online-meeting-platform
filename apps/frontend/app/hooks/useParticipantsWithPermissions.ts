@@ -1,5 +1,5 @@
-import { useParticipants } from "@livekit/components-react";
-import { LocalParticipant, RemoteParticipant } from "livekit-client";
+import { useParticipants, useRoomContext } from "@livekit/components-react";
+import { LocalParticipant, RemoteParticipant, RoomEvent } from "livekit-client";
 import { useEffect, useMemo, useState } from "react";
 import {
   BlacklistEntry,
@@ -11,6 +11,8 @@ import {
   UserPermissions,
 } from "../types/room.types";
 
+export type Panel = "chat" | "participants" | "files";
+
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;
   remote: ParticipantWithPermissions[];
@@ -20,6 +22,8 @@ export interface ParticipantsWithPermissions {
   remotePresentations: Record<string, Presentation>;
   blacklist: BlacklistEntry[];
   isRecording: boolean;
+  openedRightPanel: Panel | undefined;
+  unreadCount: number;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -47,6 +51,7 @@ export interface ParticipantsWithPermissions {
   removeFromBlackList: (ip: string) => void;
   startRecording: () => void;
   stopRecording: () => void;
+  handleChangeOpenPanel: (panel: Panel | undefined) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -100,6 +105,41 @@ export function useParticipantsWithPermissions(
   const remoteParticipants = participants.filter((p) => !p.isLocal);
   const [isRecording, setIsRecording] = useState(false);
   const [egressId, setEgressId] = useState<string>();
+
+  const room = useRoomContext();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
+
+  const handleChangeOpenPanel = (panel: Panel | undefined) => {
+    if (panel !== openedRightPanel) {
+      setOpenedRightPanel(panel);
+      return;
+    }
+    setOpenedRightPanel(undefined);
+  };
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleMessage = () => {
+      if (openedRightPanel !== "chat") {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleMessage);
+    room.on(RoomEvent.Disconnected, () => {
+      // router.replace("/404");
+    });
+    return () => {
+      room.off(RoomEvent.DataReceived, handleMessage);
+    };
+  }, [room, openedRightPanel]);
+
+  useEffect(() => {
+    if (openedRightPanel === "chat") setUnreadCount(0);
+  }, [openedRightPanel]);
 
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
@@ -423,6 +463,8 @@ export function useParticipantsWithPermissions(
     remotePresentations,
     blacklist,
     isRecording,
+    openedRightPanel,
+    unreadCount,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -437,5 +479,6 @@ export function useParticipantsWithPermissions(
     removeFromBlackList,
     startRecording,
     stopRecording,
+    handleChangeOpenPanel,
   };
 }

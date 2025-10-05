@@ -22,12 +22,6 @@
   overflow: hidden;
 }
 
-.controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .container {
   display: grid;
   grid-template-columns: 1fr 0fr;

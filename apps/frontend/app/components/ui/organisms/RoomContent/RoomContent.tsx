@@ -2,13 +2,16 @@
 
 import "@livekit/components-styles";
 import {
-  ChatIcon,
-  ControlBar,
+  CarouselLayout,
+  FocusLayout,
+  FocusLayoutContainer,
   GridLayout,
+  LayoutContextProvider,
   ParticipantTile,
   RoomAudioRenderer,
   TrackReference,
-  useRoomContext,
+  useCreateLayoutContext,
+  usePinnedTracks,
   useTracks,
   VideoTrack,
 } from "@livekit/components-react";
@@ -23,8 +26,9 @@ import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
-import { Panel, RoomContentProps } from "./types";
+import { RoomContentProps } from "./types";
 import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
+import ControlBar from "../ControlBar/ControlBar";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -46,47 +50,21 @@ export const RoomContent = ({
     { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
   );
 
-  const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const { user } = useUser();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const room = useRoomContext();
   const {
     local,
     localPresentation,
     remotePresentations,
-    isRecording,
+    openedRightPanel,
     startPresentation,
     changePage,
     changeZoom,
     changeScroll,
     finishPresentation,
     changePresentationMode,
-    startRecording,
-    stopRecording,
+    handleChangeOpenPanel,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
-
-  useEffect(() => {
-    if (!room) return;
-
-    const handleMessage = () => {
-      if (openedRightPanel !== "chat") {
-        setUnreadCount((prev) => prev + 1);
-      }
-    };
-
-    room.on(RoomEvent.DataReceived, handleMessage);
-    room.on(RoomEvent.Disconnected, () => {
-      // router.replace("/404");
-    });
-    return () => {
-      room.off(RoomEvent.DataReceived, handleMessage);
-    };
-  }, [room, openedRightPanel]);
-
-  useEffect(() => {
-    if (openedRightPanel === "chat") setUnreadCount(0);
-  }, [openedRightPanel]);
 
   useEffect(() => {
     if (!local.participant) return;
@@ -107,14 +85,6 @@ export const RoomContent = ({
       }
     }
   }, []);
-
-  const handleChangeOpenPanel = (panel: Panel) => {
-    if (panel !== openedRightPanel) {
-      setOpenedRightPanel(panel);
-      return;
-    }
-    setOpenedRightPanel(undefined);
-  };
 
   useEffect(() => {
     const handleFetchFiles = async () => {
@@ -253,50 +223,13 @@ export const RoomContent = ({
       {openedRightPanel && (
         <button
           className={styles.closePanelButton}
-          onClick={() => setOpenedRightPanel(undefined)}
+          onClick={() => handleChangeOpenPanel(undefined)}
         >
           ✕
         </button>
       )}
 
-      {!hideControls && (
-        <div className={styles.controls}>
-          <p>{roomName}</p>
-          <ControlBar
-            controls={{
-              microphone: true,
-              camera: true,
-              screenShare: local.permissions.permissions.canShareScreen,
-              settings: false,
-              leave: false,
-            }}
-          />
-
-          <button onClick={() => handleChangeOpenPanel("participants")}>
-            {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
-          </button>
-          <button onClick={() => handleChangeOpenPanel("files")}>
-            {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
-          </button>
-          <button
-            className={styles.chatButton}
-            title="чат"
-            onClick={() => handleChangeOpenPanel("chat")}
-          >
-            <ChatIcon />
-            {unreadCount > 0 && (
-              <div className={styles.notificationDot}>{unreadCount}</div>
-            )}
-          </button>
-          {local.permissions.role === "owner" && (
-            <button
-              onClick={() => (isRecording ? stopRecording() : startRecording())}
-            >
-              Запись {isRecording ? "да" : "нет"}
-            </button>
-          )}
-        </div>
-      )}
+      {!hideControls && <ControlBar />}
 
       <RoomAudioRenderer />
     </div>
