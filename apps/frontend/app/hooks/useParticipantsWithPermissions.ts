@@ -11,7 +11,11 @@ import {
   UserPermissions,
 } from "../types/room.types";
 
-export type Panel = "chat" | "participants" | "files";
+export enum Panel {
+  Chat = "chat",
+  Participants = "participants",
+  Files = "files",
+}
 
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;

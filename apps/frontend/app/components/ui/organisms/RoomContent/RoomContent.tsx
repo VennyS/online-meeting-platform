@@ -115,15 +115,31 @@ export const RoomContent = ({
     return !participantInPresentation;
   });
 
+  const layoutContext = useCreateLayoutContext();
+
+  const focusTrack = usePinnedTracks(layoutContext)?.[0];
+  const carouselTracks = tracks.filter((track) => track !== focusTrack);
+
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
         {correctedTracks && correctedTracks.length > 0 && (
-          <GridLayout tracks={correctedTracks}>
-            <ParticipantTile />
-          </GridLayout>
+          <LayoutContextProvider value={layoutContext}>
+            {!focusTrack ? (
+              <GridLayout tracks={tracks}>
+                <ParticipantTile />
+              </GridLayout>
+            ) : (
+              <FocusLayoutContainer>
+                <CarouselLayout tracks={carouselTracks}>
+                  <ParticipantTile />
+                </CarouselLayout>
+                {focusTrack && <FocusLayout trackRef={focusTrack} />}
+              </FocusLayoutContainer>
+            )}
+          </LayoutContextProvider>
         )}
         {!!localPresentation && (
           <div className={styles.pdfContainer}>
