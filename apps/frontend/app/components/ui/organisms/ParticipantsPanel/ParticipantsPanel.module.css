@@ -8,6 +8,22 @@
   }
 }
 
+.ParticipantsPanel {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+  gap: 16px;
+}
+
+.participantsSection {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .copiedToast {
   position: fixed;
   bottom: 20px;
