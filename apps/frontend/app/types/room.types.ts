@@ -108,6 +108,13 @@ export interface BlacklistEntry {
 }
 
 export type RoomRole = "owner" | "admin" | "participant";
+
+export const RoomRoleMap = {
+  owner: "Владелец",
+  admin: "Администратор",
+  participant: "Участник",
+};
+
 export type Role = "OWNER" | "ADMIN" | "ALL";
 
 export type WSMessage<E extends string, D> = {
