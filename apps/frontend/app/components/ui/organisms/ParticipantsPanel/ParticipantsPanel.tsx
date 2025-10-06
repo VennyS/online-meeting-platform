@@ -57,6 +57,7 @@ export function ParticipantsPanel({
             variant="subtitle1"
             textTransform="uppercase"
             color="text.secondary"
+            sx={{ mb: "8px" }}
           >
             На встрече
           </Typography>

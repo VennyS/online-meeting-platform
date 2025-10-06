@@ -25,6 +25,7 @@ import { Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
 import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
+import { CircularProgress } from "@mui/material";
 
 const ControlBar = () => {
   const {
@@ -76,6 +77,10 @@ const ControlBar = () => {
     borderRadius: "40%",
   };
 
+  const Loader = () => {
+    return <CircularProgress color="inherit" size={28} />;
+  };
+
   return (
     <div className={styles.controls}>
       <div className={styles.controlsSection}>
@@ -84,6 +89,7 @@ const ControlBar = () => {
           aria-label="Микрофон"
           onClick={() => microToggle()}
           loading={microPending}
+          loadingIndicator={<Loader />}
           sx={IconButtonSx}
         >
           {microEnabled ? <MicOutlinedIcon /> : <MicOffOutlinedIcon />}
@@ -93,6 +99,7 @@ const ControlBar = () => {
           aria-label="Камера"
           onClick={() => cameraToggle()}
           loading={cameraPending}
+          loadingIndicator={<Loader />}
           sx={IconButtonSx}
         >
           {cameraEnabled ? (
@@ -148,6 +155,7 @@ const ControlBar = () => {
             aria-label="Демонстрация экрана"
             onClick={() => screenShareToggle()}
             loading={screenSharePending}
+            loadingIndicator={<Loader />}
             sx={IconButtonSx}
           >
             {screenShareEnabled ? (

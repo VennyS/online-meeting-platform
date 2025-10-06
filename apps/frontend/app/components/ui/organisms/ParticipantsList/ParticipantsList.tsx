@@ -44,7 +44,7 @@ const ParticipantsList = () => {
   return (
     <Accordion>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography sx={{ flexGrow: 1 }}>Участники</Typography>
+        <Typography sx={{ flexGrow: 1, m: 0 }}>Участники</Typography>
         <Typography variant="caption" color="text.secondary">
           {participants.length}
         </Typography>
@@ -61,7 +61,6 @@ const ParticipantsList = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                mb: 1,
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
