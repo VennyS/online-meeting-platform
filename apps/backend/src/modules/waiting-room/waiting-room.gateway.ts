@@ -58,40 +58,18 @@ export class WaitingRoomGateway
       if (!this.connections.has(roomId)) {
         this.connections.set(roomId, new Map());
       }
-      this.connections
-        .get(roomId)!
-        .set(userId, { ws, isHost, ip, username, showHistoryToNewbies });
-
-      await this.waitingRoomService.initPermissions(roomId, ws);
-      await this.waitingRoomService.joinAnalytics(roomId, userId, username, ip);
-
-      if (isHost) {
-        await this.waitingRoomService.sendInitToHost(roomId, ws);
-      }
-
-      await this.waitingRoomService.setDefaultRole(
-        roomId,
-        userId,
-        isHost ? 'owner' : 'participant',
-      );
-      await this.waitingRoomService.broadcastRoles(
-        roomId,
-        this.connections.get(roomId)!,
-      );
-
-      await this.waitingRoomService.sendPresentationsStateToClient(roomId, ws);
-
       const roomConnections = this.connections.get(roomId)!;
-
-      const showToNewbies = [...roomConnections.values()].some(
-        (conn) => conn.showHistoryToNewbies,
-      );
-
-      await this.waitingRoomService.broadcastMessages(
-        roomId,
-        showToNewbies,
+      roomConnections.set(userId, {
         ws,
-      );
+        isHost,
+        ip,
+        username,
+        showHistoryToNewbies,
+      });
+
+      (ws as any)._roomData = { roomId, userId, username, ip, isHost };
+
+      ws.send(JSON.stringify({ event: 'ready', data: {} }));
     } catch (error) {
       ws.close(1011, 'Server error');
     }
@@ -125,6 +103,29 @@ export class WaitingRoomGateway
           break;
         }
       }
+    }
+  }
+
+  @SubscribeMessage('ready')
+  async onClientReady(@ConnectedSocket() ws: WebSocket) {
+    try {
+      const data = (ws as any)._roomData;
+      if (!data) return;
+
+      const { roomId, userId, username, ip, isHost } = data;
+      const roomConnections = this.connections.get(roomId)!;
+
+      await this.waitingRoomService.handleJoin(
+        roomId,
+        ws,
+        userId,
+        username,
+        ip,
+        isHost,
+        roomConnections,
+      );
+    } catch (error) {
+      ws.close(1011, 'Server error on ready');
     }
   }
 
@@ -247,7 +248,11 @@ export class WaitingRoomGateway
   @SubscribeMessage('presentation_started')
   async startPresentation(
     @MessageBody()
-    data: { url: string; mode?: 'presentationWithCamera' | 'presentationOnly' },
+    data: {
+      fileId: string;
+      url: string;
+      mode?: 'presentationWithCamera' | 'presentationOnly';
+    },
     @ConnectedSocket() ws: WebSocket,
   ) {
     const info = this.findUserBySocket(ws);
@@ -259,6 +264,7 @@ export class WaitingRoomGateway
     const { roomId, userId } = info;
 
     const presentation: IPresentation = {
+      fileId: data.fileId,
       presentationId: uuidv4(),
       url: data.url,
       authorId: userId,

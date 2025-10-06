@@ -1,3 +1,9 @@
+import { Box, Button, List, ListItem, ListItemText } from "@mui/material";
+import Typography from "@mui/material/Typography";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
+import { useParticipantsContext } from "@/app/providers/participants.provider";
+import { useEffect } from "react";
+
 export interface IFile {
   id: number;
   fileName: string;
@@ -8,11 +14,14 @@ export interface IFile {
 
 interface PresentationListProps {
   files: IFile[];
-  onClick: (url: string) => void;
 }
 
-const PresentationList = ({ files, onClick }: PresentationListProps) => {
-  // Функция для форматирования размера файла
+export const PresentationList = ({ files }: PresentationListProps) => {
+  const { localPresentation, startPresentation, finishPresentation } =
+    useParticipantsContext();
+  const localFileId = localPresentation?.[1].fileId;
+  const localFileIdNumber = localFileId ? Number(localFileId) : undefined;
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return "0 Bytes";
 
@@ -23,32 +32,45 @@ const PresentationList = ({ files, onClick }: PresentationListProps) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  if (files.length === 0) {
+    return <Typography>Нет файлов для отображения</Typography>;
+  }
+
   return (
-    <div className="presentation-list">
-      {files.length === 0 ? (
-        <p>Нет файлов для отображения</p>
-      ) : (
-        <div className="files-container">
-          {files.map((file) => (
-            <div key={file.id} className="file-item">
-              <div className="file-info">
-                <h3 className="file-name">{file.fileName}</h3>
-                <p className="file-size">
-                  Размер: {formatFileSize(file.fileSize)}
-                </p>
-              </div>
-              <button
-                className="download-btn"
-                onClick={() => onClick(file.url)}
-                aria-label={`Транслировать ${file.fileName}`}
-              >
-                Транслировать
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    <List>
+      {files.map((file) => (
+        <ListItem
+          key={file.id}
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1,
+            mb: 1,
+          }}
+          secondaryAction={
+            <Button
+              variant="contained"
+              size="small"
+              onClick={
+                localFileIdNumber !== file.id
+                  ? () => startPresentation(file.id, file.url)
+                  : () => finishPresentation(localPresentation![0])
+              }
+            >
+              {localFileIdNumber !== file.id ? "Транслировать" : "Завершить"}
+            </Button>
+          }
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <InsertDriveFileOutlinedIcon color="action" />
+            <ListItemText
+              primary={file.fileName}
+              secondary={`Размер: ${formatFileSize(file.fileSize)}`}
+            />
+          </Box>
+        </ListItem>
+      ))}
+    </List>
   );
 };
 

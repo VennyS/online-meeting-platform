@@ -84,6 +84,34 @@ export class WaitingRoomService {
     }
   }
 
+  async handleJoin(
+    roomId: string,
+    ws: WebSocket,
+    userId: string,
+    username: string,
+    ip: string,
+    isHost: boolean,
+    roomConnections: Map<string, any>,
+  ) {
+    await this.initPermissions(roomId, ws);
+    await this.joinAnalytics(roomId, userId, username, ip);
+
+    if (isHost) {
+      await this.sendInitToHost(roomId, ws);
+    }
+
+    await this.setDefaultRole(roomId, userId, isHost ? 'owner' : 'participant');
+    await this.broadcastRoles(roomId, roomConnections);
+
+    await this.sendPresentationsStateToClient(roomId, ws);
+
+    const showToNewbies = [...roomConnections.values()].some(
+      (conn) => conn.showHistoryToNewbies,
+    );
+
+    await this.broadcastMessages(roomId, showToNewbies, ws);
+  }
+
   // --- Права ---
   async handlePermissionUpdate(
     roomId: string,
@@ -280,6 +308,7 @@ export class WaitingRoomService {
       event: 'presentations_state',
       data: {
         presentations: presentations.map((p) => ({
+          fileId: p.fileId,
           presentationId: p.presentationId,
           url: p.url,
           authorId: p.authorId,
@@ -317,6 +346,7 @@ export class WaitingRoomService {
     const msg = JSON.stringify({
       event: 'presentation_started',
       data: {
+        fileId: presentation.fileId,
         presentationId: presentation.presentationId,
         url: presentation.url,
         authorId: presentation.authorId,

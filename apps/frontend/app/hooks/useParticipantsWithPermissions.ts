@@ -37,6 +37,7 @@ export interface ParticipantsWithPermissions {
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
   startPresentation: (
+    fileId: number,
     url: string,
     mode?: "presentationWithCamera" | "presentationOnly"
   ) => void;
@@ -61,6 +62,7 @@ export interface ParticipantsWithPermissions {
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
 
 type Presentation = {
+  fileId: string;
   presentationId: string;
   url: string;
   authorId: string;
@@ -94,6 +96,7 @@ export function useParticipantsWithPermissions(
   ws: WebSocket | null,
   localUserId: number
 ): ParticipantsWithPermissions | null {
+  const [isReady, setIsReady] = useState(false);
   const participants = useParticipants();
   const [permissionsMap, setPermissionsMap] = useState<
     Record<RoomRole, UserPermissions>
@@ -178,12 +181,13 @@ export function useParticipantsWithPermissions(
   }
 
   function startPresentation(
+    fileId: number,
     url: string,
     mode:
       | "presentationWithCamera"
       | "presentationOnly" = "presentationWithCamera"
   ) {
-    sendMessage("presentation_started", { url, mode });
+    sendMessage("presentation_started", { fileId, url, mode });
   }
 
   function changePage(presentationId: string, newPage: number) {
@@ -229,6 +233,11 @@ export function useParticipantsWithPermissions(
     sendMessage("recording_finished", { egressId });
   }
 
+  if (ws && !isReady) {
+    sendMessage("ready", {});
+    setIsReady(true);
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -237,6 +246,10 @@ export function useParticipantsWithPermissions(
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "ready": {
+          sendMessage("ready", {});
+          break;
+        }
         case "init_host":
           setBlacklist(data.blacklist);
           setWaitingGuests(data.guests);
@@ -302,6 +315,7 @@ export function useParticipantsWithPermissions(
           setPresentations((prev) => ({
             ...prev,
             [data.presentationId]: {
+              fileId: data.fileId,
               presentationId: data.presentationId,
               url: data.url,
               authorId: data.authorId,

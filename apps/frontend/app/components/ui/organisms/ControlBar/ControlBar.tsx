@@ -27,7 +27,7 @@ import Badge from "@mui/material/Badge";
 import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
 import { CircularProgress } from "@mui/material";
 
-const ControlBar = () => {
+const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const {
     local: { permissions },
     openedRightPanel,
@@ -138,17 +138,20 @@ const ControlBar = () => {
             )}
           </IconButton>
         </Badge>
-        <IconButton
-          title="Презентация"
-          onClick={() => handleChangeOpenPanel(Panel.Files)}
-          sx={IconButtonSx}
-        >
-          {openedRightPanel === Panel.Files ? (
-            <CancelPresentationOutlinedIcon />
-          ) : (
-            <PresentToAllOutlinedIcon />
-          )}
-        </IconButton>
+        {haveFiles && (
+          <IconButton
+            title="Презентация"
+            onClick={() => handleChangeOpenPanel(Panel.Files)}
+            sx={IconButtonSx}
+          >
+            {openedRightPanel === Panel.Files ? (
+              <CancelPresentationOutlinedIcon />
+            ) : (
+              <PresentToAllOutlinedIcon />
+            )}
+          </IconButton>
+        )}
+
         {permissions.permissions.canShareScreen && (
           <IconButton
             title="Демонстрация экрана"

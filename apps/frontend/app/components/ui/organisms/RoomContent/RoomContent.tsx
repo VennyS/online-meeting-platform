@@ -60,7 +60,6 @@ export const RoomContent = ({
     localPresentation,
     remotePresentations,
     openedRightPanel,
-    startPresentation,
     changePage,
     changeZoom,
     changeScroll,
@@ -83,7 +82,7 @@ export const RoomContent = ({
     {
       key: Panel.Files,
       title: "Файлы",
-      content: <PresentationList files={files} onClick={startPresentation} />,
+      content: <PresentationList files={files} />,
     },
   ];
 
@@ -247,7 +246,7 @@ export const RoomContent = ({
         </RightPanel>
       ))}
 
-      {!hideControls && <ControlBar />}
+      {!hideControls && <ControlBar haveFiles={files.length > 0} />}
 
       <RoomAudioRenderer />
     </div>

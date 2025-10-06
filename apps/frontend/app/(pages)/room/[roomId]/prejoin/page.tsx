@@ -142,21 +142,33 @@ const PrejoinPage = () => {
 
     if (!ws) return;
 
-    ws.onopen = () => {
-      const joinRequest: RoomWSSendMessage = {
-        event: "guest_join_request",
-        data: { name: userName },
-      };
-      ws.send(JSON.stringify(joinRequest));
+    ws.onopen = () => {};
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setError("Ошибка подключения");
+      setIsConnecting(false);
     };
 
-    ws.onmessage = (event: MessageEvent) => {
+    ws.onclose = () => {
+      console.log("WebSocket connection closed");
+      setIsConnecting(false);
+    };
+
+    ws.addEventListener("message", (event: MessageEvent) => {
       console.log("📨 Message from server:", event.data);
 
       const message: RoomWSMessage = JSON.parse(event.data);
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "ready":
+          const joinRequest: RoomWSSendMessage = {
+            event: "guest_join_request",
+            data: { name: userName },
+          };
+          ws.send(JSON.stringify(joinRequest));
+          break;
         case "guest_approved":
           handleApprovedAccess(userId, userName, data.token);
           break;
@@ -170,18 +182,7 @@ const PrejoinPage = () => {
           console.warn("⚠️ Неизвестное событие от сервера:", evt, data);
           break;
       }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setError("Ошибка подключения");
-      setIsConnecting(false);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-      setIsConnecting(false);
-    };
+    });
   };
 
   const handleApprovedAccess = (

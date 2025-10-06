@@ -1,6 +1,7 @@
 export type PresentationMode = 'presentationWithCamera' | 'presentationOnly';
 
 export interface IPresentation {
+  fileId: string;
   presentationId: string;
   authorId: string;
   url: string;
