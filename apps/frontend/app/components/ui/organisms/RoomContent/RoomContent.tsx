@@ -22,13 +22,17 @@ import styles from "./RoomContent.module.css";
 import cn from "classnames";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
+import { ParticipantsPanel } from "@/app/components/ui/organisms/ParticipantsPanel/ParticipantsPanel";
 import { fileService, IFile } from "@/app/services/file.service";
 import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { RoomContentProps } from "./types";
-import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
+import {
+  Panel,
+  PresentationMode,
+} from "@/app/hooks/useParticipantsWithPermissions";
 import ControlBar from "../ControlBar/ControlBar";
+import RightPanel from "../RightPanel/RightPanel";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -62,9 +66,26 @@ export const RoomContent = ({
     changeScroll,
     finishPresentation,
     changePresentationMode,
-    handleChangeOpenPanel,
   } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
+
+  const panels = [
+    {
+      key: Panel.Chat,
+      title: "Чат",
+      content: user ? <Chat /> : null,
+    },
+    {
+      key: Panel.Participants,
+      title: "Участники",
+      content: <ParticipantsPanel roomId={roomId} roomName={roomName} />,
+    },
+    {
+      key: Panel.Files,
+      title: "Файлы",
+      content: <PresentationList files={files} onClick={startPresentation} />,
+    },
+  ];
 
   useEffect(() => {
     if (!local.participant) return;
@@ -214,36 +235,17 @@ export const RoomContent = ({
         )}
       </div>
 
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "participants",
-        })}
-      >
-        <ParticipantsList roomId={roomId} roomName={roomName} />
-      </div>
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "chat",
-        })}
-      >
-        {!!user && <Chat />}
-      </div>
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "files",
-        })}
-      >
-        <PresentationList files={files} onClick={startPresentation} />
-      </div>
-
-      {openedRightPanel && (
-        <button
-          className={styles.closePanelButton}
-          onClick={() => handleChangeOpenPanel(undefined)}
+      {panels.map(({ key, title, content }) => (
+        <RightPanel
+          key={key}
+          title={title}
+          className={cn(styles.rightPanel, {
+            [styles.active]: openedRightPanel === key,
+          })}
         >
-          ✕
-        </button>
-      )}
+          {content}
+        </RightPanel>
+      ))}
 
       {!hideControls && <ControlBar />}
 

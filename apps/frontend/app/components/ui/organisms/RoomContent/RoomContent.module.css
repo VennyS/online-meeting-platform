@@ -6,13 +6,6 @@
   align-items: center;
 }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
 .gridContainer {
   flex: 1;
   min-height: 0;
@@ -25,10 +18,10 @@
 .container {
   display: grid;
   grid-template-columns: 1fr 0fr;
-  grid-template-rows: auto 1fr auto; /* шапка, контент, контролы */
+  grid-template-rows: auto 1fr auto;
   transition: grid-template-columns var(--anim-speed) ease;
   height: 100%;
-  column-gap: 16px;
+  gap: 16px;
 
   --anim-speed: 0.2s;
 }
@@ -55,6 +48,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--anim-speed) ease;
+  box-sizing: border-box;
 }
 
 .rightPanel.active {
@@ -62,22 +56,17 @@
   pointer-events: auto;
 }
 
-.closePanelButton {
-  display: none; /* по умолчанию скрыта */
-}
-
-@media (max-width: 800px) {
-  .container.open {
-    grid-template-columns: 1fr 1fr; /* при открытии списка */
-  }
-}
-
 @media (max-width: 1032px) {
+  .container,
+  .container.open {
+    grid-template-columns: 1fr;
+  }
+
   .rightPanel {
     position: fixed; /* всплывающие сверху */
     top: 0;
     right: 0;
-    width: 80%; /* или 100% для fullscreen */
+    width: 100%; /* или 100% для fullscreen */
     height: 100%;
     background: blueviolet;
     z-index: 1000;
@@ -92,21 +81,6 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0); /* выезжаем */
-  }
-
-  .closePanelButton {
-    display: block;
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1010;
-    font-size: 16px;
   }
 }
 
@@ -166,12 +140,6 @@
   display: flex;
   overflow-x: auto;
   padding: 10px;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .pdfContainer {
