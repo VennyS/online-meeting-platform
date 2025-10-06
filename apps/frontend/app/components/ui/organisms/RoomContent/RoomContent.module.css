@@ -27,7 +27,7 @@
 }
 
 .container.open {
-  grid-template-columns: 1fr 0.3fr; /* при открытии списка */
+  grid-template-columns: 1fr 0.5fr; /* при открытии списка */
 }
 
 .gridContainer {
@@ -56,7 +56,7 @@
   pointer-events: auto;
 }
 
-@media (max-width: 1032px) {
+@media (max-width: 734px) {
   .container,
   .container.open {
     grid-template-columns: 1fr;
