@@ -10,6 +10,7 @@ import {
   RoomWSSendMessage,
   UserPermissions,
 } from "../types/room.types";
+import stringToColor from "../lib/stringToColor";
 
 export enum Panel {
   Chat = "chat",
@@ -75,6 +76,8 @@ type Presentation = {
 type ParticipantWithPermissions = {
   participant: RemoteParticipant | LocalParticipant;
   permissions: UserPermissions;
+  avatarUrl?: string | null;
+  avatarColor: string;
 };
 
 const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
@@ -433,25 +436,32 @@ export function useParticipantsWithPermissions(
 
   const localRole = usersRoles[localParticipant?.identity] || "participant";
 
+  // TODO: get avatarUrl from participant.metadata
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
     permissions: {
       role: localRole,
       permissions: permissionsMap[localRole]?.permissions || {},
     },
+    avatarColor: stringToColor(localParticipant.name || "Anonymous"),
+    // avatarUrl: localParticipant.metadata?.avatarUrl || null,
   };
 
   const remote: ParticipantWithPermissions[] = remoteParticipants.map((p) => {
     const role = usersRoles[p.identity] || "participant";
+    // const metadata = p.metadata ? JSON.parse(p.metadata) : {};
+    // const avatarUrl = metadata.avatarUrl || null;
+
     return {
       participant: p,
       permissions: {
         role,
         permissions: permissionsMap[role]?.permissions || {},
       },
+      avatarColor: stringToColor(p.name || "Anonymous"),
+      // avatarUrl,
     };
   });
-
   const localPresentation = useMemo(
     () =>
       Object.entries(presentations).find(

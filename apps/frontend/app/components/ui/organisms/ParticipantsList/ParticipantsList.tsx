@@ -51,7 +51,7 @@ const ParticipantsList = () => {
       </AccordionSummary>
 
       <AccordionDetails>
-        {participants.map(({ participant, permissions }) => {
+        {participants.map(({ participant, permissions, ...avatarProps }) => {
           const role = permissions.role;
 
           return (
@@ -64,7 +64,11 @@ const ParticipantsList = () => {
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Avatar>{participant.name?.charAt(0)}</Avatar>
+                <Avatar
+                  sx={{ bgcolor: avatarProps.avatarColor, fontSize: "16px" }}
+                >
+                  {participant.name?.charAt(0)}
+                </Avatar>
                 <Box>
                   <Typography>
                     {participant.name || participant.identity || "Аноним"}
