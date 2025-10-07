@@ -1,13 +1,13 @@
 "use client";
 
 import "@livekit/components-styles";
+
 import {
   CarouselLayout,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
   LayoutContextProvider,
-  ParticipantTile,
   RoomAudioRenderer,
   TrackReference,
   useCreateLayoutContext,
@@ -33,6 +33,8 @@ import {
 } from "@/app/hooks/useParticipantsWithPermissions";
 import ControlBar from "../ControlBar/ControlBar";
 import RightPanel from "../RightPanel/RightPanel";
+import React from "react";
+import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
 
 const PDFViewer = dynamic(
   () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
@@ -148,7 +150,10 @@ export const RoomContent = ({
         {correctedTracks && correctedTracks.length > 0 && (
           <LayoutContextProvider value={layoutContext}>
             {!focusTrack ? (
-              <GridLayout tracks={tracks}>
+              <GridLayout
+                tracks={correctedTracks}
+                className={styles.gridLayout}
+              >
                 <ParticipantTile />
               </GridLayout>
             ) : (
