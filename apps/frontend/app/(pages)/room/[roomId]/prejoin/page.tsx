@@ -156,8 +156,6 @@ const PrejoinPage = () => {
     };
 
     ws.addEventListener("message", (event: MessageEvent) => {
-      console.log("📨 Message from server:", event.data);
-
       const message: RoomWSMessage = JSON.parse(event.data);
       const { event: evt, data } = message;
 

@@ -67,7 +67,7 @@ const ParticipantsList = () => {
                 <Avatar
                   sx={{ bgcolor: avatarProps.avatarColor, fontSize: "16px" }}
                 >
-                  {participant.name?.charAt(0)}
+                  {participant.name?.charAt(0).toUpperCase()}
                 </Avatar>
                 <Box>
                   <Typography>
