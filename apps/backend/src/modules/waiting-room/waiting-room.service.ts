@@ -134,76 +134,60 @@ export class WaitingRoomService {
   }
 
   async initPermissions(roomId: string, ws: WebSocket) {
-    // Получаем пермишены из Redis
-    let permissions: Record<string, any> | null =
-      await this.redis.getPermissions(roomId);
+    try {
+      let permissions = await this.redis.getPermissions(roomId);
 
-    // Если в Redis нет данных или объект пустой, подтягиваем из Prisma
-    if (!permissions || Object.keys(permissions).length === 0) {
-      const requestedRoom = await this.roomRepository.findByShortId(roomId);
+      if (!permissions || Object.keys(permissions).length === 0) {
+        const room = await this.roomRepository.findByShortId(roomId);
 
-      if (!requestedRoom) {
-        ws.send(
-          JSON.stringify({
-            event: 'permissions_error',
-            data: { message: `Room ${roomId} not found` },
-          }),
+        if (!room) {
+          ws.send(
+            JSON.stringify({
+              event: 'permissions_error',
+              data: { message: `Room ${roomId} not found` },
+            }),
+          );
+          return;
+        }
+
+        const roles = ['owner', 'admin', 'participant'] as const;
+        permissions = Object.fromEntries(
+          roles.map((role) => [
+            role,
+            {
+              canShareScreen:
+                room.canShareScreen === 'ALL' ||
+                (room.canShareScreen === 'ADMIN' && role !== 'participant') ||
+                (room.canShareScreen === 'OWNER' && role === 'owner'),
+              canStartPresentation:
+                room.canStartPresentation === 'ALL' ||
+                (room.canStartPresentation === 'ADMIN' &&
+                  role !== 'participant') ||
+                (room.canStartPresentation === 'OWNER' && role === 'owner'),
+            },
+          ]),
         );
-        return;
+
+        await this.redis.setPermissions(roomId, permissions);
       }
 
-      // Формируем объект permissions из данных комнаты
-      permissions = {
-        canShareScreen: requestedRoom.canShareScreen,
-        canStartPresentation: requestedRoom.canStartPresentation,
-      };
+      ws.send(
+        JSON.stringify({
+          event: 'permissions_init',
+          data: permissions,
+        }),
+      );
+
+      console.log('Permissions initialized:', permissions);
+    } catch (err) {
+      console.error('initPermissions failed:', err);
+      ws.send(
+        JSON.stringify({
+          event: 'permissions_error',
+          data: { message: 'Failed to initialize permissions' },
+        }),
+      );
     }
-
-    // Определяем роли и их права
-    const roles = ['owner', 'admin', 'participant'] as const;
-    const rolePermissions = roles.map((role) => {
-      const perms: Record<string, boolean> = {
-        canShareScreen: false,
-        canStartPresentation: false,
-      };
-
-      // Логика для canShareScreen
-      if (permissions!.canShareScreen === 'ALL') {
-        perms.canShareScreen = true;
-      } else if (
-        permissions!.canShareScreen === 'ADMIN' &&
-        (role === 'owner' || role === 'admin')
-      ) {
-        perms.canShareScreen = true;
-      } else if (permissions!.canShareScreen === 'OWNER' && role === 'owner') {
-        perms.canShareScreen = true;
-      }
-
-      // Логика для canStartPresentation
-      if (permissions!.canStartPresentation === 'ALL') {
-        perms.canStartPresentation = true;
-      } else if (
-        permissions!.canStartPresentation === 'ADMIN' &&
-        (role === 'owner' || role === 'admin')
-      ) {
-        perms.canStartPresentation = true;
-      } else if (
-        permissions!.canStartPresentation === 'OWNER' &&
-        role === 'owner'
-      ) {
-        perms.canStartPresentation = true;
-      }
-
-      return { role, permissions: perms };
-    });
-
-    // Отправляем права через WebSocket
-    ws.send(
-      JSON.stringify({
-        event: 'permissions_init',
-        data: rolePermissions,
-      }),
-    );
   }
 
   // --- Очередь гостей ---
