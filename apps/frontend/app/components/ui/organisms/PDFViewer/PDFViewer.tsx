@@ -20,6 +20,12 @@ import { Document, Page, pdfjs } from "react-pdf";
 import styles from "./PDFViewer.module.css";
 import { PDFViewerProps } from "./types";
 import cn from "classnames";
+import { IconButton, Stack, Switch, Typography } from "@mui/material";
+import ChevronLeftOutlinedIcon from "@mui/icons-material/ChevronLeftOutlined";
+import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
+import ZoomInOutlinedIcon from "@mui/icons-material/ZoomInOutlined";
+import ZoomOutOutlinedIcon from "@mui/icons-material/ZoomOutOutlined";
+import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   `pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`,
@@ -27,7 +33,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const PDFViewer = ({
-  pdfUrl,
+  url,
   currentPage = 1,
   zoom = 1,
   totalPages = 0,
@@ -113,7 +119,7 @@ const PDFViewer = ({
 
   const documentElement = useMemo(
     () => (
-      <Document key={pdfUrl} file={pdfUrl} onLoadSuccess={handleDocumentLoad}>
+      <Document key={url} file={url} onLoadSuccess={handleDocumentLoad}>
         <Page
           pageNumber={currentPage}
           scale={zoom}
@@ -122,36 +128,58 @@ const PDFViewer = ({
         />
       </Document>
     ),
-    [pdfUrl, currentPage, zoom]
+    [url, currentPage, zoom]
   );
 
   return (
     <div className={styles.container}>
       {isAuthor && (
-        <div className={styles.controls}>
-          <button onClick={handlePrevPage} disabled={currentPage <= 1}>
-            l
-          </button>
-          <span className={styles.pageInfo}>
-            Страница {currentPage} {numPages > 0 ? `из ${numPages}` : ""}
-          </span>
-          <button onClick={handleNextPage} disabled={currentPage >= numPages}>
-            r
-          </button>
-
-          <button onClick={handleZoomOut}>−</button>
-          <span className={styles.zoomInfo}>{Math.round(zoom * 100)}%</span>
-          <button onClick={handleZoomIn}>+</button>
-
-          <label className={styles.modeToggle}>
-            <input
-              type="checkbox"
+        <Stack
+          direction="row"
+          alignItems="center"
+          px={1}
+          sx={{
+            bgcolor: "background.paper",
+          }}
+        >
+          {numPages > 1 && (
+            <>
+              <IconButton onClick={handlePrevPage} disabled={currentPage <= 1}>
+                <ChevronLeftOutlinedIcon />
+              </IconButton>
+              <Typography variant="body2">
+                Страница {currentPage} {numPages > 0 ? `из ${numPages}` : ""}
+              </Typography>
+              <IconButton
+                onClick={handleNextPage}
+                disabled={currentPage >= numPages}
+              >
+                <ChevronRightOutlinedIcon />
+              </IconButton>
+            </>
+          )}
+          <IconButton onClick={handleZoomOut}>
+            <ZoomOutOutlinedIcon />
+          </IconButton>
+          <Typography variant="body2">{Math.round(zoom * 100)}%</Typography>
+          <IconButton onClick={handleZoomIn}>
+            <ZoomInOutlinedIcon />
+          </IconButton>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.5}
+            sx={{ ml: 1 }}
+          >
+            <VideocamOutlinedIcon sx={{ color: "rgba(0, 0, 0, 0.54);" }} />
+            <Switch
               checked={mode === "presentationWithCamera"}
               onChange={handleModeChange}
+              color="primary"
+              size="small"
             />
-            Показывать камеру
-          </label>
-        </div>
+          </Stack>
+        </Stack>
       )}
 
       <div

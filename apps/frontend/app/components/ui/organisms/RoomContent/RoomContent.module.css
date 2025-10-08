@@ -25,13 +25,14 @@
   grid-template-rows: auto 1fr auto;
   transition: grid-template-columns var(--anim-speed) ease;
   height: 100%;
-  gap: 16px;
+  gap: 16px 0;
 
   --anim-speed: 0.2s;
 }
 
 .container.open {
   grid-template-columns: 1fr 0.5fr; /* при открытии списка */
+  gap: 16px 16px;
 }
 
 .gridContainer {
@@ -53,10 +54,12 @@
   pointer-events: none;
   transition: opacity var(--anim-speed) ease;
   box-sizing: border-box;
+  padding: 0 !important;
 }
 
 .rightPanel.active {
   opacity: 1;
+  padding: 12px !important;
   pointer-events: auto;
 }
 
@@ -154,4 +157,11 @@
 
 .presentationItem {
   overflow: auto;
+}
+
+.CarouselLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
 }

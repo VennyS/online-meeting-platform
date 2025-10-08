@@ -3,20 +3,11 @@
 import "@livekit/components-styles";
 
 import {
-  CarouselLayout,
-  FocusLayout,
   FocusLayoutContainer,
-  GridLayout,
-  LayoutContextProvider,
   RoomAudioRenderer,
-  TrackReference,
-  useCreateLayoutContext,
-  usePinnedTracks,
-  useTracks,
-  VideoTrack,
+  TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import { LocalParticipant, RoomEvent, Track } from "livekit-client";
 import { useUser } from "@/app/hooks/useUser";
 import styles from "./RoomContent.module.css";
 import cn from "classnames";
@@ -24,50 +15,34 @@ import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import { ParticipantsPanel } from "@/app/components/ui/organisms/ParticipantsPanel/ParticipantsPanel";
 import { fileService, IFile } from "@/app/services/file.service";
-import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { RoomContentProps } from "./types";
 import {
   Panel,
-  PresentationMode,
+  Presentation,
 } from "@/app/hooks/useParticipantsWithPermissions";
 import ControlBar from "../ControlBar/ControlBar";
 import RightPanel from "../RightPanel/RightPanel";
 import React from "react";
 import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
-
-const PDFViewer = dynamic(
-  () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
-  {
-    ssr: false,
-  }
-);
+import { useFocus } from "@/app/providers/focus.provider";
+import { GridLayout } from "../GridLayout/GridLayout";
+import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
+import { isTrackReferenceOrPlaceholder } from "@/app/lib/isTrackReferenceOfPlaceholder";
 
 export const RoomContent = ({
   roomId,
   roomName,
   hideControls = false,
 }: RoomContentProps) => {
-  const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: false },
-    ],
-    { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
-  );
+  const tracks = useRoomTracksWithPresentations({
+    includeCamera: true,
+    includeScreen: true,
+    withPlaceholder: true,
+  });
 
   const { user } = useUser();
-  const {
-    local,
-    localPresentation,
-    remotePresentations,
-    openedRightPanel,
-    changePage,
-    changeZoom,
-    changeScroll,
-    finishPresentation,
-    changePresentationMode,
-  } = useParticipantsContext();
+  const { openedRightPanel } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
   const panels = [
@@ -89,26 +64,6 @@ export const RoomContent = ({
   ];
 
   useEffect(() => {
-    if (!local.participant) return;
-
-    if (local.participant instanceof LocalParticipant) {
-      if (!local.permissions.permissions.canShareScreen) {
-        const screenTrackPub = Array.from(
-          local.participant.trackPublications.values()
-        ).find((pub) => pub.source === "screen_share");
-
-        if (screenTrackPub?.track) {
-          local.participant.unpublishTrack(screenTrackPub.track);
-        }
-      }
-
-      if (localPresentation) {
-        finishPresentation(localPresentation[0]);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     const handleFetchFiles = async () => {
       try {
         const files = await fileService.list(roomId, 0, 10, "PDF");
@@ -121,121 +76,36 @@ export const RoomContent = ({
     handleFetchFiles();
   }, [roomId]);
 
-  const correctedTracks = tracks.filter((t) => {
-    if (t.participant.permissions?.hidden) return false;
-    if (t.source !== Track.Source.Camera) return true;
+  const { focusTrack } = useFocus();
+  const carouselTracks = tracks.filter((t) => {
+    if (!focusTrack || Array.isArray(focusTrack)) return true;
 
-    const participantInPresentation =
-      (localPresentation &&
-        localPresentation[1].authorId === t.participant.identity &&
-        localPresentation[1].mode === "presentationWithCamera") ||
-      Object.values(remotePresentations).some(
-        (p) =>
-          p.authorId === t.participant.identity &&
-          p.mode === "presentationWithCamera"
-      );
-    return !participantInPresentation;
+    const focused = focusTrack.participant.identity;
+    const focusedSource = focusTrack.source;
+
+    return !(t.participant.identity === focused && t.source === focusedSource);
   });
-
-  const layoutContext = useCreateLayoutContext();
-
-  const focusTrack = usePinnedTracks(layoutContext)?.[0];
-  const carouselTracks = tracks.filter((track) => track !== focusTrack);
 
   return (
     <div
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
-        {correctedTracks && correctedTracks.length > 0 && (
-          <LayoutContextProvider value={layoutContext}>
+        {tracks && tracks.length > 0 && (
+          <>
             {!focusTrack ? (
-              <GridLayout
-                tracks={correctedTracks}
-                className={styles.gridLayout}
-              >
-                <ParticipantTile />
-              </GridLayout>
+              <GridLayout tracks={tracks} className={styles.gridLayout} />
             ) : (
-              <FocusLayoutContainer>
-                <CarouselLayout tracks={carouselTracks}>
-                  <ParticipantTile />
-                </CarouselLayout>
-                {focusTrack && <FocusLayout trackRef={focusTrack} />}
+              <FocusLayoutContainer className={styles.gridLayout}>
+                <div className={styles.CarouselLayout}>
+                  {carouselTracks.map((t) => {
+                    return <ParticipantTile trackReference={t} />;
+                  })}
+                </div>
+                {focusTrack && <ParticipantTile trackReference={focusTrack} />}
               </FocusLayoutContainer>
             )}
-          </LayoutContextProvider>
-        )}
-        {!!localPresentation && (
-          <div className={styles.pdfContainer}>
-            <PDFViewer
-              isAuthor
-              key={localPresentation[1].url}
-              pdfUrl={localPresentation[1].url}
-              currentPage={localPresentation[1].currentPage}
-              zoom={localPresentation[1].zoom}
-              scrollPosition={localPresentation[1].scroll}
-              onPageChange={(page: number) => {
-                changePage(localPresentation[0], page);
-              }}
-              onZoomChange={(zoom: number) => {
-                changeZoom(localPresentation[0], zoom);
-              }}
-              onScrollChange={(position: { x: number; y: number }) => {
-                changeScroll(localPresentation[0], position);
-              }}
-              mode={localPresentation[1].mode}
-              onChangePresentationMode={(mode: PresentationMode) => {
-                changePresentationMode(localPresentation[0], mode);
-              }}
-            />
-            {localPresentation![1].mode === "presentationWithCamera" &&
-              (() => {
-                const track = tracks.find(
-                  (t) =>
-                    t.source === Track.Source.Camera &&
-                    t.participant.identity === localPresentation[1].authorId
-                );
-                return (
-                  track?.publication && (
-                    <div className={styles.presenterCamera}>
-                      <VideoTrack trackRef={track as TrackReference} />
-                    </div>
-                  )
-                );
-              })()}
-          </div>
-        )}
-
-        {Object.entries(remotePresentations).map(
-          ([presentationId, presentation]) => (
-            <div key={presentationId} className={styles.presentationItem}>
-              <div className={styles.presentationWrapper}>
-                <PDFViewer
-                  key={presentation.url}
-                  pdfUrl={presentation.url}
-                  currentPage={presentation.currentPage}
-                  zoom={presentation.zoom}
-                  scrollPosition={presentation.scroll}
-                />
-                {presentation.mode === "presentationWithCamera" &&
-                  (() => {
-                    const track = tracks.find(
-                      (t) =>
-                        t.source === Track.Source.Camera &&
-                        t.participant.identity === presentation.authorId
-                    );
-                    return (
-                      track?.publication && (
-                        <div className={styles.presenterCamera}>
-                          <VideoTrack trackRef={track as TrackReference} />
-                        </div>
-                      )
-                    );
-                  })()}
-              </div>
-            </div>
-          )
+          </>
         )}
       </div>
 
