@@ -25,7 +25,8 @@ import { Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
 import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
-import { CircularProgress } from "@mui/material";
+import { CircularProgress, Menu, MenuItem, useMediaQuery } from "@mui/material";
+import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const {
@@ -33,12 +34,14 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
     openedRightPanel,
     unreadCount,
     remote,
+    waitingGuests,
     handleChangeOpenPanel,
     stopRecording,
     startRecording,
   } = useParticipantsContext();
 
-  const participantsCount = remote.length + 1;
+  const isMobile = useMediaQuery("(max-width:540px)");
+
   const room = useRoomContext();
 
   const {
@@ -80,6 +83,11 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const Loader = () => {
     return <CircularProgress color="inherit" size={28} />;
   };
+
+  const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
+  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) =>
+    setMenuAnchor(event.currentTarget);
+  const handleCloseMenu = () => setMenuAnchor(null);
 
   return (
     <div className={styles.controls}>
@@ -124,67 +132,136 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
           </IconButton>
         )}
       </div>
-      <div className={styles.controlsSection}>
-        <Badge badgeContent={participantsCount} max={99} color="primary">
-          <IconButton
-            title="Список участников"
-            onClick={() => handleChangeOpenPanel(Panel.Participants)}
-            sx={IconButtonSx}
-          >
-            {openedRightPanel === Panel.Participants ? (
-              <GroupOffOutlinedIcon />
-            ) : (
-              <GroupOutlinedIcon />
-            )}
-          </IconButton>
-        </Badge>
-        {haveFiles && (
-          <IconButton
-            title="Презентация"
-            onClick={() => handleChangeOpenPanel(Panel.Files)}
-            sx={IconButtonSx}
-          >
-            {openedRightPanel === Panel.Files ? (
-              <CancelPresentationOutlinedIcon />
-            ) : (
-              <PresentToAllOutlinedIcon />
-            )}
-          </IconButton>
-        )}
+      {!isMobile && (
+        <div className={styles.controlsSection}>
+          <Badge badgeContent={waitingGuests.length} max={99} color="primary">
+            <IconButton
+              title="Список участников"
+              onClick={() => handleChangeOpenPanel(Panel.Participants)}
+              sx={IconButtonSx}
+            >
+              {openedRightPanel === Panel.Participants ? (
+                <GroupOffOutlinedIcon />
+              ) : (
+                <GroupOutlinedIcon />
+              )}
+            </IconButton>
+          </Badge>
 
-        {permissions.permissions.canShareScreen && (
-          <IconButton
-            title="Демонстрация экрана"
-            aria-label="Демонстрация экрана"
-            onClick={() => screenShareToggle()}
-            loading={screenSharePending}
-            loadingIndicator={<Loader />}
-            sx={IconButtonSx}
-          >
-            {screenShareEnabled ? (
-              <ScreenShareOutlinedIcon />
-            ) : (
-              <StopScreenShareOutlinedIcon />
-            )}
-          </IconButton>
-        )}
-        <Badge badgeContent={unreadCount} max={99} color="primary">
-          <IconButton
-            title="Чат"
-            className={styles.chatButton}
-            onClick={() => handleChangeOpenPanel(Panel.Chat)}
-            sx={IconButtonSx}
-          >
-            {openedRightPanel === Panel.Chat ? (
-              <CommentsDisabledOutlinedIcon />
-            ) : (
-              <CommentOutlinedIcon />
-            )}
-          </IconButton>
-        </Badge>
-      </div>
+          {haveFiles && (
+            <IconButton
+              title="Презентация"
+              onClick={() => handleChangeOpenPanel(Panel.Files)}
+              sx={IconButtonSx}
+            >
+              {openedRightPanel === Panel.Files ? (
+                <CancelPresentationOutlinedIcon />
+              ) : (
+                <PresentToAllOutlinedIcon />
+              )}
+            </IconButton>
+          )}
+
+          {permissions.permissions.canShareScreen && (
+            <IconButton
+              title="Демонстрация экрана"
+              onClick={() => screenShareToggle()}
+              loading={screenSharePending}
+              loadingIndicator={<Loader />}
+              sx={IconButtonSx}
+            >
+              {screenShareEnabled ? (
+                <ScreenShareOutlinedIcon />
+              ) : (
+                <StopScreenShareOutlinedIcon />
+              )}
+            </IconButton>
+          )}
+
+          <Badge badgeContent={unreadCount} max={99} color="primary">
+            <IconButton
+              title="Чат"
+              onClick={() => handleChangeOpenPanel(Panel.Chat)}
+              sx={IconButtonSx}
+            >
+              {openedRightPanel === Panel.Chat ? (
+                <CommentsDisabledOutlinedIcon />
+              ) : (
+                <CommentOutlinedIcon />
+              )}
+            </IconButton>
+          </Badge>
+        </div>
+      )}
 
       <div className={styles.controlsSection}>
+        {isMobile && (
+          <>
+            <Badge
+              badgeContent={waitingGuests.length + unreadCount}
+              max={99}
+              color="primary"
+            >
+              <IconButton
+                title="Меню"
+                onClick={handleOpenMenu}
+                sx={IconButtonSx}
+              >
+                <MoreVertOutlinedIcon />
+              </IconButton>
+            </Badge>
+
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={handleCloseMenu}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              transformOrigin={{ vertical: "bottom", horizontal: "center" }}
+            >
+              <MenuItem
+                onClick={() => {
+                  handleChangeOpenPanel(Panel.Participants);
+                  handleCloseMenu();
+                }}
+              >
+                Участники ({waitingGuests.length})
+              </MenuItem>
+
+              {haveFiles && (
+                <MenuItem
+                  onClick={() => {
+                    handleChangeOpenPanel(Panel.Files);
+                    handleCloseMenu();
+                  }}
+                >
+                  Презентация
+                </MenuItem>
+              )}
+
+              {permissions.permissions.canShareScreen && (
+                <MenuItem
+                  onClick={() => {
+                    screenShareToggle();
+                    handleCloseMenu();
+                  }}
+                >
+                  {screenShareEnabled
+                    ? "Остановить экран"
+                    : "Поделиться экраном"}
+                </MenuItem>
+              )}
+
+              <MenuItem
+                onClick={() => {
+                  handleChangeOpenPanel(Panel.Chat);
+                  handleCloseMenu();
+                }}
+              >
+                Чат ({unreadCount})
+              </MenuItem>
+            </Menu>
+          </>
+        )}
         <IconButton
           title="Выйти из комнаты"
           onClick={onDisconnectButtonClick}

@@ -17,10 +17,7 @@ import { ParticipantsPanel } from "@/app/components/ui/organisms/ParticipantsPan
 import { fileService, IFile } from "@/app/services/file.service";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { RoomContentProps } from "./types";
-import {
-  Panel,
-  Presentation,
-} from "@/app/hooks/useParticipantsWithPermissions";
+import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
 import ControlBar from "../ControlBar/ControlBar";
 import RightPanel from "../RightPanel/RightPanel";
 import React from "react";
@@ -28,7 +25,6 @@ import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
 import { useFocus } from "@/app/providers/focus.provider";
 import { GridLayout } from "../GridLayout/GridLayout";
 import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
-import { isTrackReferenceOrPlaceholder } from "@/app/lib/isTrackReferenceOfPlaceholder";
 
 export const RoomContent = ({
   roomId,
@@ -96,13 +92,23 @@ export const RoomContent = ({
             {!focusTrack ? (
               <GridLayout tracks={tracks} className={styles.gridLayout} />
             ) : (
-              <FocusLayoutContainer className={styles.gridLayout}>
-                <div className={styles.CarouselLayout}>
+              <FocusLayoutContainer className={styles.focusLayoutContainer}>
+                <div className={styles.carouselLayout}>
                   {carouselTracks.map((t) => {
-                    return <ParticipantTile trackReference={t} />;
+                    return (
+                      <ParticipantTile
+                        trackReference={t}
+                        className={styles.carouselTile}
+                      />
+                    );
                   })}
                 </div>
-                {focusTrack && <ParticipantTile trackReference={focusTrack} />}
+                {focusTrack && (
+                  <ParticipantTile
+                    trackReference={focusTrack}
+                    className={styles.focusTrackContainer}
+                  />
+                )}
               </FocusLayoutContainer>
             )}
           </>

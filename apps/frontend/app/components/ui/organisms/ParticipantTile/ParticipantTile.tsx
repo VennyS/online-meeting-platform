@@ -1,4 +1,10 @@
-import { Avatar, Box, IconButton, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  IconButton,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
 import stringToColor from "@/app/lib/stringToColor";
 import {
   useFeatureContext,
@@ -39,14 +45,18 @@ export const ParticipantTile: (
 ) => React.ReactNode = /* @__PURE__ */ React.forwardRef<
   HTMLDivElement,
   ParticipantTileProps
->(function ParticipantTile({ trackReference }: ParticipantTileProps, ref) {
+>(function ParticipantTile(
+  { trackReference, ...props }: ParticipantTileProps,
+  ref
+) {
   const autoManageSubscription = useFeatureContext()?.autoSubscription;
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const { changePage, changeZoom, changeScroll, changePresentationMode } =
     useParticipantsContext();
 
   const isSpeaking = useIsSpeaking(trackReference.participant);
-  const { focusTrack, isFocused, setFocusTrack } = useFocus();
+  const { focusTrack, show, isFocused, setFocusTrack } = useFocus();
 
   const { isMuted } = useTrackMutedIndicator({
     participant: trackReference.participant,
@@ -71,9 +81,11 @@ export const ParticipantTile: (
       : participantName;
 
   const isNotFocusTrack = !!focusTrack && trackReference != focusTrack;
+  const isFocusTrack = !!focusTrack && trackReference == focusTrack;
 
   return (
     <Box
+      className={props.className}
       ref={ref}
       sx={{
         display: "flex",
@@ -88,13 +100,13 @@ export const ParticipantTile: (
             ? "4px solid #4caf50"
             : "4px solid transparent",
         transition: "border-color 0.2s ease-in",
-        aspectRatio: isNotFocusTrack ? "1" : null,
-        flexShrink: isNotFocusTrack ? "0" : null,
+        aspectRatio: isNotFocusTrack && !isMobile ? "1" : null,
+        flexShrink: isNotFocusTrack && !isMobile ? "0" : null,
       }}
     >
       {isPres ? (
         <PDFViewer
-          isAuthor={trackReference.local && !isNotFocusTrack}
+          isAuthor={trackReference.local && isFocusTrack}
           {...trackReference}
           onPageChange={
             trackReference.local
@@ -131,28 +143,30 @@ export const ParticipantTile: (
             width: "80px",
             height: "80px",
             bgcolor: stringToColor(participantName),
-            maxWidth: "65%",
-            maxHeight: "65%",
+            maxWidth: isNotFocusTrack ? "32px" : "65%",
+            maxHeight: isNotFocusTrack ? "32px" : "65%",
+            fontSize: isNotFocusTrack ? "0.8rem" : "1.25rem",
           }}
         >
           {participantName[0].toUpperCase()}
         </Avatar>
       )}
-
-      <IconButton
-        sx={{ position: "absolute", top: 8, right: 8 }}
-        onClick={
-          isFocused(trackReference)
-            ? () => setFocusTrack(null)
-            : () => setFocusTrack(trackReference)
-        }
-      >
-        {isFocused(trackReference) ? (
-          <HighlightOffOutlinedIcon sx={{ color: "white" }} />
-        ) : (
-          <CenterFocusStrongOutlinedIcon sx={{ color: "white" }} />
-        )}
-      </IconButton>
+      {show && (
+        <IconButton
+          sx={{ position: "absolute", top: 8, right: 8, p: 0 }}
+          onClick={
+            isFocused(trackReference)
+              ? () => setFocusTrack(null)
+              : () => setFocusTrack(trackReference)
+          }
+        >
+          {isFocused(trackReference) ? (
+            <HighlightOffOutlinedIcon sx={{ color: "white" }} />
+          ) : (
+            <CenterFocusStrongOutlinedIcon sx={{ color: "white" }} />
+          )}
+        </IconButton>
+      )}
 
       {trackReference.source === Track.Source.Camera && (
         <Box
@@ -167,7 +181,10 @@ export const ParticipantTile: (
             borderRadius: 1,
           }}
         >
-          <Typography variant="body2">{participantName}</Typography>
+          {!isNotFocusTrack && (
+            <Typography variant="body2">{participantName}</Typography>
+          )}
+
           {isMuted && <MicOffOutlinedIcon sx={{ fontSize: 16 }} />}
         </Box>
       )}

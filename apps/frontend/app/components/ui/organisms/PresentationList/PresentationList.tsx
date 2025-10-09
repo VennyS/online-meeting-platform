@@ -2,7 +2,8 @@ import { Box, Button, List, ListItem, ListItemText } from "@mui/material";
 import Typography from "@mui/material/Typography";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { useEffect } from "react";
+import PresentToAllOutlinedIcon from "@mui/icons-material/PresentToAllOutlined";
+import CancelPresentationOutlinedIcon from "@mui/icons-material/CancelPresentationOutlined";
 
 export interface IFile {
   id: number;
@@ -17,9 +18,10 @@ interface PresentationListProps {
 }
 
 export const PresentationList = ({ files }: PresentationListProps) => {
-  const { localPresentation, startPresentation, finishPresentation } =
+  const { presentations, startPresentation, finishPresentation } =
     useParticipantsContext();
-  const localFileId = localPresentation?.[1].fileId;
+  const localPresentation = presentations.find((p) => p.local);
+  const localFileId = localPresentation?.fileId;
   const localFileIdNumber = localFileId ? Number(localFileId) : undefined;
 
   const formatFileSize = (bytes: number): string => {
@@ -46,6 +48,7 @@ export const PresentationList = ({ files }: PresentationListProps) => {
             borderColor: "divider",
             borderRadius: 1,
             mb: 1,
+            maxWidth: "100%",
           }}
           secondaryAction={
             <Button
@@ -54,18 +57,30 @@ export const PresentationList = ({ files }: PresentationListProps) => {
               onClick={
                 localFileIdNumber !== file.id
                   ? () => startPresentation(file.id, file.url)
-                  : () => finishPresentation(localPresentation![0])
+                  : () => finishPresentation(localPresentation!.presentationId)
               }
+              sx={{ p: "4px" }}
             >
-              {localFileIdNumber !== file.id ? "Транслировать" : "Завершить"}
+              {localFileIdNumber !== file.id ? (
+                <PresentToAllOutlinedIcon />
+              ) : (
+                <CancelPresentationOutlinedIcon />
+              )}
             </Button>
           }
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              overflowWrap: "anywhere",
+            }}
+          >
             <InsertDriveFileOutlinedIcon color="action" />
             <ListItemText
               primary={file.fileName}
-              secondary={`Размер: ${formatFileSize(file.fileSize)}`}
+              secondary={`${formatFileSize(file.fileSize)}`}
             />
           </Box>
         </ListItem>
