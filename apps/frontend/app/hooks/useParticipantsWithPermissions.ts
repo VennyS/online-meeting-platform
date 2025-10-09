@@ -305,7 +305,7 @@ export function useParticipantsWithPermissions(
           break;
 
         case "waiting_queue_updated":
-          setWaitingGuests(data.guests);
+          setWaitingGuests(data.guests ?? []);
           break;
 
         case "new_guest_waiting":

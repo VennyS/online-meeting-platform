@@ -31,7 +31,9 @@ const WaitingGuestsList = () => {
               mb: 1,
             }}
           >
-            <Typography>{guest.name}</Typography>
+            <Typography sx={{ overflowWrap: "anywhere" }}>
+              {guest.name}
+            </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Button
                 size="small"
