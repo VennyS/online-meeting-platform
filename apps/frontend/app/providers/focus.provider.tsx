@@ -1,13 +1,15 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { TrackReferenceOrPlaceholder } from "@livekit/components-react";
 import { Presentation } from "../hooks/useParticipantsWithPermissions";
 import { isPresentation } from "../lib/isPresentations";
 import { isTrackReferenceOrPlaceholder } from "../lib/isTrackReferenceOfPlaceholder";
+import { useRoomTracksWithPresentations } from "../hooks/useRoomTracksWithPresentations";
 
 type FocusTarget = TrackReferenceOrPlaceholder | Presentation | null;
 
 interface FocusContextValue {
   focusTrack: FocusTarget;
+  show: boolean;
   setFocusTrack: (track: FocusTarget) => void;
   clearFocus: () => void;
   isFocused: (track: FocusTarget) => boolean;
@@ -17,6 +19,21 @@ const FocusContext = createContext<FocusContextValue | null>(null);
 
 export const FocusProvider = ({ children }: { children: React.ReactNode }) => {
   const [focusTrack, setFocusTrack] = useState<FocusTarget>(null);
+  const tracks = useRoomTracksWithPresentations({
+    includeCamera: true,
+    includeScreen: true,
+    withPlaceholder: true,
+  });
+  const [show, setShow] = useState(true);
+
+  useEffect(() => {
+    if (tracks.length < 2) {
+      setShow(false);
+      setFocusTrack(null);
+      return;
+    }
+    setShow(true);
+  }, [tracks]);
 
   const clearFocus = () => setFocusTrack(null);
 
@@ -42,7 +59,7 @@ export const FocusProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <FocusContext.Provider
-      value={{ focusTrack, setFocusTrack, clearFocus, isFocused }}
+      value={{ focusTrack, show, setFocusTrack, clearFocus, isFocused }}
     >
       {children}
     </FocusContext.Provider>

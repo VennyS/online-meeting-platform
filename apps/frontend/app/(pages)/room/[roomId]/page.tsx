@@ -60,11 +60,11 @@ export default function MeetingRoom() {
         className={styles.roomContainer}
       >
         {user && (
-          <FocusProvider>
-            <ParticipantsProvider localUserId={user.id} ws={ws}>
+          <ParticipantsProvider localUserId={user.id} ws={ws}>
+            <FocusProvider>
               <RoomContent roomId={roomId as string} roomName={roomName} />
-            </ParticipantsProvider>
-          </FocusProvider>
+            </FocusProvider>
+          </ParticipantsProvider>
         )}
       </LiveKitRoom>
     </main>
