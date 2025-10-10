@@ -18,6 +18,16 @@ import Link from "next/link";
 import Modal from "../../atoms/Modal/Modal";
 import { fileService, IFile } from "@/app/services/file.service";
 import { formatFileSize } from "@/app/lib/formatFileSize";
+import {
+  Button,
+  Card,
+  CardActions,
+  CardContent,
+  Checkbox,
+  FormControlLabel,
+  Stack,
+  TextField,
+} from "@mui/material";
 
 export default function RoomList({
   fetchMode = "user",
@@ -82,7 +92,7 @@ export default function RoomList({
   );
 }
 
-function RoomCard({ room, onSave, updating }: RoomCardProps) {
+export function RoomCard({ room, onSave, updating }: RoomCardProps) {
   const [editData, setEditData] = useState<UpdateRoomDto>({
     name: room.name,
     description: room.description ?? "",
@@ -106,14 +116,13 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    const target = e.currentTarget;
-    const { name, value, type } = target;
+    const { name, value, type } = e.currentTarget;
 
     setEditData((prev) => ({
       ...prev,
       [name]:
         type === "checkbox"
-          ? (target as HTMLInputElement).checked
+          ? (e.currentTarget as HTMLInputElement).checked
           : name === "durationMinutes"
           ? Number(value)
           : value,
@@ -131,169 +140,162 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
   };
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}>
-      <h2>
-        <input
-          type="text"
-          name="name"
-          value={editData.name ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </h2>
+    <Card
+      variant="outlined"
+      sx={{
+        mb: 2,
+        p: 2,
+        borderRadius: 2,
+        boxShadow: 1,
+      }}
+    >
+      <CardContent>
+        <Stack spacing={2}>
+          <TextField
+            label="Название комнаты"
+            name="name"
+            value={editData.name ?? ""}
+            onChange={handleChange}
+            size="small"
+            disabled={updating}
+            fullWidth
+          />
 
-      <textarea
-        name="description"
-        value={editData.description ?? ""}
-        onChange={handleChange}
-        disabled={updating}
-      />
+          <TextField
+            label="Описание"
+            name="description"
+            value={editData.description ?? ""}
+            onChange={handleChange}
+            multiline
+            rows={2}
+            disabled={updating}
+            fullWidth
+          />
 
-      <p>
-        Дата начала:
-        <input
-          type="datetime-local"
-          name="startAt"
-          value={editData.startAt ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </p>
-
-      <p>
-        Длительность (мин):
-        <input
-          type="number"
-          name="durationMinutes"
-          value={editData.durationMinutes ?? 0}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </p>
-
-      <label>
-        Публичная:{" "}
-        <input
-          type="checkbox"
-          name="isPublic"
-          checked={editData.isPublic ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Показывать историю новичкам:{" "}
-        <input
-          type="checkbox"
-          name="showHistoryToNewbies"
-          checked={editData.showHistoryToNewbies ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Пароль:
-        <input
-          type="text"
-          name="password"
-          value={editData.password ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Зал ожидания:{" "}
-        <input
-          type="checkbox"
-          name="waitingRoomEnabled"
-          checked={editData.waitingRoomEnabled ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Разрешить ранний вход:{" "}
-        <input
-          type="checkbox"
-          name="allowEarlyJoin"
-          checked={editData.allowEarlyJoin ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Отменена:{" "}
-        <input
-          type="checkbox"
-          name="cancelled"
-          checked={editData.cancelled ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <div style={{ marginTop: 10 }}>
-        <button
-          onClick={handleSave}
-          disabled={updating}
-          style={{
-            background: "green",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Сохранить
-        </button>
-
-        <Link
-          href={`/room/${room.shortId}`}
-          style={{
-            background: "green",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Зайти
-        </Link>
-
-        {room.haveReports && (
-          <>
-            <button
-              onClick={() => setReportsOpen(true)}
+          <Stack direction="row" spacing={2}>
+            <TextField
+              label="Дата начала"
+              type="datetime-local"
+              name="startAt"
+              value={editData.startAt ?? ""}
+              onChange={handleChange}
               disabled={updating}
-              style={{
-                background: "blue",
-                color: "white",
-                padding: "5px 10px",
-                marginRight: "5px",
-              }}
-            >
-              Показать отчёты
-            </button>
-          </>
-        )}
+              fullWidth
+            />
 
-        {room.haveFiles && (
-          <button onClick={() => setIsFilesOpen(true)}>Файлы</button>
-        )}
-      </div>
+            <TextField
+              label="Длительность (мин)"
+              type="number"
+              name="durationMinutes"
+              value={editData.durationMinutes ?? 0}
+              onChange={handleChange}
+              disabled={updating}
+              sx={{ width: 150 }}
+            />
+          </Stack>
+
+          <Stack direction="row" flexWrap="wrap">
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="isPublic"
+                  checked={editData.isPublic}
+                  onChange={handleChange}
+                  disabled={updating}
+                />
+              }
+              label="Публичная"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="showHistoryToNewbies"
+                  checked={editData.showHistoryToNewbies}
+                  onChange={handleChange}
+                  disabled={updating}
+                />
+              }
+              label="Показывать историю новичкам"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="waitingRoomEnabled"
+                  checked={editData.waitingRoomEnabled}
+                  onChange={handleChange}
+                  disabled={updating}
+                />
+              }
+              label="Зал ожидания"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="allowEarlyJoin"
+                  checked={editData.allowEarlyJoin}
+                  onChange={handleChange}
+                  disabled={updating}
+                />
+              }
+              label="Ранний вход"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="cancelled"
+                  checked={editData.cancelled}
+                  onChange={handleChange}
+                  disabled={updating}
+                />
+              }
+              label="Отменена"
+            />
+          </Stack>
+
+          <TextField
+            label="Пароль"
+            name="password"
+            type="text"
+            value={editData.password ?? ""}
+            onChange={handleChange}
+            disabled={updating}
+            fullWidth
+          />
+        </Stack>
+      </CardContent>
+
+      <CardActions sx={{ justifyContent: "space-between", flexWrap: "wrap" }}>
+        <Stack direction="row" spacing={1}>
+          <Button variant="contained" onClick={handleSave} disabled={updating}>
+            Сохранить
+          </Button>
+
+          <Button
+            component={Link}
+            href={`/room/${room.shortId}`}
+            variant="outlined"
+            color="primary"
+          >
+            Зайти
+          </Button>
+
+          {room.haveReports && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => setReportsOpen(true)}
+            >
+              Отчёты
+            </Button>
+          )}
+          {room.haveFiles && (
+            <Button variant="outlined" onClick={() => setIsFilesOpen(true)}>
+              Файлы
+            </Button>
+          )}
+        </Stack>
+      </CardActions>
+
       {room.haveReports && (
         <MeetingReportsModal
           shortId={room.shortId}
@@ -309,7 +311,7 @@ function RoomCard({ room, onSave, updating }: RoomCardProps) {
           onClose={() => setIsFilesOpen(false)}
         />
       )}
-    </div>
+    </Card>
   );
 }
 
