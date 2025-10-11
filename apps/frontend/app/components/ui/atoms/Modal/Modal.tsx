@@ -1,15 +1,20 @@
-import React from "react";
+import { Dialog, DialogContent } from "@mui/material";
 import { ModalProps } from "./types";
-import styles from "./Modal.module.css";
 
-const Modal = ({ children, onClose }: ModalProps) => {
+export const Modal = ({ children, onClose }: ModalProps) => {
   return (
-    <div className={styles.background} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 2, p: 2 },
+        },
+      }}
+    >
+      <DialogContent>{children}</DialogContent>
+    </Dialog>
   );
 };
-
-export default Modal;

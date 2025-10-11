@@ -26,6 +26,8 @@ export interface UpdateRoomDto {
   allowEarlyJoin?: boolean;
   cancelled?: boolean;
   timeZone?: string;
+  canShareScreen?: Role;
+  canStartPresentation?: Role;
 }
 
 export interface IRoom {
@@ -44,6 +46,10 @@ export interface IRoom {
   timeZone: string;
   haveFiles: boolean;
   haveReports: boolean;
+  showHistoryToNewbies: boolean;
+  durationMinutes: number;
+  canShareScreen: Role;
+  canStartPresentation: Role;
 }
 
 export interface MeetingReports {
