@@ -1,23 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Box,
-  Typography,
-  IconButton,
-  CircularProgress,
-  Alert,
-  TextField,
-  Stack,
-  Paper,
-} from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import DownloadIcon from "@mui/icons-material/Download";
-import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
-import { fileService } from "@/app/services/file.service";
+import { Box, Typography, CircularProgress, Alert, Stack } from "@mui/material";
+import { fileService, IFile } from "@/app/services/file.service";
 import { Modal } from "../../atoms/Modal/Modal";
 import { RoomFilesModalProps } from "./types";
-import { IFile } from "../PresentationList/PresentationList";
+import { FileCard } from "../FileCard/FileCard";
 
 export const RoomFilesModal = ({
   shortId,
@@ -50,8 +38,7 @@ export const RoomFilesModal = ({
     try {
       await fileService.delete(fileId);
       setFiles((prev) => prev?.filter((f) => f.id !== fileId) ?? null);
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("Не удалось удалить файл");
     }
   };
@@ -82,12 +69,12 @@ export const RoomFilesModal = ({
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  const handleNameChange = (fileId: number, newName: string) => {
+    setFiles((prev) =>
+      prev
+        ? prev.map((f) => (f.id === fileId ? { ...f, fileName: newName } : f))
+        : prev
+    );
   };
 
   if (!isOpen) return null;
@@ -96,13 +83,7 @@ export const RoomFilesModal = ({
     <Modal title="Файлы встречи" onClose={onClose}>
       <Box>
         {loading && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              py: 4,
-            }}
-          >
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>
         )}
@@ -118,85 +99,14 @@ export const RoomFilesModal = ({
         {!loading && files && files.length > 0 && (
           <Stack spacing={1.5}>
             {files.map((file) => (
-              <Paper
+              <FileCard
                 key={file.id}
-                sx={{
-                  p: 1.5,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  borderRadius: 2,
-                  backgroundColor: "white",
-                  boxShadow: "var(--Paper-shadow)",
-                  backgroundImage: "var(--Paper-overlay)",
-                  transition: "0.2s",
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    flexGrow: 1,
-                    overflow: "hidden",
-                  }}
-                >
-                  <InsertDriveFileOutlinedIcon color="action" />
-                  <Stack spacing={0} sx={{ flexGrow: 1 }}>
-                    <TextField
-                      variant="standard"
-                      fullWidth
-                      value={file.fileName}
-                      onChange={(e) => {
-                        const newName = e.target.value;
-                        setFiles((prev) =>
-                          prev
-                            ? prev.map((f) =>
-                                f.id === file.id
-                                  ? { ...f, fileName: newName }
-                                  : f
-                              )
-                            : prev
-                        );
-                      }}
-                      onBlur={() => handleRename(file)}
-                      slotProps={{
-                        input: {
-                          disableUnderline: true,
-                          sx: { fontSize: "0.95rem", fontWeight: 500, p: 0 },
-                        },
-                      }}
-                    />
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontSize: "0.75rem" }}
-                    >
-                      {file.fileType} · {formatFileSize(file.fileSize)}
-                    </Typography>
-                  </Stack>
-                </Box>
-
-                <Stack direction="row" spacing={0.5}>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDownload(file)}
-                    title="Скачать"
-                    sx={{ color: "#000000b5" }}
-                  >
-                    <DownloadIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDelete(file.id)}
-                    title="Удалить"
-                    color="error"
-                  >
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Stack>
-              </Paper>
+                file={file}
+                onRename={handleRename}
+                onDownload={handleDownload}
+                onDelete={handleDelete}
+                onNameChange={handleNameChange}
+              />
             ))}
           </Stack>
         )}
