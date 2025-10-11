@@ -81,6 +81,7 @@ export default function RoomList({
         sx={{
           width: "100%",
           padding: { xs: "12px", sm: "16px" },
+          paddingBottom: "0 !important",
           boxSizing: "border-box",
           borderRadius: "12px",
         }}

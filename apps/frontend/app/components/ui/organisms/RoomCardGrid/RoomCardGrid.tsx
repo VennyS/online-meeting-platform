@@ -25,10 +25,12 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
             justifyContent: "space-between",
             borderRadius: 3,
             p: 2,
-            transition: "transform 0.2s, box-shadow 0.2s",
+            transition: "0.2s",
+            cursor: "pointer",
             "&:hover": {
-              transform: "translateY(-3px)",
-              boxShadow: 3,
+              borderColor: "rgb(37, 99, 235)",
+              boxShadow: "rgba(0, 0, 0, 0.08) 0px 2px 12px",
+              transform: "translateY(-1px)",
             },
           }}
         >

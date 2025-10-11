@@ -9,17 +9,22 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
   return (
     <Box sx={{ width: "100%" }}>
       {rooms.map((room) => (
-        <div
+        <Box
           key={room.id}
-          style={{
+          sx={{
             backgroundColor: "rgb(255, 255, 255)",
             color: "rgb(17, 24, 39)",
-            marginBottom: "12px",
+            mb: 1.5, // 12px
             border: "1px solid rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
+            borderRadius: 1,
             overflow: "hidden",
             transition: "0.2s",
             cursor: "pointer",
+            "&:hover": {
+              borderColor: "rgb(37, 99, 235)",
+              boxShadow: "rgba(0, 0, 0, 0.08) 0px 2px 12px",
+              transform: "translateY(-1px)",
+            },
           }}
         >
           <div
@@ -81,7 +86,7 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
               </Button>
             </div>
           </div>
-        </div>
+        </Box>
       ))}
     </Box>
   );
