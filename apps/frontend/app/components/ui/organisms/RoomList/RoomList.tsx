@@ -2,10 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
-import { IRoom, UpdateRoomDto } from "@/app/types/room.types";
-import styles from "./RoomList.module.css";
+import { IRoom } from "@/app/types/room.types";
 import { RoomListProps } from "./types";
-import { RoomCard } from "../RoomCard/RoomCard";
+
+import {
+  Box,
+  Button,
+  Divider,
+  Paper,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
+import { RoomReportsModal } from "../RoomReportsModal/RoomReportsModal";
+import RoomFilesModal from "../RoomFilesModal/RoomFilesModal";
+
+import RoomCardGrid from "../RoomCardGrid/RoomCardGrid";
+import { RoomTable } from "../RoomTable/RoomTable";
+import RoomModal from "../RoomModal/RoomModal";
+
+export enum Modal {
+  Files = "chat",
+  Reports = "reports",
+  Create = "create",
+  Edit = "edit",
+}
+
+export type ModalState =
+  | { modal: Modal.Files; shortId: string }
+  | { modal: Modal.Reports; shortId: string }
+  | { modal: Modal.Create }
+  | { modal: Modal.Edit; room: IRoom }
+  | { modal: undefined };
 
 export default function RoomList({
   fetchMode = "user",
@@ -13,10 +40,14 @@ export default function RoomList({
 }: RoomListProps) {
   const [rooms, setRooms] = useState<IRoom[]>(initialRooms);
   const [loading, setLoading] = useState(false);
-  const [updatingRoomId, setUpdatingRoomId] = useState<number | null>(null);
+  const [modalState, setModalState] = useState<ModalState>({
+    modal: undefined,
+  });
+
+  const isMobile = useMediaQuery("(max-width:700px)");
 
   useEffect(() => {
-    if (fetchMode === "none") return; // ничего не грузим, юзаем initialRooms
+    if (fetchMode === "none") return;
 
     const fetchRooms = async () => {
       try {
@@ -36,36 +67,76 @@ export default function RoomList({
     fetchRooms();
   }, [fetchMode]);
 
-  const saveRoom = async (
-    roomId: number,
-    shortId: string,
-    updatedData: UpdateRoomDto
-  ) => {
-    try {
-      setUpdatingRoomId(roomId);
-      const updated = await roomService.updateRoom(shortId, updatedData);
-      setRooms((prev) =>
-        prev.map((r) => (r.shortId === shortId ? updated : r))
-      );
-    } catch (err) {
-      console.error("Ошибка при сохранении комнаты:", err);
-    } finally {
-      setUpdatingRoomId(null);
-    }
-  };
-
-  if (loading) return <p>Загрузка...</p>;
+  function onModalClose() {
+    setModalState({ modal: undefined });
+  }
 
   return (
-    <div className={styles.roomsWrapper}>
-      {rooms.map((room) => (
-        <RoomCard
-          key={room.id}
-          room={room}
-          onSave={(data) => saveRoom(room.id, room.shortId, data)}
-          updating={updatingRoomId === room.id}
+    <>
+      <Button onClick={() => setModalState({ modal: Modal.Create })}>
+        Создать встречу
+      </Button>
+      <Paper
+        elevation={1}
+        sx={{
+          width: "100%",
+          padding: { xs: "12px", sm: "16px" },
+          boxSizing: "border-box",
+          borderRadius: "12px",
+        }}
+      >
+        <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
+          <Typography
+            variant="h2"
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+          >
+            Встречи
+          </Typography>
+        </Box>
+
+        <Divider />
+        <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
+          {isMobile ? (
+            <RoomCardGrid
+              rooms={rooms}
+              onModalOpen={(params) => setModalState(params)}
+            />
+          ) : (
+            <RoomTable
+              rooms={rooms}
+              onModalOpen={(params) => setModalState(params)}
+            />
+          )}
+        </Box>
+      </Paper>
+
+      {modalState?.modal === Modal.Reports && modalState.shortId && (
+        <RoomReportsModal
+          shortId={modalState.shortId}
+          isOpen
+          onClose={onModalClose}
         />
-      ))}
-    </div>
+      )}
+
+      {modalState?.modal === Modal.Files && modalState.shortId && (
+        <RoomFilesModal
+          shortId={modalState.shortId}
+          isOpen
+          onClose={onModalClose}
+        />
+      )}
+
+      {modalState?.modal === Modal.Create && (
+        <RoomModal mode={modalState.modal} onClose={onModalClose} />
+      )}
+
+      {modalState?.modal === Modal.Edit && (
+        <RoomModal
+          mode={modalState.modal}
+          onClose={onModalClose}
+          initialData={modalState.room}
+        />
+      )}
+    </>
   );
 }
