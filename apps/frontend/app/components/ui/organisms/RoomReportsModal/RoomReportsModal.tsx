@@ -1,13 +1,19 @@
-import { roomService } from "@/app/services/room.service";
-import {
-  MeetingReport,
-  MeetingReports,
-  Participant,
-  ParticipantSession,
-} from "@/app/types/room.types";
+"use client";
+
 import { useEffect, useState } from "react";
-import Modal from "../../atoms/Modal/Modal";
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Alert,
+  Divider,
+  Stack,
+  Paper,
+} from "@mui/material";
+import { roomService } from "@/app/services/room.service";
+import { MeetingReports } from "@/app/types/room.types";
 import { RoomReportsProps } from "./types";
+import { Modal } from "../../atoms/Modal/Modal";
 
 export const RoomReportsModal = ({
   shortId,
@@ -23,6 +29,7 @@ export const RoomReportsModal = ({
 
     const fetchReports = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await roomService.getMeetingReports(shortId);
         setReports(data);
@@ -36,106 +43,116 @@ export const RoomReportsModal = ({
     fetchReports();
   }, [shortId, isOpen]);
 
-  if (!isOpen) return null;
-
   return (
-    <Modal onClose={onClose}>
-      <button onClick={onClose}>Закрыть</button>
-      {loading && <p>Загрузка...</p>}
-      {error && <p>{error}</p>}
-      {reports && reports.sessions.length === 0 ? (
-        <p>Нет доступных отчётов о встречах</p>
-      ) : (
-        <>
-          <button
-            onClick={() => roomService.downloadMeetingReportsExcel(shortId)}
-            style={{
-              background: "orange",
-              color: "white",
-              padding: "5px 10px",
-              marginRight: "5px",
+    <Modal title="Отчёты о встречах" onClose={onClose}>
+      <Box>
+        {loading && (
+          <Box
+            sx={{
+              py: 6,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            Скачать Excel
-          </button>
+            <CircularProgress />
+          </Box>
+        )}
 
-          <button
-            onClick={() => roomService.downloadMeetingReportsCsv(shortId)}
-            style={{
-              background: "purple",
-              color: "white",
-              padding: "5px 10px",
-            }}
-          >
-            Скачать CSV
-          </button>
-        </>
-      )}
-      {reports &&
-        reports.sessions.map((session: MeetingReport) => (
-          <div key={session.id}>
-            <h3>Сессия встречи</h3>
-            <p>Начало: {formatDateTime(session.startTime)}</p>
-            <p>
-              Конец:{" "}
-              {session.endTime
-                ? formatDateTime(session.endTime)
-                : "Все еще идет"}
-            </p>
-            {!!session.duration && (
-              <p>Длительность: {formatDuration(session.duration)}</p>
-            )}
-            <h4>Участники</h4>
-            <ul>
-              {session.participants.map((participant: Participant) => (
-                <li key={participant.id}>
-                  <p>
-                    {participant.name} (ID: {participant.userId})
-                  </p>
-                  <ul>
-                    {participant.sessions.map(
-                      (s: ParticipantSession, index: number) => (
-                        <li key={index}>
-                          Вход: {formatDateTime(s.joinTime)}
+        {!loading && error && <Alert severity="error">{error}</Alert>}
+
+        {!loading && !error && reports?.sessions.length === 0 && (
+          <Typography color="text.secondary" align="center" py={4}>
+            Отчёты отсутствуют
+          </Typography>
+        )}
+
+        {!loading && !error && reports && reports.sessions.length > 0 && (
+          <Stack spacing={2}>
+            {reports.sessions.map((session) => (
+              <Paper
+                key={session.id}
+                sx={{
+                  p: 2,
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  borderRadius: 2,
+                  backgroundColor: "white",
+                  boxShadow: "var(--Paper-shadow)",
+                  backgroundImage: "var(--Paper-overlay)",
+                  transition: "0.2s",
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight={600}>
+                  Сессия #{session.id}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mb: 1 }}
+                >
+                  Начало:{" "}
+                  {new Date(session.startTime).toLocaleString("ru-RU", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+                  {session.endTime && (
+                    <>
+                      {" | "}Окончание:{" "}
+                      {new Date(session.endTime).toLocaleString("ru-RU", {
+                        timeStyle: "short",
+                      })}
+                    </>
+                  )}
+                </Typography>
+
+                {session.duration && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Длительность: {Math.round(session.duration / 60)} мин
+                  </Typography>
+                )}
+
+                <Divider sx={{ my: 1.5 }} />
+
+                <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>
+                  Участники:
+                </Typography>
+
+                <Stack spacing={1}>
+                  {session.participants.map((p) => (
+                    <Box
+                      key={p.id}
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: "grey.50",
+                      }}
+                    >
+                      <Typography fontWeight={500}>{p.name}</Typography>
+                      {p.sessions.map((s, idx) => (
+                        <Typography
+                          key={idx}
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          — Вошёл:{" "}
+                          {new Date(s.joinTime).toLocaleTimeString("ru-RU")}
                           {s.leaveTime &&
-                            `, Выход: ${formatDateTime(s.leaveTime)}`}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+                            ` | Вышел: ${new Date(
+                              s.leaveTime
+                            ).toLocaleTimeString("ru-RU")}`}
+                        </Typography>
+                      ))}
+                    </Box>
+                  ))}
+                </Stack>
+              </Paper>
+            ))}
+          </Stack>
+        )}
+      </Box>
     </Modal>
   );
 };
-
-/**
- * Форматирует дату: если есть часы → ч:м:с, если только минуты → м:с, если только секунды → с
- */
-function formatDateTime(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function formatDuration(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours} ч${minutes > 0 ? ` ${minutes} мин` : ""}${
-      seconds > 0 ? ` ${seconds} сек` : ""
-    }`;
-  }
-  if (minutes > 0) {
-    return `${minutes} мин${seconds > 0 ? ` ${seconds} сек` : ""}`;
-  }
-  return `${seconds} сек`;
-}
