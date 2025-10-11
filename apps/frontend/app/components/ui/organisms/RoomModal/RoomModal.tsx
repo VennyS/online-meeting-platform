@@ -7,28 +7,60 @@ import { useUser } from "@/app/hooks/useUser";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
 import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
 import { fileService } from "@/app/services/file.service";
-import { Permissions, Role } from "@/app/types/room.types";
-import Modal from "@/app/components/ui/atoms/Modal/Modal";
+import { Permissions, Role, IRoom } from "@/app/types/room.types";
+import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
 
-export default function CreateRoomModal() {
+interface RoomModalProps {
+  mode: "create" | "edit";
+  initialData?: IRoom; // если редактируем — передаем комнату
+  onClose: () => void;
+}
+
+export default function RoomModal({
+  mode,
+  initialData,
+  onClose,
+}: RoomModalProps) {
   const router = useRouter();
   const { user } = useUser();
 
   const now = new Date();
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [startAt, setStartAt] = useState(formatDateTimeLocal(now));
-  const [durationMinutes, setDurationMinutes] = useState<number | "">("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [showHistoryToNewbies, setShowHistoryToNewbies] = useState(false);
+  // ----------- Состояния формы -----------
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? ""
+  );
+  const [startAt, setStartAt] = useState(
+    formatDateTimeLocal(
+      initialData?.startAt ? new Date(initialData.startAt) : now
+    )
+  );
+  const [durationMinutes, setDurationMinutes] = useState<number | "">(
+    initialData?.durationMinutes ?? ""
+  );
+  const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? false);
+  const [showHistoryToNewbies, setShowHistoryToNewbies] = useState(
+    initialData?.showHistoryToNewbies ?? false
+  );
   const [password, setPassword] = useState("");
-  const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(false);
-  const [allowEarlyJoin, setAllowEarlyJoin] = useState(true);
+  const [waitingRoomEnabled, setWaitingRoomEnabled] = useState(
+    initialData?.waitingRoomEnabled ?? false
+  );
+  const [allowEarlyJoin, setAllowEarlyJoin] = useState(
+    initialData?.allowEarlyJoin ?? true
+  );
   const [isConnectInstantly, setIsConnectInstantly] = useState(true);
 
-  const [canShareScreen, setcanShareScreen] = useState<Role>("ALL");
-  const [canStartPresentation, setCanSharePresentation] = useState<Role>("ALL");
+  const [canShareScreen, setCanShareScreen] = useState<Role>(
+    initialData?.canShareScreen ?? "ALL"
+  );
+  const [canStartPresentation, setCanSharePresentation] = useState<Role>(
+    initialData?.canStartPresentation ?? "ALL"
+  );
+
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
   const roleOptions: { label: string; value: Role }[] = [
     { label: "Только владелец", value: "OWNER" },
@@ -40,19 +72,11 @@ export default function CreateRoomModal() {
     permission: keyof Permissions,
     value: Role
   ) => {
-    if (permission === "canShareScreen") {
-      setcanShareScreen(value);
-    }
-    setCanSharePresentation(value);
+    if (permission === "canShareScreen") setCanShareScreen(value);
+    else setCanSharePresentation(value);
   };
 
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-
-  const handleClose = () => {
-    router.push("/");
-  };
-
+  // ----------- Файлы -----------
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     const invalidFiles = selectedFiles.filter(
@@ -68,105 +92,115 @@ export default function CreateRoomModal() {
   };
 
   const handleUploadFiles = async (roomShortId: string) => {
-    if (files.length === 0 || !roomShortId) {
-      setUploadStatus("Выберите файлы и укажите shortId комнаты");
-      return;
-    }
-
+    if (files.length === 0) return;
     try {
       const urls = await fileService.uploadFiles(roomShortId, files);
       setUploadStatus(`Файлы успешно загружены: ${urls.join(", ")}`);
       setFiles([]);
     } catch (error) {
-      console.error("Ошибка при загрузке файлов:", error);
+      console.error(error);
       setUploadStatus(`Ошибка при загрузке файлов: ${error}`);
     }
   };
 
-  const handleCreateRoom = async () => {
+  // ----------- Сабмит формы -----------
+  const handleSubmit = async () => {
     try {
       const startDate = startAt
         ? toUtcISOString(startAt, "Europe/Moscow")
         : undefined;
 
-      const room = await roomService.createRoom({
-        ownerId: user!.id,
-        name,
-        description,
-        startAt: startDate,
-        durationMinutes:
-          durationMinutes === "" ? undefined : Number(durationMinutes),
-        isPublic,
-        showHistoryToNewbies,
-        password,
-        waitingRoomEnabled,
-        allowEarlyJoin,
-        timeZone: "Europe/Moscow",
-        canShareScreen: canShareScreen,
-        canStartPresentation: canStartPresentation,
-      });
+      if (mode === "create") {
+        const room = await roomService.createRoom({
+          ownerId: user!.id,
+          name,
+          description,
+          startAt: startDate,
+          durationMinutes:
+            durationMinutes === "" ? undefined : Number(durationMinutes),
+          isPublic,
+          showHistoryToNewbies,
+          password,
+          waitingRoomEnabled,
+          allowEarlyJoin,
+          timeZone: "Europe/Moscow",
+          canShareScreen,
+          canStartPresentation,
+        });
 
-      await handleUploadFiles(room.shortId);
+        await handleUploadFiles(room.shortId);
 
-      if (isConnectInstantly) {
-        var nextUrl = `/room/${room.shortId}`;
-        if (password) {
-          nextUrl += `/prejoin`;
+        if (isConnectInstantly) {
+          let nextUrl = `/room/${room.shortId}`;
+          if (password) nextUrl += `/prejoin`;
+          router.push(nextUrl);
+        } else {
+          onClose();
         }
-        router.push(nextUrl);
-      } else {
-        router.back();
+      } else if (mode === "edit" && initialData) {
+        await roomService.updateRoom(initialData.shortId, {
+          name,
+          description,
+          startAt: startDate,
+          durationMinutes:
+            durationMinutes === "" ? undefined : Number(durationMinutes),
+          isPublic,
+          showHistoryToNewbies,
+          password,
+          waitingRoomEnabled,
+          allowEarlyJoin,
+          canShareScreen,
+          canStartPresentation,
+        });
+
+        await handleUploadFiles(initialData.shortId);
+        onClose();
       }
     } catch (error) {
-      console.error("Ошибка при создании комнаты:", error);
+      console.error(error);
     }
   };
 
   return (
-    <Modal onClose={handleClose}>
-      <h2>Создать комнату</h2>
+    <Modal onClose={onClose}>
+      <h2>{mode === "edit" ? "Редактировать комнату" : "Создать комнату"}</h2>
+
+      {/* Общие поля */}
       <div>
-        <label htmlFor="name">Название:</label>
+        <label>Название:</label>
         <input
           type="text"
-          id="name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Например: Встреча команды"
         />
       </div>
       <div>
-        <label htmlFor="description">Описание:</label>
+        <label>Описание:</label>
         <input
           type="text"
-          id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Необязательно"
         />
       </div>
       <div>
-        <label htmlFor="startAt">Дата и время начала (мск):</label>
+        <label>Дата и время начала:</label>
         <input
           type="datetime-local"
-          id="startAt"
           value={startAt}
           onChange={(e) => setStartAt(e.target.value)}
           min={formatDateTimeLocal(now)}
         />
       </div>
       <div>
-        <label htmlFor="duration">Длительность (минуты):</label>
+        <label>Длительность (минуты):</label>
         <input
           type="number"
-          id="duration"
           value={durationMinutes}
           onChange={(e) =>
             setDurationMinutes(
               e.target.value === "" ? "" : Number(e.target.value)
             )
           }
-          placeholder="Например: 60"
         />
       </div>
       <div>
@@ -190,13 +224,11 @@ export default function CreateRoomModal() {
         </label>
       </div>
       <div>
-        <label htmlFor="password">Пароль:</label>
+        <label>Пароль:</label>
         <input
           type="password"
-          id="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Введите пароль"
         />
       </div>
       <div>
@@ -219,22 +251,11 @@ export default function CreateRoomModal() {
           Разрешить ранний вход
         </label>
       </div>
-      <div>
-        <label>
-          <input
-            type="checkbox"
-            checked={isConnectInstantly}
-            onChange={(e) => setIsConnectInstantly(e.target.checked)}
-          />
-          Сразу же подключится
-        </label>
-      </div>
 
-      <h2>Права</h2>
+      {/* Права */}
       <div>
         <label>Может делиться экраном:</label>
         <select
-          title="canShareScreen dropdown"
           value={canShareScreen}
           onChange={(e) =>
             handlePermissionChange("canShareScreen", e.target.value as Role)
@@ -247,11 +268,9 @@ export default function CreateRoomModal() {
           ))}
         </select>
       </div>
-
       <div>
         <label>Может делиться презентацией:</label>
         <select
-          title="canStartPresentation dropdown"
           value={canStartPresentation}
           onChange={(e) =>
             handlePermissionChange(
@@ -268,20 +287,23 @@ export default function CreateRoomModal() {
         </select>
       </div>
 
-      <h2>Загрузить PDF файлы в комнату</h2>
+      {/* Файлы */}
       <div>
-        <label htmlFor="files">Выберите PDF файлы:</label>
+        <label>Выберите PDF файлы:</label>
         <input
           type="file"
-          id="files"
           accept="application/pdf"
           multiple
           onChange={handleFileChange}
         />
+        {uploadStatus && <p>{uploadStatus}</p>}
       </div>
-      {uploadStatus && <p>{uploadStatus}</p>}
-      <button onClick={handleCreateRoom}>Создать</button>
-      <button onClick={handleClose}>Отмена</button>
+
+      {/* Кнопки */}
+      <button onClick={handleSubmit}>
+        {mode === "edit" ? "Сохранить" : "Создать"}
+      </button>
+      <button onClick={onClose}>Отмена</button>
     </Modal>
   );
 }
