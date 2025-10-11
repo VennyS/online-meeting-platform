@@ -1,7 +1,7 @@
 import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
 
 export type PDFViewerProps = {
-  pdfUrl: string;
+  url: string;
   currentPage?: number;
   zoom?: number;
   totalPages?: number;

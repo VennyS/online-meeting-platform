@@ -1,5 +1,11 @@
-import { useParticipants } from "@livekit/components-react";
-import { LocalParticipant, RemoteParticipant } from "livekit-client";
+import { useParticipants, useRoomContext } from "@livekit/components-react";
+import {
+  LocalParticipant,
+  Participant,
+  RemoteParticipant,
+  RoomEvent,
+  Track,
+} from "livekit-client";
 import { useEffect, useMemo, useState } from "react";
 import {
   BlacklistEntry,
@@ -10,16 +16,24 @@ import {
   RoomWSSendMessage,
   UserPermissions,
 } from "../types/room.types";
+import stringToColor from "../lib/stringToColor";
+
+export enum Panel {
+  Chat = "chat",
+  Participants = "participants",
+  Files = "files",
+}
 
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;
   remote: ParticipantWithPermissions[];
   permissionsMap: Record<RoomRole, UserPermissions>;
   waitingGuests: IWaitingGuest[];
-  localPresentation?: [string, Presentation];
-  remotePresentations: Record<string, Presentation>;
+  presentations: Presentation[];
   blacklist: BlacklistEntry[];
   isRecording: boolean;
+  openedRightPanel: Panel | undefined;
+  unreadCount: number;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -29,6 +43,7 @@ export interface ParticipantsWithPermissions {
   approveGuest: (guestId: string) => void;
   rejectGuest: (guestId: string) => void;
   startPresentation: (
+    fileId: number,
     url: string,
     mode?: "presentationWithCamera" | "presentationOnly"
   ) => void;
@@ -47,11 +62,14 @@ export interface ParticipantsWithPermissions {
   removeFromBlackList: (ip: string) => void;
   startRecording: () => void;
   stopRecording: () => void;
+  handleChangeOpenPanel: (panel: Panel | undefined) => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
 
-type Presentation = {
+export type Presentation = {
+  id: string;
+  fileId: string;
   presentationId: string;
   url: string;
   authorId: string;
@@ -59,11 +77,16 @@ type Presentation = {
   zoom: number;
   scroll: { x: number; y: number };
   mode: PresentationMode;
+  source: Track.Source;
+  participant: Participant;
+  local: boolean;
 };
 
 type ParticipantWithPermissions = {
   participant: RemoteParticipant | LocalParticipant;
   permissions: UserPermissions;
+  avatarUrl?: string | null;
+  avatarColor: string;
 };
 
 const getDefaultPermissions = (): Record<RoomRole, UserPermissions> => ({
@@ -85,6 +108,7 @@ export function useParticipantsWithPermissions(
   ws: WebSocket | null,
   localUserId: number
 ): ParticipantsWithPermissions | null {
+  const [isReady, setIsReady] = useState(false);
   const participants = useParticipants();
   const [permissionsMap, setPermissionsMap] = useState<
     Record<RoomRole, UserPermissions>
@@ -92,7 +116,7 @@ export function useParticipantsWithPermissions(
   const [usersRoles, setUsersRoles] = useState<Record<string, RoomRole>>({});
   const [waitingGuests, setWaitingGuests] = useState<IWaitingGuest[]>([]);
   const [presentations, setPresentations] = useState<
-    Record<string, Presentation>
+    Record<string, Omit<Presentation, "source" | "participant" | "local">>
   >({});
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
 
@@ -100,6 +124,41 @@ export function useParticipantsWithPermissions(
   const remoteParticipants = participants.filter((p) => !p.isLocal);
   const [isRecording, setIsRecording] = useState(false);
   const [egressId, setEgressId] = useState<string>();
+
+  const room = useRoomContext();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
+
+  const handleChangeOpenPanel = (panel: Panel | undefined) => {
+    if (panel !== openedRightPanel) {
+      setOpenedRightPanel(panel);
+      return;
+    }
+    setOpenedRightPanel(undefined);
+  };
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleMessage = () => {
+      if (openedRightPanel !== "chat") {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleMessage);
+    room.on(RoomEvent.Disconnected, () => {
+      // router.replace("/404");
+    });
+    return () => {
+      room.off(RoomEvent.DataReceived, handleMessage);
+    };
+  }, [room, openedRightPanel]);
+
+  useEffect(() => {
+    if (openedRightPanel === "chat") setUnreadCount(0);
+  }, [openedRightPanel]);
 
   function sendMessage<E extends RoomWSSendMessage["event"]>(
     event: E,
@@ -134,12 +193,13 @@ export function useParticipantsWithPermissions(
   }
 
   function startPresentation(
+    fileId: number,
     url: string,
     mode:
       | "presentationWithCamera"
       | "presentationOnly" = "presentationWithCamera"
   ) {
-    sendMessage("presentation_started", { url, mode });
+    sendMessage("presentation_started", { fileId, url, mode });
   }
 
   function changePage(presentationId: string, newPage: number) {
@@ -185,6 +245,11 @@ export function useParticipantsWithPermissions(
     sendMessage("recording_finished", { egressId });
   }
 
+  if (ws && !isReady) {
+    sendMessage("ready", {});
+    setIsReady(true);
+  }
+
   useEffect(() => {
     if (!ws) return;
 
@@ -193,6 +258,10 @@ export function useParticipantsWithPermissions(
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "ready": {
+          sendMessage("ready", {});
+          break;
+        }
         case "init_host":
           setBlacklist(data.blacklist);
           setWaitingGuests(data.guests);
@@ -209,15 +278,14 @@ export function useParticipantsWithPermissions(
           break;
 
         case "permissions_init":
-          const newPermissionsMap = message.data.reduce<
+          const newPermissionsMap = Object.entries(message.data).reduce<
             Record<RoomRole, UserPermissions>
-          >((acc, { role, permissions }) => {
-            acc[role] = { role, permissions };
+          >((acc, [role, permissions]) => {
+            acc[role as RoomRole] = { role: role as RoomRole, permissions };
             return acc;
           }, {} as Record<RoomRole, UserPermissions>);
           setPermissionsMap(newPermissionsMap);
           break;
-
         case "role_updated":
           setUsersRoles((prev) => ({
             ...prev,
@@ -237,7 +305,7 @@ export function useParticipantsWithPermissions(
           break;
 
         case "waiting_queue_updated":
-          setWaitingGuests(data.guests);
+          setWaitingGuests(data.guests ?? []);
           break;
 
         case "new_guest_waiting":
@@ -245,11 +313,21 @@ export function useParticipantsWithPermissions(
           break;
 
         case "presentations_state":
-          setPresentations((prev) => {
-            const newPresentations: Record<string, Presentation> = {};
-            data.presentations.forEach((p: Presentation) => {
-              newPresentations[p.presentationId] = p;
-            });
+          setPresentations(() => {
+            const newPresentations: Record<
+              string,
+              Omit<Presentation, "source" | "participant" | "local">
+            > = {};
+            data.presentations.forEach(
+              (
+                p: Omit<Presentation, "id" | "source" | "participant" | "local">
+              ) => {
+                newPresentations[p.presentationId] = {
+                  ...p,
+                  id: p.presentationId,
+                };
+              }
+            );
             return newPresentations;
           });
           break;
@@ -257,15 +335,7 @@ export function useParticipantsWithPermissions(
         case "presentation_started":
           setPresentations((prev) => ({
             ...prev,
-            [data.presentationId]: {
-              presentationId: data.presentationId,
-              url: data.url,
-              authorId: data.authorId,
-              currentPage: data.currentPage,
-              zoom: data.zoom,
-              scroll: data.scroll,
-              mode: data.mode || "presentationWithCamera",
-            },
+            [data.presentationId]: { ...data, id: data.presentationId },
           }));
           break;
 
@@ -375,43 +445,54 @@ export function useParticipantsWithPermissions(
 
   const localRole = usersRoles[localParticipant?.identity] || "participant";
 
+  // TODO: get avatarUrl from participant.metadata
   const local: ParticipantWithPermissions = {
     participant: localParticipant,
     permissions: {
       role: localRole,
       permissions: permissionsMap[localRole]?.permissions || {},
     },
+    avatarColor: stringToColor(localParticipant.name || "Anonymous"),
+    // avatarUrl: localParticipant.metadata?.avatarUrl || null,
   };
 
   const remote: ParticipantWithPermissions[] = remoteParticipants.map((p) => {
     const role = usersRoles[p.identity] || "participant";
+    // const metadata = p.metadata ? JSON.parse(p.metadata) : {};
+    // const avatarUrl = metadata.avatarUrl || null;
+
     return {
       participant: p,
       permissions: {
         role,
         permissions: permissionsMap[role]?.permissions || {},
       },
+      avatarColor: stringToColor(p.name || "Anonymous"),
+      // avatarUrl,
     };
   });
 
-  const localPresentation = useMemo(
+  const allPresentations: Presentation[] = useMemo(
     () =>
-      Object.entries(presentations).find(
-        ([, presentation]) =>
-          presentation.authorId === localParticipant?.identity
-      ),
-    [presentations, localParticipant?.identity]
-  );
+      Object.values(presentations)
+        .map((p) => {
+          const participant =
+            p.authorId === localParticipant?.identity
+              ? localParticipant
+              : remote.find((r) => r.participant.identity === p.authorId)
+                  ?.participant;
 
-  const remotePresentations: Record<string, Presentation> = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(presentations).filter(
-          ([, presentation]) =>
-            presentation.authorId !== localParticipant?.identity
-        )
-      ),
-    [presentations, localParticipant?.identity]
+          if (!participant) return null;
+
+          return {
+            ...p,
+            participant,
+            source: Track.Source.Unknown,
+            local: participant.sid === localParticipant.sid,
+          };
+        })
+        .filter(Boolean) as (Presentation & { source: Track.Source })[],
+    [presentations, localParticipant, remote]
   );
 
   return {
@@ -419,10 +500,11 @@ export function useParticipantsWithPermissions(
     remote,
     permissionsMap,
     waitingGuests,
-    localPresentation,
-    remotePresentations,
+    presentations: allPresentations,
     blacklist,
     isRecording,
+    openedRightPanel,
+    unreadCount,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -437,5 +519,6 @@ export function useParticipantsWithPermissions(
     removeFromBlackList,
     startRecording,
     stopRecording,
+    handleChangeOpenPanel,
   };
 }

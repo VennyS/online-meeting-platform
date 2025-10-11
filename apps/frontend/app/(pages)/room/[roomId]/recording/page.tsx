@@ -13,7 +13,7 @@ import styles from "./page.module.css";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 
-export const EGRESS_CREDENTIAL = "egress";
+const EGRESS_CREDENTIAL = "egress";
 
 const RecordingPage = () => {
   const router = useRouter();

@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UploadedFiles,
@@ -18,6 +21,8 @@ import type { Room } from '@prisma/client';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ListFilesQueryDto } from './dto/listFilesQueryDto';
+import type { AuthTokenPayload } from 'src/common/utils/auth.utils';
+import { PatchFileDto } from './dto/patchFileDto';
 
 @Controller('file')
 export class FileController {
@@ -104,5 +109,33 @@ export class FileController {
       }
       throw error;
     }
+  }
+
+  @Delete(':id')
+  @UseGuards(AuthGuard({ required: true }))
+  async delete(
+    @User() tokenPayload: AuthTokenPayload,
+    @Query('id') fileId: number,
+  ) {
+    await this.fileService.deleteFile(
+      fileId,
+      tokenPayload.id,
+      tokenPayload.roleId,
+    );
+  }
+
+  @Patch(':id')
+  @UseGuards(AuthGuard({ required: true }))
+  async updateFile(
+    @User() tokenPayload: AuthTokenPayload,
+    @Query('id') fileId: number,
+    @Body() dto: PatchFileDto,
+  ) {
+    return await this.fileService.updateFile(
+      fileId,
+      tokenPayload.id,
+      tokenPayload.roleId,
+      dto,
+    );
   }
 }

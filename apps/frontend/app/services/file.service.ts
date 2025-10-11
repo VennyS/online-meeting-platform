@@ -78,4 +78,15 @@ export const fileService = {
       throw err;
     }
   },
+
+  async delete(fileId: number): Promise<void> {
+    await axiosClassic.delete(`/file/${fileId}`);
+  },
+
+  async patch(fileId: number, fileName: string): Promise<IFile> {
+    const response = await axiosClassic.patch<IFile>(`/file/${fileId}`, {
+      name: fileName,
+    });
+    return response.data;
+  },
 };

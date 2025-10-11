@@ -1,24 +1,39 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
-import styles from "./page.module.css";
+import { useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Stack,
+  TextField,
+  Typography,
+  Alert,
+  Collapse,
+  Fade,
+} from "@mui/material";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { roomService } from "@/app/services/room.service";
-import {
-  IPrequisites,
-  RoomWSMessage,
-  RoomWSSendMessage,
-} from "@/app/types/room.types";
+import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
 
-const PrejoinPage = () => {
+export default function PrejoinPage() {
   const { roomId } = useParams();
-  const [guestName, setGuestName] = useState("");
-  const { user, setUser, setToken, loading: isUserLoading } = useUser();
   const router = useRouter();
+  const { user, setUser, setToken, loading: isUserLoading } = useUser();
+  const { connect } = useWebSocket();
+
+  const [guestName, setGuestName] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isRoomOwner, setIsRoomOwner] = useState(false);
+  const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
   const [prequisites, setPrequisites] = useState<IPrequisites>({
     guestAllowed: false,
     passwordRequired: false,
@@ -32,18 +47,13 @@ const PrejoinPage = () => {
     isFinished: false,
     isBlackListed: false,
   });
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isRoomOwner, setIsRoomOwner] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
     hours: number;
     minutes: number;
     seconds: number;
   } | null>(null);
-  const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
-  const { connect } = useWebSocket();
 
   useEffect(() => {
     const checkPrerequisites = async () => {
@@ -55,22 +65,15 @@ const PrejoinPage = () => {
         setPrequisites(data);
         setIsRoomOwner(data.isOwner);
 
-        if (data.isBlackListed) {
-          router.replace("/404");
-        }
+        if (data.isBlackListed) router.replace("/404");
 
-        if (
-          !data.allowEarlyJoin &&
-          data.startAt &&
-          new Date(data.startAt) > new Date()
-        ) {
+        if (!data.allowEarlyJoin && new Date(data.startAt) > new Date()) {
           startCountdown(data.startAt);
         }
       } catch (err) {
         if (err instanceof AxiosError && err.response?.status === 404) {
           router.replace("/404");
         }
-        console.error("Error fetching prerequisites:", error);
       } finally {
         setIsPrequisitesLoading(false);
       }
@@ -90,25 +93,17 @@ const PrejoinPage = () => {
   const startCountdown = (startDate: Date) => {
     const interval = setInterval(() => {
       const now = new Date();
-      const difference = new Date(startDate).getTime() - now.getTime();
+      const diff = new Date(startDate).getTime() - now.getTime();
+      if (diff <= 0) return clearInterval(interval);
 
-      if (difference <= 0) {
-        clearInterval(interval);
-        setTimeLeft(null);
-        return;
-      }
-
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor(
-        (difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
       );
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
       setTimeLeft({ days, hours, minutes, seconds });
     }, 1000);
-
-    return () => clearInterval(interval);
   };
 
   useEffect(() => {
@@ -128,7 +123,6 @@ const PrejoinPage = () => {
     try {
       const fullName = `${user!.firstName} ${user!.lastName}`;
       const response = await authService.getToken(roomId as string, fullName);
-
       setToken(response.token);
       router.replace(`/room/${roomId}`);
     } catch (err) {
@@ -139,49 +133,30 @@ const PrejoinPage = () => {
   const connectWebSocket = (userId: number, userName: string) => {
     setIsConnecting(true);
     const ws = connect(roomId as string, userId, userName);
-
     if (!ws) return;
 
-    ws.onopen = () => {
-      const joinRequest: RoomWSSendMessage = {
-        event: "guest_join_request",
-        data: { name: userName },
-      };
-      ws.send(JSON.stringify(joinRequest));
-    };
-
-    ws.onmessage = (event: MessageEvent) => {
-      console.log("📨 Message from server:", event.data);
-
+    ws.addEventListener("message", (event: MessageEvent) => {
       const message: RoomWSMessage = JSON.parse(event.data);
       const { event: evt, data } = message;
 
       switch (evt) {
+        case "ready":
+          ws.send(
+            JSON.stringify({
+              event: "guest_join_request",
+              data: { name: userName },
+            })
+          );
+          break;
         case "guest_approved":
           handleApprovedAccess(userId, userName, data.token);
           break;
-
         case "guest_rejected":
-          setError("Ваш запрос был отклонен");
+          setError("Ваш запрос был отклонён");
           setIsConnecting(false);
           break;
-
-        default:
-          console.warn("⚠️ Неизвестное событие от сервера:", evt, data);
-          break;
       }
-    };
-
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setError("Ошибка подключения");
-      setIsConnecting(false);
-    };
-
-    ws.onclose = () => {
-      console.log("WebSocket connection closed");
-      setIsConnecting(false);
-    };
+    });
   };
 
   const handleApprovedAccess = (
@@ -190,7 +165,6 @@ const PrejoinPage = () => {
     token: string
   ) => {
     setToken(token);
-
     setUser({
       id: userId,
       firstName: userName,
@@ -203,7 +177,6 @@ const PrejoinPage = () => {
       profileImage: "",
       isGuest: true,
     });
-
     router.replace(`/room/${roomId}`);
   };
 
@@ -216,7 +189,6 @@ const PrejoinPage = () => {
 
     let livekitToken: string | null = null;
 
-    // 1️⃣ Если нужен пароль — получаем токен сразу
     if (prequisites.passwordRequired) {
       try {
         const response = await authService.getToken(
@@ -227,11 +199,11 @@ const PrejoinPage = () => {
         );
         livekitToken = response.token;
       } catch (err) {
-        if (err instanceof AxiosError && err.response?.status === 401) {
-          setError("Неправильный пароль");
-        } else {
-          setError("Ошибка при подключении");
-        }
+        setError(
+          err instanceof AxiosError && err.response?.status === 401
+            ? "Неверный пароль"
+            : "Ошибка подключения"
+        );
         return;
       }
     }
@@ -241,7 +213,6 @@ const PrejoinPage = () => {
       return;
     }
 
-    // 3️⃣ Если нет waiting room или пароль уже дали токен — пропускаем в комнату
     if (!livekitToken) {
       try {
         const response = await authService.getToken(
@@ -251,107 +222,145 @@ const PrejoinPage = () => {
           userId
         );
         livekitToken = response.token;
-      } catch (err) {
+      } catch {
         setError("Ошибка при подключении");
         return;
       }
     }
 
-    // Финальный доступ
     handleApprovedAccess(userId, userName, livekitToken);
   };
 
   const isTimerVisible =
     !prequisites.allowEarlyJoin &&
-    prequisites.startAt &&
     new Date(prequisites.startAt) > new Date() &&
     !!timeLeft;
 
-  if (prequisites.isFinished)
-    return <span>Встреча не существует или завершена</span>;
-  if (prequisites.cancelled) return <span>Встреча отменена</span>;
+  if (prequisites.isFinished) return <Typography>Встреча завершена</Typography>;
+  if (prequisites.cancelled) return <Typography>Встреча отменена</Typography>;
 
   return (
-    <div className={styles.guestForm}>
-      <div>
-        <h2>{prequisites.name}</h2>
-        <span>{prequisites.description}</span>
-      </div>
+    <Box
+      display="flex"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      p={2}
+    >
+      <Fade in timeout={300}>
+        <Card sx={{ maxWidth: 480, width: "100%", borderRadius: 3 }}>
+          <CardContent>
+            {isPrequisitesLoading ? (
+              <Stack alignItems="center" spacing={2}>
+                <CircularProgress />
+                <Typography>Загрузка данных...</Typography>
+              </Stack>
+            ) : (
+              <Stack spacing={3}>
+                <Box>
+                  <Typography variant="h5" fontWeight={700}>
+                    {prequisites.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {prequisites.description}
+                  </Typography>
+                </Box>
 
-      {isTimerVisible && (
-        <div className={styles.timer}>
-          <h3>Встреча начнется через:</h3>
-          <div className={styles.timerDigits}>
-            {timeLeft.days > 0 && (
-              <div className={styles.timeUnit}>
-                <span className={styles.timeValue}>{timeLeft.days}</span>
-                <span className={styles.timeLabel}>дней</span>
-              </div>
+                <Collapse
+                  in={isTimerVisible}
+                  sx={{ m: isTimerVisible ? "auto" : "0px !important" }}
+                >
+                  {isTimerVisible && (
+                    <Box textAlign="center">
+                      <Typography variant="h6" fontWeight={600} gutterBottom>
+                        Встреча начнётся через:
+                      </Typography>
+                      <Stack
+                        direction="row"
+                        justifyContent="center"
+                        spacing={2}
+                      >
+                        {timeLeft?.days! > 0 && (
+                          <TimeChip value={timeLeft!.days} label="дней" />
+                        )}
+                        <TimeChip value={timeLeft!.hours} label="часов" />
+                        <TimeChip value={timeLeft!.minutes} label="минут" />
+                        <TimeChip value={timeLeft!.seconds} label="секунд" />
+                      </Stack>
+                    </Box>
+                  )}
+                </Collapse>
+
+                {prequisites.guestAllowed && !user && (
+                  <TextField
+                    label="Ваше имя"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    disabled={isConnecting || isTimerVisible}
+                    slotProps={{
+                      input: { disableUnderline: true },
+                    }}
+                  />
+                )}
+
+                {prequisites.passwordRequired && (
+                  <TextField
+                    label="Пароль"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isConnecting || isTimerVisible}
+                    slotProps={{
+                      input: { disableUnderline: true },
+                    }}
+                  />
+                )}
+
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleAccessRequest}
+                  disabled={
+                    isConnecting ||
+                    isTimerVisible ||
+                    (!user && !guestName) ||
+                    (prequisites.passwordRequired && !password)
+                  }
+                >
+                  {isConnecting ? "Подключение..." : "Войти"}
+                </Button>
+
+                <Collapse
+                  in={!!error}
+                  sx={{ m: !!error ? "auto" : "0px !important" }}
+                >
+                  <Alert severity="error">{error}</Alert>
+                </Collapse>
+
+                <Collapse
+                  in={isConnecting && !error}
+                  sx={{ m: isConnecting && !error ? "auto" : "0px !important" }}
+                >
+                  <Alert severity="info">
+                    Ожидаем одобрения от организатора...
+                  </Alert>
+                </Collapse>
+              </Stack>
             )}
-            <div className={styles.timeUnit}>
-              <span className={styles.timeValue}>
-                {timeLeft.hours.toString().padStart(2, "0")}
-              </span>
-              <span className={styles.timeLabel}>часов</span>
-            </div>
-            <div className={styles.timeUnit}>
-              <span className={styles.timeValue}>
-                {timeLeft.minutes.toString().padStart(2, "0")}
-              </span>
-              <span className={styles.timeLabel}>минут</span>
-            </div>
-            <div className={styles.timeUnit}>
-              <span className={styles.timeValue}>
-                {timeLeft.seconds.toString().padStart(2, "0")}
-              </span>
-              <span className={styles.timeLabel}>секунд</span>
-            </div>
-          </div>
-          <p>Ожидайте начала встречи...</p>
-        </div>
-      )}
-
-      {prequisites.guestAllowed && !user && (
-        <>
-          <h2>Введите имя для входа в комнату</h2>
-          <input
-            type="text"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            placeholder="Ваше имя"
-            disabled={isConnecting || isTimerVisible === true}
-          />
-        </>
-      )}
-      {prequisites.passwordRequired && (
-        <>
-          <h2>Введите пароль для входа в комнату</h2>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Ваш пароль"
-            disabled={isConnecting || isTimerVisible === true}
-          />
-        </>
-      )}
-
-      <button
-        onClick={handleAccessRequest}
-        disabled={
-          isConnecting ||
-          !!isTimerVisible ||
-          (!user && !guestName) ||
-          (prequisites.passwordRequired && !password)
-        }
-      >
-        {isConnecting ? "Подключение..." : "Войти как гость"}
-      </button>
-
-      {error && <p className={styles.error}>{error}</p>}
-      {isConnecting && <p>Ожидаем одобрения от организатора встречи...</p>}
-    </div>
+          </CardContent>
+        </Card>
+      </Fade>
+    </Box>
   );
-};
+}
 
-export default PrejoinPage;
+const TimeChip = ({ value, label }: { value: number; label: string }) => (
+  <Stack alignItems="center" spacing={0.5}>
+    <Typography fontWeight={700} fontSize="1.4rem">
+      {String(value).padStart(2, "0")}
+    </Typography>
+    <Typography variant="body2" color="text.secondary">
+      {label}
+    </Typography>
+  </Stack>
+);

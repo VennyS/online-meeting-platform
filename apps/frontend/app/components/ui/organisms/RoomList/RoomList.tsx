@@ -2,22 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
+import { IRoom } from "@/app/types/room.types";
+import { RoomListProps } from "./types";
+
 import {
-  IRoom,
-  UpdateRoomDto,
-  MeetingReports,
-  MeetingReport,
-  Participant,
-  ParticipantSession,
-} from "@/app/types/room.types";
-import styles from "./RoomList.module.css";
-import { MeetingReportsProps, RoomCardProps, RoomListProps } from "./types";
-import { toDateTimeLocalString } from "@/app/lib/toDateTimeLocalString";
-import { toUtcISOString } from "@/app/lib/toUtcISOString";
-import Link from "next/link";
-import Modal from "../../atoms/Modal/Modal";
-import { fileService, IFile } from "@/app/services/file.service";
-import { formatFileSize } from "@/app/lib/formatFileSize";
+  Box,
+  Button,
+  Divider,
+  Paper,
+  Typography,
+  useMediaQuery,
+} from "@mui/material";
+import { RoomReportsModal } from "../RoomReportsModal/RoomReportsModal";
+import { RoomFilesModal } from "../RoomFilesModal/RoomFilesModal";
+
+import RoomCardGrid from "../RoomCardGrid/RoomCardGrid";
+import { RoomTable } from "../RoomTable/RoomTable";
+import RoomModal from "../RoomModal/RoomModal";
+
+export enum Modal {
+  Files = "chat",
+  Reports = "reports",
+  Create = "create",
+  Edit = "edit",
+}
+
+export type ModalState =
+  | { modal: Modal.Files; shortId: string }
+  | { modal: Modal.Reports; shortId: string }
+  | { modal: Modal.Create }
+  | { modal: Modal.Edit; room: IRoom }
+  | { modal: undefined };
 
 export default function RoomList({
   fetchMode = "user",
@@ -25,10 +40,14 @@ export default function RoomList({
 }: RoomListProps) {
   const [rooms, setRooms] = useState<IRoom[]>(initialRooms);
   const [loading, setLoading] = useState(false);
-  const [updatingRoomId, setUpdatingRoomId] = useState<number | null>(null);
+  const [modalState, setModalState] = useState<ModalState>({
+    modal: undefined,
+  });
+
+  const isMobile = useMediaQuery("(max-width:700px)");
 
   useEffect(() => {
-    if (fetchMode === "none") return; // ничего не грузим, юзаем initialRooms
+    if (fetchMode === "none") return;
 
     const fetchRooms = async () => {
       try {
@@ -48,473 +67,103 @@ export default function RoomList({
     fetchRooms();
   }, [fetchMode]);
 
-  const saveRoom = async (
-    roomId: number,
-    shortId: string,
-    updatedData: UpdateRoomDto
-  ) => {
-    try {
-      setUpdatingRoomId(roomId);
-      const updated = await roomService.updateRoom(shortId, updatedData);
-      setRooms((prev) =>
-        prev.map((r) => (r.shortId === shortId ? updated : r))
-      );
-    } catch (err) {
-      console.error("Ошибка при сохранении комнаты:", err);
-    } finally {
-      setUpdatingRoomId(null);
-    }
-  };
-
-  if (loading) return <p>Загрузка...</p>;
-
-  return (
-    <div className={styles.roomsWrapper}>
-      {rooms.map((room) => (
-        <RoomCard
-          key={room.id}
-          room={room}
-          onSave={(data) => saveRoom(room.id, room.shortId, data)}
-          updating={updatingRoomId === room.id}
-        />
-      ))}
-    </div>
-  );
-}
-
-function RoomCard({ room, onSave, updating }: RoomCardProps) {
-  const [editData, setEditData] = useState<UpdateRoomDto>({
-    name: room.name,
-    description: room.description ?? "",
-    startAt: room.startAt
-      ? toDateTimeLocalString(room.startAt, room.timeZone)
-      : "",
-    durationMinutes: 60,
-    isPublic: room.isPublic,
-    showHistoryToNewbies: false,
-    password: "",
-    waitingRoomEnabled: room.waitingRoomEnabled,
-    allowEarlyJoin: room.allowEarlyJoin,
-    cancelled: room.cancelled,
-  });
-
-  const [isReportsOpen, setReportsOpen] = useState(false);
-  const [isFilesOpen, setIsFilesOpen] = useState(false);
-
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const target = e.currentTarget;
-    const { name, value, type } = target;
-
-    setEditData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? (target as HTMLInputElement).checked
-          : name === "durationMinutes"
-          ? Number(value)
-          : value,
-    }));
-  };
-
-  const handleSave = () => {
-    onSave({
-      ...editData,
-      startAt: editData.startAt
-        ? toUtcISOString(editData.startAt, "Europe/Moscow")
-        : undefined,
-      timeZone: "Europe/Moscow",
-    });
-  };
-
-  return (
-    <div style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}>
-      <h2>
-        <input
-          type="text"
-          name="name"
-          value={editData.name ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </h2>
-
-      <textarea
-        name="description"
-        value={editData.description ?? ""}
-        onChange={handleChange}
-        disabled={updating}
-      />
-
-      <p>
-        Дата начала:
-        <input
-          type="datetime-local"
-          name="startAt"
-          value={editData.startAt ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </p>
-
-      <p>
-        Длительность (мин):
-        <input
-          type="number"
-          name="durationMinutes"
-          value={editData.durationMinutes ?? 0}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </p>
-
-      <label>
-        Публичная:{" "}
-        <input
-          type="checkbox"
-          name="isPublic"
-          checked={editData.isPublic ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Показывать историю новичкам:{" "}
-        <input
-          type="checkbox"
-          name="showHistoryToNewbies"
-          checked={editData.showHistoryToNewbies ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Пароль:
-        <input
-          type="text"
-          name="password"
-          value={editData.password ?? ""}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Зал ожидания:{" "}
-        <input
-          type="checkbox"
-          name="waitingRoomEnabled"
-          checked={editData.waitingRoomEnabled ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Разрешить ранний вход:{" "}
-        <input
-          type="checkbox"
-          name="allowEarlyJoin"
-          checked={editData.allowEarlyJoin ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <br />
-
-      <label>
-        Отменена:{" "}
-        <input
-          type="checkbox"
-          name="cancelled"
-          checked={editData.cancelled ?? false}
-          onChange={handleChange}
-          disabled={updating}
-        />
-      </label>
-
-      <div style={{ marginTop: 10 }}>
-        <button
-          onClick={handleSave}
-          disabled={updating}
-          style={{
-            background: "green",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Сохранить
-        </button>
-
-        <Link
-          href={`/room/${room.shortId}`}
-          style={{
-            background: "green",
-            color: "white",
-            padding: "5px 10px",
-            marginRight: "5px",
-          }}
-        >
-          Зайти
-        </Link>
-
-        {room.haveReports && (
-          <>
-            <button
-              onClick={() => setReportsOpen(true)}
-              disabled={updating}
-              style={{
-                background: "blue",
-                color: "white",
-                padding: "5px 10px",
-                marginRight: "5px",
-              }}
-            >
-              Показать отчёты
-            </button>
-          </>
-        )}
-
-        {room.haveFiles && (
-          <button onClick={() => setIsFilesOpen(true)}>Файлы</button>
-        )}
-      </div>
-      {room.haveReports && (
-        <MeetingReportsModal
-          shortId={room.shortId}
-          isOpen={isReportsOpen}
-          onClose={() => setReportsOpen(false)}
-        />
-      )}
-
-      {room.haveFiles && (
-        <MeetingFilesModal
-          shortId={room.shortId}
-          isOpen={isFilesOpen}
-          onClose={() => setIsFilesOpen(false)}
-        />
-      )}
-    </div>
-  );
-}
-
-export const MeetingReportsModal = ({
-  shortId,
-  isOpen,
-  onClose,
-}: MeetingReportsProps) => {
-  const [reports, setReports] = useState<MeetingReports | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const fetchReports = async () => {
-      setLoading(true);
-      try {
-        const data = await roomService.getMeetingReports(shortId);
-        setReports(data);
-      } catch (err) {
-        setError("Не удалось загрузить отчёты о встречах");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
-  }, [shortId, isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal onClose={onClose}>
-      <button onClick={onClose}>Закрыть</button>
-      {loading && <p>Загрузка...</p>}
-      {error && <p>{error}</p>}
-      {reports && reports.sessions.length === 0 ? (
-        <p>Нет доступных отчётов о встречах</p>
-      ) : (
-        <>
-          <button
-            onClick={() => roomService.downloadMeetingReportsExcel(shortId)}
-            style={{
-              background: "orange",
-              color: "white",
-              padding: "5px 10px",
-              marginRight: "5px",
-            }}
-          >
-            Скачать Excel
-          </button>
-
-          <button
-            onClick={() => roomService.downloadMeetingReportsCsv(shortId)}
-            style={{
-              background: "purple",
-              color: "white",
-              padding: "5px 10px",
-            }}
-          >
-            Скачать CSV
-          </button>
-        </>
-      )}
-      {reports &&
-        reports.sessions.map((session: MeetingReport) => (
-          <div key={session.id}>
-            <h3>Сессия встречи</h3>
-            <p>Начало: {formatDateTime(session.startTime)}</p>
-            <p>
-              Конец:{" "}
-              {session.endTime
-                ? formatDateTime(session.endTime)
-                : "Все еще идет"}
-            </p>
-            {!!session.duration && (
-              <p>Длительность: {formatDuration(session.duration)}</p>
-            )}
-            <h4>Участники</h4>
-            <ul>
-              {session.participants.map((participant: Participant) => (
-                <li key={participant.id}>
-                  <p>
-                    {participant.name} (ID: {participant.userId})
-                  </p>
-                  <ul>
-                    {participant.sessions.map(
-                      (s: ParticipantSession, index: number) => (
-                        <li key={index}>
-                          Вход: {formatDateTime(s.joinTime)}
-                          {s.leaveTime &&
-                            `, Выход: ${formatDateTime(s.leaveTime)}`}
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-    </Modal>
-  );
-};
-
-interface MeetingFilesModalProps {
-  shortId: string;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const MeetingFilesModal = ({
-  shortId,
-  isOpen,
-  onClose,
-}: MeetingFilesModalProps) => {
-  const [files, setFiles] = useState<IFile[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const fetchFiles = async () => {
-      setLoading(true);
-      try {
-        const data = await fileService.list(shortId, 0, 50);
-        setFiles(data);
-      } catch (err) {
-        setError("Не удалось загрузить файлы встречи");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFiles();
-  }, [shortId, isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <Modal onClose={onClose}>
-      <button onClick={onClose}>Закрыть</button>
-      {loading && <p>Загрузка...</p>}
-      {error && <p>{error}</p>}
-      {files && files.length === 0 && <p>Файлы отсутствуют</p>}
-      {files &&
-        files.map((file: IFile) => (
-          <div key={file.id} style={{ marginBottom: 12 }}>
-            <h4>{file.fileName}</h4>
-            <p>Тип: {file.fileType}</p>
-            <p>Размер: {formatFileSize(file.fileSize)}</p>
-            <button
-              onClick={async () => {
-                try {
-                  const res = await fetch(file.url);
-                  if (!res.ok) throw new Error("Ошибка скачивания");
-                  const blob = await res.blob();
-                  const downloadUrl = window.URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = downloadUrl;
-                  a.download = file.fileName;
-                  document.body.appendChild(a);
-                  a.click();
-                  a.remove();
-                  window.URL.revokeObjectURL(downloadUrl);
-                } catch (err) {
-                  console.error(err);
-                  alert("Не удалось скачать файл");
-                }
-              }}
-            >
-              Скачать
-            </button>
-          </div>
-        ))}
-    </Modal>
-  );
-};
-
-/**
- * Форматирует дату: если есть часы → ч:м:с, если только минуты → м:с, если только секунды → с
- */
-function formatDateTime(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function formatDuration(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours} ч${minutes > 0 ? ` ${minutes} мин` : ""}${
-      seconds > 0 ? ` ${seconds} сек` : ""
-    }`;
+  function onModalClose() {
+    setModalState({ modal: undefined });
   }
-  if (minutes > 0) {
-    return `${minutes} мин${seconds > 0 ? ` ${seconds} сек` : ""}`;
-  }
-  return `${seconds} сек`;
+
+  return (
+    <>
+      <Box
+        sx={{
+          mb: 2,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 2,
+          textAlign: "center",
+          maxWidth: "800px",
+        }}
+      >
+        <Typography variant="h3" sx={{ mb: "8px" }}>
+          Добро пожаловать!
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          fontSize="1.5rem"
+          sx={{ color: "text.secondary", lineHeight: "1.4" }}
+        >
+          Создавайте встречи, записывайте их, транслируйте экран или
+          презентацию, отслеживайте отчёты. Всё просто, удобно и быстро.
+        </Typography>
+        <Button
+          onClick={() => setModalState({ modal: Modal.Create })}
+          variant="contained"
+          sx={{ mt: 2 }}
+        >
+          Новая встреча
+        </Button>
+      </Box>
+
+      <Paper
+        elevation={1}
+        sx={{
+          width: "100%",
+          padding: { xs: "12px", sm: "16px" },
+          paddingBottom: "0 !important",
+          boxSizing: "border-box",
+          borderRadius: "12px",
+        }}
+      >
+        <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
+          <Typography
+            variant="h2"
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+          >
+            Встречи
+          </Typography>
+        </Box>
+
+        <Divider />
+        <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
+          {isMobile ? (
+            <RoomCardGrid
+              rooms={rooms}
+              onModalOpen={(params) => setModalState(params)}
+            />
+          ) : (
+            <RoomTable
+              rooms={rooms}
+              onModalOpen={(params) => setModalState(params)}
+            />
+          )}
+        </Box>
+      </Paper>
+
+      {modalState?.modal === Modal.Reports && modalState.shortId && (
+        <RoomReportsModal
+          shortId={modalState.shortId}
+          isOpen
+          onClose={onModalClose}
+        />
+      )}
+
+      {modalState?.modal === Modal.Files && modalState.shortId && (
+        <RoomFilesModal
+          shortId={modalState.shortId}
+          isOpen
+          onClose={onModalClose}
+        />
+      )}
+
+      {modalState?.modal === Modal.Create && (
+        <RoomModal mode={modalState.modal} onClose={onModalClose} />
+      )}
+
+      {modalState?.modal === Modal.Edit && (
+        <RoomModal
+          mode={modalState.modal}
+          onClose={onModalClose}
+          initialData={modalState.room}
+        />
+      )}
+    </>
+  );
 }

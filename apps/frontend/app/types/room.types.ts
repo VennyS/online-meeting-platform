@@ -26,6 +26,8 @@ export interface UpdateRoomDto {
   allowEarlyJoin?: boolean;
   cancelled?: boolean;
   timeZone?: string;
+  canShareScreen?: Role;
+  canStartPresentation?: Role;
 }
 
 export interface IRoom {
@@ -44,6 +46,10 @@ export interface IRoom {
   timeZone: string;
   haveFiles: boolean;
   haveReports: boolean;
+  showHistoryToNewbies: boolean;
+  durationMinutes: number;
+  canShareScreen: Role;
+  canStartPresentation: Role;
 }
 
 export interface MeetingReports {
@@ -108,6 +114,13 @@ export interface BlacklistEntry {
 }
 
 export type RoomRole = "owner" | "admin" | "participant";
+
+export const RoomRoleMap = {
+  owner: "Владелец",
+  admin: "Администратор",
+  participant: "Участник",
+};
+
 export type Role = "OWNER" | "ADMIN" | "ALL";
 
 export type WSMessage<E extends string, D> = {
@@ -120,13 +133,11 @@ export type RoomWSMessage =
       "init_host",
       { guests: IWaitingGuest[]; blacklist: BlacklistEntry[] }
     >
+  | WSMessage<"ready", {}>
   | WSMessage<"waiting_queue_updated", { guests: IWaitingGuest[] }>
   | WSMessage<"new_guest_waiting", { guest: IWaitingGuest }>
   | WSMessage<"role_updated", { role: RoomRole; userId: string | number }>
-  | WSMessage<
-      "permissions_init",
-      { role: RoomRole; permissions: Permissions }[]
-    >
+  | WSMessage<"permissions_init", Record<RoomRole, Permissions>>
   | WSMessage<
       "permissions_updated",
       { role: RoomRole; permissions: Partial<Permissions> }
@@ -137,6 +148,7 @@ export type RoomWSMessage =
   | WSMessage<
       "presentation_started",
       {
+        fileId: string;
         presentationId: string;
         url: string;
         authorId: string;
@@ -163,6 +175,7 @@ export type RoomWSMessage =
       "presentations_state",
       {
         presentations: Array<{
+          fileId: string;
           presentationId: string;
           url: string;
           authorId: string;
@@ -194,12 +207,14 @@ export type RoomWSSendMessage =
       "update_permission",
       { targetRole: RoomRole; permission: keyof Permissions; value: boolean }
     >
+  | WSMessage<"ready", {}>
   | WSMessage<"update_role", { targetUserId: string; newRole: RoomRole }>
   | WSMessage<"host_approval", { guestId: string; approved: boolean }>
   | WSMessage<"guest_join_request", { name: string }>
   | WSMessage<
       "presentation_started",
       {
+        fileId: number;
         url: string;
         mode: "presentationWithCamera" | "presentationOnly";
       }

@@ -6,13 +6,6 @@
   align-items: center;
 }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-}
-
 .gridContainer {
   flex: 1;
   min-height: 0;
@@ -22,25 +15,70 @@
   overflow: hidden;
 }
 
-.controls {
+.gridLayout,
+.focusLayoutContainer {
+  gap: 16px;
+}
+
+.carouselLayout {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+.carouselTile {
+  max-width: 120px;
+}
+
+.focusLayoutContainer {
+  grid-template-columns: 120px 5fr;
+}
+
+@media (max-width: 600px) {
+  .focusTrackContainer {
+    flex-grow: 1;
+    flex-shrink: 0;
+    min-height: 80%;
+  }
+
+  .carouselTile {
+    max-width: unset;
+  }
+
+  .focusLayoutContainer {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  .carouselLayout {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    grid-auto-rows: 1fr;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    flex-grow: 0;
+    overflow-y: auto;
+    grid-auto-rows: 100%;
+  }
 }
 
 .container {
   display: grid;
   grid-template-columns: 1fr 0fr;
-  grid-template-rows: auto 1fr auto; /* шапка, контент, контролы */
+  grid-template-rows: auto 1fr auto;
   transition: grid-template-columns var(--anim-speed) ease;
   height: 100%;
-  column-gap: 16px;
+  gap: 16px 0;
 
   --anim-speed: 0.2s;
 }
 
 .container.open {
-  grid-template-columns: 1fr 0.3fr; /* при открытии списка */
+  grid-template-columns: 1fr 0.5fr; /* при открытии списка */
+  gap: 16px 16px;
 }
 
 .gridContainer {
@@ -61,29 +99,27 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--anim-speed) ease;
+  box-sizing: border-box;
+  padding: 0 !important;
 }
 
 .rightPanel.active {
   opacity: 1;
+  padding: 12px !important;
   pointer-events: auto;
 }
 
-.closePanelButton {
-  display: none; /* по умолчанию скрыта */
-}
-
-@media (max-width: 800px) {
+@media (max-width: 734px) {
+  .container,
   .container.open {
-    grid-template-columns: 1fr 1fr; /* при открытии списка */
+    grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 1032px) {
   .rightPanel {
     position: fixed; /* всплывающие сверху */
     top: 0;
     right: 0;
-    width: 80%; /* или 100% для fullscreen */
+    width: 100%; /* или 100% для fullscreen */
     height: 100%;
     background: blueviolet;
     z-index: 1000;
@@ -98,21 +134,6 @@
     opacity: 1;
     pointer-events: auto;
     transform: translateX(0); /* выезжаем */
-  }
-
-  .closePanelButton {
-    display: block;
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1010;
-    font-size: 16px;
   }
 }
 
@@ -174,12 +195,6 @@
   padding: 10px;
 }
 
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
 .pdfContainer {
   position: relative;
   max-width: 100%;
@@ -188,4 +203,11 @@
 
 .presentationItem {
   overflow: auto;
+}
+
+.CarouselLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
 }

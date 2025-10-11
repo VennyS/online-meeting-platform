@@ -9,6 +9,7 @@ import type { IFileService } from './interfaces/file.service.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { slugify } from 'transliteration';
 import * as path from 'path';
+import { PatchFileDto } from './dto/patchFileDto';
 
 @Injectable()
 export class FileManagementService {
@@ -140,20 +141,64 @@ export class FileManagementService {
     return this.fileService.getPresignedUrl(file.fileKey);
   }
 
-  async deleteFile(fileId: number, userId: number): Promise<void> {
-    const file = await this.prisma.file.findUnique({
-      where: { id: fileId },
+  async deleteFile(
+    fileId: number,
+    userId: number,
+    roleId: number,
+  ): Promise<void> {
+    const isAdmin = roleId === 4;
+
+    const file = await this.prisma.file.findFirst({
+      where: {
+        id: fileId,
+        OR: [
+          { userId },
+          { room: { ownerId: userId } },
+          ...(isAdmin ? [{}] : []),
+        ],
+      },
       include: { room: true },
     });
+
     if (!file) {
-      throw new NotFoundException('File not found');
-    }
-    if (file.userId !== userId && file.room.ownerId !== userId) {
-      throw new ForbiddenException('Access denied');
+      throw new ForbiddenException('Access denied or file not found');
     }
 
     await this.fileService.delete(file.fileKey);
-    await this.prisma.file.delete({ where: { id: fileId } });
+
+    await this.prisma.file.delete({ where: { id: file.id } });
+  }
+
+  async updateFile(
+    fileId: number,
+    userId: number,
+    roleId: number,
+    dto: PatchFileDto,
+  ) {
+    const isAdmin = roleId === 4;
+
+    const file = await this.prisma.file.findFirst({
+      where: {
+        id: fileId,
+        OR: [
+          { userId },
+          { room: { ownerId: userId } },
+          ...(isAdmin ? [{}] : []),
+        ],
+      },
+      include: { room: true },
+    });
+
+    if (!file) {
+      throw new ForbiddenException('Access denied or file not found');
+    }
+
+    return this.prisma.file.update({
+      where: { id: file.id },
+      data: {
+        fileName: dto.name,
+      },
+    });
   }
 
   async listFiles(

@@ -1,120 +1,63 @@
 "use client";
 
 import "@livekit/components-styles";
+
 import {
-  ChatIcon,
-  ControlBar,
-  GridLayout,
-  ParticipantTile,
+  FocusLayoutContainer,
   RoomAudioRenderer,
-  TrackReference,
-  useRoomContext,
-  useTracks,
-  VideoTrack,
+  TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import { LocalParticipant, RoomEvent, Track } from "livekit-client";
 import { useUser } from "@/app/hooks/useUser";
 import styles from "./RoomContent.module.css";
 import cn from "classnames";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { ParticipantsList } from "@/app/components/ui/organisms/ParticipantsList/ParticipantsList";
+import { ParticipantsPanel } from "@/app/components/ui/organisms/ParticipantsPanel/ParticipantsPanel";
 import { fileService, IFile } from "@/app/services/file.service";
-import dynamic from "next/dynamic";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
-import { Panel, RoomContentProps } from "./types";
-import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
-
-const PDFViewer = dynamic(
-  () => import("@/app/components/ui/organisms/PDFViewer/PDFViewer"),
-  {
-    ssr: false,
-  }
-);
+import { RoomContentProps } from "./types";
+import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
+import ControlBar from "../ControlBar/ControlBar";
+import RightPanel from "../RightPanel/RightPanel";
+import React from "react";
+import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
+import { useFocus } from "@/app/providers/focus.provider";
+import { GridLayout } from "../GridLayout/GridLayout";
+import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
 
 export const RoomContent = ({
   roomId,
   roomName,
   hideControls = false,
 }: RoomContentProps) => {
-  const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: false },
-    ],
-    { updateOnlyOn: [RoomEvent.ActiveSpeakersChanged], onlySubscribed: false }
-  );
+  const tracks = useRoomTracksWithPresentations({
+    includeCamera: true,
+    includeScreen: true,
+    withPlaceholder: true,
+  });
 
-  const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
   const { user } = useUser();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const room = useRoomContext();
-  const {
-    local,
-    localPresentation,
-    remotePresentations,
-    isRecording,
-    startPresentation,
-    changePage,
-    changeZoom,
-    changeScroll,
-    finishPresentation,
-    changePresentationMode,
-    startRecording,
-    stopRecording,
-  } = useParticipantsContext();
+  const { openedRightPanel } = useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
-  useEffect(() => {
-    if (!room) return;
-
-    const handleMessage = () => {
-      if (openedRightPanel !== "chat") {
-        setUnreadCount((prev) => prev + 1);
-      }
-    };
-
-    room.on(RoomEvent.DataReceived, handleMessage);
-    room.on(RoomEvent.Disconnected, () => {
-      // router.replace("/404");
-    });
-    return () => {
-      room.off(RoomEvent.DataReceived, handleMessage);
-    };
-  }, [room, openedRightPanel]);
-
-  useEffect(() => {
-    if (openedRightPanel === "chat") setUnreadCount(0);
-  }, [openedRightPanel]);
-
-  useEffect(() => {
-    if (!local.participant) return;
-
-    if (local.participant instanceof LocalParticipant) {
-      if (!local.permissions.permissions.canShareScreen) {
-        const screenTrackPub = Array.from(
-          local.participant.trackPublications.values()
-        ).find((pub) => pub.source === "screen_share");
-
-        if (screenTrackPub?.track) {
-          local.participant.unpublishTrack(screenTrackPub.track);
-        }
-      }
-
-      if (localPresentation) {
-        finishPresentation(localPresentation[0]);
-      }
-    }
-  }, []);
-
-  const handleChangeOpenPanel = (panel: Panel) => {
-    if (panel !== openedRightPanel) {
-      setOpenedRightPanel(panel);
-      return;
-    }
-    setOpenedRightPanel(undefined);
-  };
+  const panels = [
+    {
+      key: Panel.Chat,
+      title: "Чат",
+      content: user ? <Chat /> : null,
+    },
+    {
+      key: Panel.Participants,
+      title: "Участники",
+      content: <ParticipantsPanel roomId={roomId} roomName={roomName} />,
+    },
+    {
+      key: Panel.Files,
+      title: "Файлы",
+      content: <PresentationList files={files} />,
+    },
+  ];
 
   useEffect(() => {
     const handleFetchFiles = async () => {
@@ -129,20 +72,14 @@ export const RoomContent = ({
     handleFetchFiles();
   }, [roomId]);
 
-  const correctedTracks = tracks.filter((t) => {
-    if (t.participant.permissions?.hidden) return false;
-    if (t.source !== Track.Source.Camera) return true;
+  const { focusTrack } = useFocus();
+  const carouselTracks = tracks.filter((t) => {
+    if (!focusTrack || Array.isArray(focusTrack)) return true;
 
-    const participantInPresentation =
-      (localPresentation &&
-        localPresentation[1].authorId === t.participant.identity &&
-        localPresentation[1].mode === "presentationWithCamera") ||
-      Object.values(remotePresentations).some(
-        (p) =>
-          p.authorId === t.participant.identity &&
-          p.mode === "presentationWithCamera"
-      );
-    return !participantInPresentation;
+    const focused = focusTrack.participant.identity;
+    const focusedSource = focusTrack.source;
+
+    return !(t.participant.identity === focused && t.source === focusedSource);
   });
 
   return (
@@ -150,153 +87,47 @@ export const RoomContent = ({
       className={cn(styles.container, { [styles.open]: !!openedRightPanel })}
     >
       <div className={styles.gridContainer}>
-        {correctedTracks && correctedTracks.length > 0 && (
-          <GridLayout tracks={correctedTracks}>
-            <ParticipantTile />
-          </GridLayout>
-        )}
-        {!!localPresentation && (
-          <div className={styles.pdfContainer}>
-            <PDFViewer
-              isAuthor
-              key={localPresentation[1].url}
-              pdfUrl={localPresentation[1].url}
-              currentPage={localPresentation[1].currentPage}
-              zoom={localPresentation[1].zoom}
-              scrollPosition={localPresentation[1].scroll}
-              onPageChange={(page: number) => {
-                changePage(localPresentation[0], page);
-              }}
-              onZoomChange={(zoom: number) => {
-                changeZoom(localPresentation[0], zoom);
-              }}
-              onScrollChange={(position: { x: number; y: number }) => {
-                changeScroll(localPresentation[0], position);
-              }}
-              mode={localPresentation[1].mode}
-              onChangePresentationMode={(mode: PresentationMode) => {
-                changePresentationMode(localPresentation[0], mode);
-              }}
-            />
-            {localPresentation![1].mode === "presentationWithCamera" &&
-              (() => {
-                const track = tracks.find(
-                  (t) =>
-                    t.source === Track.Source.Camera &&
-                    t.participant.identity === localPresentation[1].authorId
-                );
-                return (
-                  track?.publication && (
-                    <div className={styles.presenterCamera}>
-                      <VideoTrack trackRef={track as TrackReference} />
-                    </div>
-                  )
-                );
-              })()}
-          </div>
-        )}
-
-        {Object.entries(remotePresentations).map(
-          ([presentationId, presentation]) => (
-            <div key={presentationId} className={styles.presentationItem}>
-              <div className={styles.presentationWrapper}>
-                <PDFViewer
-                  key={presentation.url}
-                  pdfUrl={presentation.url}
-                  currentPage={presentation.currentPage}
-                  zoom={presentation.zoom}
-                  scrollPosition={presentation.scroll}
-                />
-                {presentation.mode === "presentationWithCamera" &&
-                  (() => {
-                    const track = tracks.find(
-                      (t) =>
-                        t.source === Track.Source.Camera &&
-                        t.participant.identity === presentation.authorId
-                    );
+        {tracks && tracks.length > 0 && (
+          <>
+            {!focusTrack ? (
+              <GridLayout tracks={tracks} className={styles.gridLayout} />
+            ) : (
+              <FocusLayoutContainer className={styles.focusLayoutContainer}>
+                <div className={styles.carouselLayout}>
+                  {carouselTracks.map((t) => {
                     return (
-                      track?.publication && (
-                        <div className={styles.presenterCamera}>
-                          <VideoTrack trackRef={track as TrackReference} />
-                        </div>
-                      )
+                      <ParticipantTile
+                        trackReference={t}
+                        className={styles.carouselTile}
+                      />
                     );
-                  })()}
-              </div>
-            </div>
-          )
+                  })}
+                </div>
+                {focusTrack && (
+                  <ParticipantTile
+                    trackReference={focusTrack}
+                    className={styles.focusTrackContainer}
+                  />
+                )}
+              </FocusLayoutContainer>
+            )}
+          </>
         )}
       </div>
 
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "participants",
-        })}
-      >
-        <ParticipantsList roomId={roomId} roomName={roomName} />
-      </div>
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "chat",
-        })}
-      >
-        {!!user && <Chat />}
-      </div>
-      <div
-        className={cn(styles.rightPanel, {
-          [styles.active]: openedRightPanel === "files",
-        })}
-      >
-        <PresentationList files={files} onClick={startPresentation} />
-      </div>
-
-      {openedRightPanel && (
-        <button
-          className={styles.closePanelButton}
-          onClick={() => setOpenedRightPanel(undefined)}
+      {panels.map(({ key, title, content }) => (
+        <RightPanel
+          key={key}
+          title={title}
+          className={cn(styles.rightPanel, {
+            [styles.active]: openedRightPanel === key,
+          })}
         >
-          ✕
-        </button>
-      )}
+          {content}
+        </RightPanel>
+      ))}
 
-      {!hideControls && (
-        <div className={styles.controls}>
-          <p>{roomName}</p>
-          <ControlBar
-            controls={{
-              microphone: true,
-              camera: true,
-              screenShare: local.permissions.permissions.canShareScreen,
-              settings: false,
-              leave: false,
-            }}
-          />
-
-          <button onClick={() => handleChangeOpenPanel("participants")}>
-            {openedRightPanel === "participants" ? "Закрыть" : "Участники"}
-          </button>
-          <button onClick={() => handleChangeOpenPanel("files")}>
-            {openedRightPanel === "files" ? "Закрыть" : "Презентация"}
-          </button>
-          <button
-            className={styles.chatButton}
-            title="чат"
-            onClick={() => handleChangeOpenPanel("chat")}
-          >
-            <ChatIcon />
-            {unreadCount > 0 && (
-              <div className={styles.notificationDot}>{unreadCount}</div>
-            )}
-          </button>
-          {local.permissions.role === "owner" && (
-            <button
-              onClick={() => (isRecording ? stopRecording() : startRecording())}
-            >
-              Запись {isRecording ? "да" : "нет"}
-            </button>
-          )}
-        </div>
-      )}
+      {!hideControls && <ControlBar haveFiles={files.length > 0} />}
 
       <RoomAudioRenderer />
     </div>

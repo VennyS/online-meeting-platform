@@ -9,6 +9,7 @@ import { LiveKitRoom } from "@livekit/components-react";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
+import { FocusProvider } from "@/app/providers/focus.provider";
 
 export default function MeetingRoom() {
   const { roomId } = useParams();
@@ -60,7 +61,9 @@ export default function MeetingRoom() {
       >
         {user && (
           <ParticipantsProvider localUserId={user.id} ws={ws}>
-            <RoomContent roomId={roomId as string} roomName={roomName} />
+            <FocusProvider>
+              <RoomContent roomId={roomId as string} roomName={roomName} />
+            </FocusProvider>
           </ParticipantsProvider>
         )}
       </LiveKitRoom>

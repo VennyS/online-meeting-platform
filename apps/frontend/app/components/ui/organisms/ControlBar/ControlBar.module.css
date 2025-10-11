@@ -1,0 +1,15 @@
+.controls {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+
+  svg {
+    width: 1.2em;
+    height: 1.2em;
+  }
+}
+
+.controlsSection {
+  display: flex;
+  gap: 8px;
+}

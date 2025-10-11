@@ -153,6 +153,24 @@ export class RedisService {
     return rolePermissions;
   }
 
+  async setPermissions(
+    roomId: string,
+    permissions: Record<string, Record<string, any>>,
+  ) {
+    const key = `room:${roomId}:permissions`;
+
+    // Преобразуем объект ролей в пары для hset
+    const entries = Object.entries(permissions).map(([role, perms]) => [
+      role,
+      JSON.stringify(perms),
+    ]);
+
+    // Сохраняем все роли за один вызов
+    await this.client.hset(key, ...entries.flat());
+
+    return permissions;
+  }
+
   // --- Презентация ---
 
   async setPresentation(

@@ -1,270 +1,132 @@
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Avatar,
+  Typography,
+  IconButton,
+  Menu,
+  MenuItem,
+  Box,
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import React, { useState } from "react";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { Permissions, RoomRole } from "@/app/types/room.types";
-import styles from "./ParticipantsList.module.css";
-import { useState, useEffect } from "react";
+import { RoomRoleMap } from "@/app/types/room.types";
 
-export function ParticipantsList({
-  roomId,
-  roomName,
-}: {
-  roomId: string;
-  roomName: string;
-}) {
-  const {
-    local,
-    remote,
-    waitingGuests,
-    permissionsMap,
-    blacklist,
-    updateUserRole,
-    updateRolePermissions,
-    approveGuest,
-    rejectGuest,
-    addToBlackList,
-    removeFromBlackList,
-  } = useParticipantsContext();
-  const [canShareScreenValue, setCanShareScreenValue] = useState<
-    RoomRole | "all"
-  >(getPermissionValue("canShareScreen"));
-  const [canStartPresentationValue, setCanStartPresentationValue] = useState<
-    RoomRole | "all"
-  >(getPermissionValue("canStartPresentation"));
-  const [copied, setCopied] = useState(false);
-  const [manualText, setManualText] = useState<string | null>(null);
+const ParticipantsList = () => {
+  const { local, remote, updateUserRole, addToBlackList } =
+    useParticipantsContext();
 
-  useEffect(() => {
-    // Проверяем, что все роли присутствуют в permissionsMap
-    if (
-      permissionsMap.owner &&
-      permissionsMap.admin &&
-      permissionsMap.participant
-    ) {
-      const shareScreenValue = getPermissionValue("canShareScreen");
-      const startPresentationValue = getPermissionValue("canStartPresentation");
-      setCanShareScreenValue(shareScreenValue);
-      setCanStartPresentationValue(startPresentationValue);
-    }
-  }, [permissionsMap]);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
 
-  const generateMeetingInfo = () => {
-    const meetingDate = new Date().toLocaleString("ru-RU", {
-      timeZone: "Europe/Moscow",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const meetingLink = `${window.location.origin}/room/${roomId}`;
+  const participants = [local, ...remote];
 
-    return `Встреча: ${roomName}
-Дата: ${meetingDate} (Москва)
-Подключиться: ${meetingLink}`;
-  };
-
-  const handleCopy = async () => {
-    const text = generateMeetingInfo();
-
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Не удалось скопировать:", err);
-      setManualText(text);
-    }
-  };
-
-  // helper — варианты выбора
-  const roleOptions: { label: string; value: RoomRole | "all" }[] = [
-    { label: "Только владелец", value: "owner" },
-    { label: "Владелец и админ", value: "admin" },
-    { label: "Все", value: "all" },
-  ];
-
-  // обработка смены dropdown
-  const handlePermissionChange = (
-    permission: keyof Permissions,
-    value: RoomRole | "all",
-    set: (role: RoomRole | "all") => void
+  const handleOpenMenu = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    participantId: string,
+    name: string
   ) => {
-    if (value === "all") {
-      updateRolePermissions("owner", permission, true);
-      updateRolePermissions("admin", permission, true);
-      updateRolePermissions("participant", permission, true);
-      set("all");
-    } else if (value === "admin") {
-      updateRolePermissions("owner", permission, true);
-      updateRolePermissions("admin", permission, true);
-      updateRolePermissions("participant", permission, false);
-      set("admin");
-    } else if (value === "owner") {
-      updateRolePermissions("owner", permission, true);
-      updateRolePermissions("admin", permission, false);
-      updateRolePermissions("participant", permission, false);
-      set("owner");
-    }
+    setAnchorEl(event.currentTarget);
+    setSelectedId(participantId);
+    setName(name);
   };
 
-  function getPermissionValue(permission: keyof Permissions): RoomRole | "all" {
-    const ownerHas = permissionsMap["owner"]?.permissions[permission];
-    const adminHas = permissionsMap["admin"]?.permissions[permission];
-    const participantHas =
-      permissionsMap["participant"]?.permissions[permission];
-
-    if (ownerHas && adminHas && participantHas) return "all";
-    if (ownerHas && adminHas && !participantHas) return "admin";
-    if (ownerHas && !adminHas && !participantHas) return "owner";
-    return "owner";
-  }
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+    setSelectedId(null);
+    setName("");
+  };
 
   return (
-    <div className={styles.participantsList}>
-      <button onClick={handleCopy}>Поделиться встречей</button>
+    <Accordion>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Typography sx={{ flexGrow: 1, m: 0 }}>Участники</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {participants.length}
+        </Typography>
+      </AccordionSummary>
 
-      {waitingGuests && (
-        <>
-          <h2>Ожидающие гости</h2>
-          <div>
-            {waitingGuests.map((guest) => (
-              <div key={guest.guestId} className={styles.participantWrapper}>
-                <p>{guest.name}</p>
-                <button onClick={() => approveGuest(guest.guestId)}>
-                  Одобрить
-                </button>
-                <button onClick={() => rejectGuest(guest.guestId)}>
-                  Отклонить
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      <h2>Участники встречи</h2>
-      <div>
-        {[local, ...remote].map(({ participant, permissions }) => {
+      <AccordionDetails>
+        {participants.map(({ participant, permissions, ...avatarProps }) => {
           const role = permissions.role;
-          return (
-            <div key={participant.sid} className={styles.participantWrapper}>
-              <p>{participant.name || participant.identity || "Аноним"}</p>
-              <p>Роль: {role}</p>
 
+          return (
+            <Box
+              key={participant.sid}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Avatar
+                  sx={{ bgcolor: avatarProps.avatarColor, fontSize: "16px" }}
+                >
+                  {participant.name?.charAt(0).toUpperCase()}
+                </Avatar>
+                <Box>
+                  <Typography>
+                    {participant.name || participant.identity || "Аноним"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {RoomRoleMap[role]}
+                  </Typography>
+                </Box>
+              </Box>
               {local.permissions.role === "owner" &&
-                participant !== local.participant && (
-                  <div>
-                    <button
-                      onClick={() =>
-                        updateUserRole(participant.identity, "admin")
-                      }
-                    >
-                      Сделать админом
-                    </button>
-                    <button
-                      onClick={() =>
-                        updateUserRole(participant.identity, "participant")
-                      }
-                    >
-                      Сделать участником
-                    </button>
-                    <button
-                      onClick={() => {
-                        addToBlackList(
-                          participant.identity,
-                          participant.name || "unkown"
-                        );
-                      }}
-                    >
-                      Исключить
-                    </button>
-                  </div>
+                participant.identity != local.participant.identity && (
+                  <IconButton
+                    size="small"
+                    onClick={(e) =>
+                      handleOpenMenu(
+                        e,
+                        participant.identity,
+                        participant.name || participant.identity || "Аноним"
+                      )
+                    }
+                  >
+                    <MoreVertIcon />
+                  </IconButton>
                 )}
-            </div>
+            </Box>
           );
         })}
+      </AccordionDetails>
 
-        <details>
-          <summary>Чёрный список</summary>
-          {blacklist.map((e) => {
-            return (
-              <div key={e.ip + e.name}>
-                <p>{e.name}</p>
-                <button
-                  onClick={() => {
-                    removeFromBlackList(e.ip);
-                  }}
-                >
-                  Вернуть
-                </button>
-              </div>
-            );
-          })}
-        </details>
-      </div>
-
-      {/* Управление правами */}
-      {local.permissions.role === "owner" && (
-        <div className={styles.permissionsSection}>
-          <h2>Права</h2>
-          <div className={styles.permissionControl}>
-            <label>Может делиться экраном:</label>
-            <select
-              title="canShareScreen dropdown"
-              value={canShareScreenValue}
-              onChange={(e) =>
-                handlePermissionChange(
-                  "canShareScreen",
-                  e.target.value as RoomRole | "all",
-                  setCanShareScreenValue
-                )
-              }
-            >
-              {roleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className={styles.permissionControl}>
-            <label>Может делиться презентацией:</label>
-            <select
-              title="canStartPresentation dropdown"
-              value={canStartPresentationValue}
-              onChange={(e) =>
-                handlePermissionChange(
-                  "canStartPresentation",
-                  e.target.value as RoomRole | "all",
-                  setCanStartPresentationValue
-                )
-              }
-            >
-              {roleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* сюда можно добавить другие права аналогично */}
-        </div>
-      )}
-
-      {copied && (
-        <div className={styles.copiedToast}>Скопировано в буфер обмена</div>
-      )}
-      {manualText && (
-        <div className={styles.manualCopy}>
-          <div>Не удалось скопировать. Скопируйте вручную:</div>
-          <textarea
-            readOnly
-            value={manualText}
-            className={styles.manualTextarea}
-          />
-        </div>
-      )}
-    </div>
+      {/* Выпадающее меню для действий */}
+      <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleCloseMenu}>
+        <MenuItem
+          onClick={() => {
+            updateUserRole(selectedId!, "admin");
+            handleCloseMenu();
+          }}
+        >
+          Сделать админом
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            updateUserRole(selectedId!, "participant");
+            handleCloseMenu();
+          }}
+        >
+          Сделать участником
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            addToBlackList(selectedId!, name);
+            handleCloseMenu();
+          }}
+        >
+          Исключить
+        </MenuItem>
+      </Menu>
+    </Accordion>
   );
-}
+};
+
+export default ParticipantsList;
