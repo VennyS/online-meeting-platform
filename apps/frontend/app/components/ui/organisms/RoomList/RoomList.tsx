@@ -14,7 +14,7 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import { RoomReportsModal } from "../RoomReportsModal/RoomReportsModal";
-import RoomFilesModal from "../RoomFilesModal/RoomFilesModal";
+import { RoomFilesModal } from "../RoomFilesModal/RoomFilesModal";
 
 import RoomCardGrid from "../RoomCardGrid/RoomCardGrid";
 import { RoomTable } from "../RoomTable/RoomTable";
@@ -73,9 +73,35 @@ export default function RoomList({
 
   return (
     <>
-      <Button onClick={() => setModalState({ modal: Modal.Create })}>
-        Создать встречу
-      </Button>
+      <Box
+        sx={{
+          mb: 2,
+          p: { xs: 2, sm: 3 },
+          borderRadius: 2,
+          textAlign: "center",
+          maxWidth: "800px",
+        }}
+      >
+        <Typography variant="h3" sx={{ mb: "8px" }}>
+          Добро пожаловать!
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          fontSize="1.5rem"
+          sx={{ color: "text.secondary", lineHeight: "1.4" }}
+        >
+          Создавайте встречи, записывайте их, транслируйте экран или
+          презентацию, отслеживайте отчёты. Всё просто, удобно и быстро.
+        </Typography>
+        <Button
+          onClick={() => setModalState({ modal: Modal.Create })}
+          variant="contained"
+          sx={{ mt: 2 }}
+        >
+          Новая встреча
+        </Button>
+      </Box>
+
       <Paper
         elevation={1}
         sx={{
