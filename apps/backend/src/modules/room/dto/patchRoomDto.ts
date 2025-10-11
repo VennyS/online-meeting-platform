@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsDate,
+  IsEnum,
   IsInt,
   IsOptional,
   IsPositive,
@@ -8,6 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PermissionLevel } from '@prisma/client';
 
 export class PatchRoomDto {
   @IsOptional()
@@ -20,7 +22,7 @@ export class PatchRoomDto {
   description?: string;
 
   @IsOptional()
-  @Type(() => Date) // аналог z.coerce.date()
+  @Type(() => Date)
   @IsDate()
   startAt?: Date;
 
@@ -56,4 +58,12 @@ export class PatchRoomDto {
   @IsOptional()
   @IsBoolean()
   cancelled?: boolean;
+
+  @IsEnum(PermissionLevel)
+  @IsOptional()
+  canShareScreen: PermissionLevel = PermissionLevel.ALL;
+
+  @IsEnum(PermissionLevel)
+  @IsOptional()
+  canStartPresentation: PermissionLevel = PermissionLevel.ALL;
 }
