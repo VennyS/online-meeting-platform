@@ -4,18 +4,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import PresentToAllOutlinedIcon from "@mui/icons-material/PresentToAllOutlined";
 import CancelPresentationOutlinedIcon from "@mui/icons-material/CancelPresentationOutlined";
-
-export interface IFile {
-  id: number;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
-  url: string;
-}
-
-interface PresentationListProps {
-  files: IFile[];
-}
+import { PresentationListProps } from "./types";
 
 export const PresentationList = ({ files }: PresentationListProps) => {
   const { presentations, startPresentation, finishPresentation } =

@@ -14,7 +14,7 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
           sx={{
             backgroundColor: "rgb(255, 255, 255)",
             color: "rgb(17, 24, 39)",
-            mb: 1.5, // 12px
+            mb: 1.5,
             border: "1px solid rgba(0, 0, 0, 0.12)",
             borderRadius: 1,
             overflow: "hidden",
@@ -35,7 +35,7 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <MeetingRoomOutlinedIcon sx={{ color: "rgb(55, 65, 81)" }} />
               <div>
                 <Typography variant="body1">{room.name}</Typography>
