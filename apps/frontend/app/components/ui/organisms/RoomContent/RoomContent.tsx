@@ -97,6 +97,7 @@ export const RoomContent = ({
                   {carouselTracks.map((t) => {
                     return (
                       <ParticipantTile
+                        key={t.participant.identity + t.source}
                         trackReference={t}
                         className={styles.carouselTile}
                       />
