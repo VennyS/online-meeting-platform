@@ -337,6 +337,7 @@ export class WaitingRoomService {
         currentPage: presentation.currentPage,
         zoom: presentation.zoom,
         scroll: presentation.scroll,
+        mode: presentation.mode,
       },
     });
 

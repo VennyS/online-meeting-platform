@@ -1,4 +1,8 @@
-import { useParticipants, useRoomContext } from "@livekit/components-react";
+import {
+  TrackReference,
+  useParticipants,
+  useRoomContext,
+} from "@livekit/components-react";
 import {
   LocalParticipant,
   Participant,
@@ -80,6 +84,7 @@ export type Presentation = {
   source: Track.Source;
   participant: Participant;
   local: boolean;
+  video?: TrackReference;
 };
 
 type ParticipantWithPermissions = {
