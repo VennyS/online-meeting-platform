@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import IconButton from "@mui/material/IconButton";
 import MicOutlinedIcon from "@mui/icons-material/MicOutlined";
 import MicOffOutlinedIcon from "@mui/icons-material/MicOffOutlined";
@@ -21,7 +21,7 @@ import {
   useRoomContext,
   useTrackToggle,
 } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { RoomEvent, Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
 import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
@@ -33,7 +33,6 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
     local: { permissions },
     openedRightPanel,
     unreadCount,
-    remote,
     waitingGuests,
     handleChangeOpenPanel,
     stopRecording,
@@ -43,6 +42,28 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const isMobile = useMediaQuery("(max-width:540px)");
 
   const room = useRoomContext();
+  const [isRecording, setIsRecording] = useState(room.isRecording);
+  const [recordingPending, setRecordingPending] = useState(false);
+
+  useEffect(() => {
+    if (!room) return;
+
+    const handleStatus = (recording: boolean) => {
+      setRecordingPending(false);
+      setIsRecording(recording);
+    };
+
+    room.on(RoomEvent.RecordingStatusChanged, handleStatus);
+
+    return () => {
+      room.off(RoomEvent.RecordingStatusChanged, handleStatus);
+    };
+  }, [room]);
+
+  const handleRecordingClick = () => {
+    setRecordingPending(true);
+    isRecording ? stopRecording() : startRecording();
+  };
 
   const {
     buttonProps: {
@@ -119,12 +140,12 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
         {permissions.role === "owner" && (
           <IconButton
             title="Запись"
-            onClick={() =>
-              room.isRecording ? stopRecording() : startRecording()
-            }
+            loading={recordingPending}
+            loadingIndicator={<Loader />}
+            onClick={handleRecordingClick}
             sx={IconButtonSx}
           >
-            {room.isRecording ? (
+            {isRecording ? (
               <RadioButtonCheckedOutlinedIcon color="error" />
             ) : (
               <RadioButtonUncheckedOutlinedIcon />
