@@ -130,30 +130,35 @@ export class RecordingService {
       const msgDate = new Date(msg.createdAt);
       return msgDate >= startDate && msgDate <= endDate;
     });
+    if (filteredMessages.length > 0) {
+      const txtContent = filteredMessages
+        .map((msg) => {
+          const time = format(new Date(msg.createdAt), 'HH:mm:ss');
+          return `[${time}] ${msg.user.firstName}: ${msg.text}`;
+        })
+        .join('\n');
 
-    const txtContent = filteredMessages
-      .map((msg) => {
-        const time = format(new Date(msg.createdAt), 'HH:mm:ss');
-        return `[${time}] ${msg.user.firstName}: ${msg.text}`;
-      })
-      .join('\n');
+      const txtFileName = fileName.replace('.mp4', '.txt');
 
-    const txtFileName = fileName.replace('.mp4', '.txt');
+      const txtFile: Express.Multer.File = {
+        fieldname: 'file',
+        originalname: txtFileName,
+        encoding: '7bit',
+        mimetype: 'text/plain',
+        buffer: Buffer.from(txtContent, 'utf-8'),
+        size: Buffer.byteLength(txtContent, 'utf-8'),
+        destination: '',
+        filename: txtFileName,
+        path: '',
+        stream: undefined as any,
+      };
 
-    const txtFile: Express.Multer.File = {
-      fieldname: 'file',
-      originalname: txtFileName,
-      encoding: '7bit',
-      mimetype: 'text/plain',
-      buffer: Buffer.from(txtContent, 'utf-8'),
-      size: Buffer.byteLength(txtContent, 'utf-8'),
-      destination: '',
-      filename: txtFileName,
-      path: '',
-      stream: undefined as any,
-    };
-
-    await this.fileManagementService.uploadFile(room.id, userId ?? 0, txtFile);
+      await this.fileManagementService.uploadFile(
+        room.id,
+        userId ?? 0,
+        txtFile,
+      );
+    }
 
     await this.redis.deleteEgressUser(event.egressId);
 
