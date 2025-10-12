@@ -82,6 +82,8 @@ export const ParticipantTile: (
       : participantName;
 
   const isNotFocusTrack = !!focusTrack && trackReference != focusTrack;
+  const isFocusTrack =
+    (!!focusTrack && trackReference == focusTrack) || !focusTrack;
 
   return (
     <Box
@@ -107,7 +109,7 @@ export const ParticipantTile: (
       {isPres ? (
         <>
           <PDFViewer
-            isAuthor={trackReference.local}
+            isAuthor={trackReference.local && isFocusTrack}
             {...trackReference}
             onPageChange={
               trackReference.local
@@ -132,10 +134,10 @@ export const ParticipantTile: (
             }
           />
 
-          {!!trackReference.video && (
+          {!!trackReference.video && isFocusTrack && (
             <VideoTrack
               className={styles.presentationVideoTrack}
-              title="title"
+              title={`Камера ${trackReference.participant.name}`}
               trackRef={trackReference.video}
               manageSubscription={autoManageSubscription}
             />
