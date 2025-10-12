@@ -67,7 +67,7 @@ export default function RoomModal({
     initialData?.canStartPresentation ?? "ALL"
   );
 
-  const [files, setFiles] = useState<IFile[]>([]);
+  const [files, setFiles] = useState<(IFile & { isNew?: boolean })[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,44 +101,54 @@ export default function RoomModal({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
+
     const invalidFiles = selectedFiles.filter(
       (file) => file.type !== "application/pdf"
     );
     if (invalidFiles.length > 0) {
-      setFiles([]);
       setUploadStatus("Пожалуйста, выберите только файлы в формате PDF");
       return;
     }
 
-    const newFiles: IFile[] = selectedFiles.map((file, index) => ({
-      id: Date.now() + index,
-      fileName: file.name,
-      fileType: "PDF" as FileType,
-      fileSize: file.size,
-      url: URL.createObjectURL(file),
-    }));
-    setFiles(newFiles);
+    const newFiles: (IFile & { isNew?: boolean })[] = selectedFiles.map(
+      (file, index) => ({
+        id: Date.now() + index,
+        fileName: file.name,
+        fileType: "PDF",
+        fileSize: file.size,
+        url: URL.createObjectURL(file),
+        isNew: true,
+      })
+    );
+
+    setFiles((prev) => [...prev, ...newFiles]);
     setUploadStatus(null);
   };
 
   const handleUploadFiles = async (roomShortId: string) => {
-    if (files.length === 0) return;
+    const newFiles = files.filter((f) => f.isNew);
+    if (newFiles.length === 0) return;
+
     try {
       const fileObjects: File[] = await Promise.all(
-        files.map(async (file) => {
+        newFiles.map(async (file) => {
           const blob = await fetch(file.url).then((res) => res.blob());
           return new File([blob], file.fileName, { type: "application/pdf" });
         })
       );
+
       const urls = await fileService.uploadFiles(roomShortId, fileObjects);
-      const uploadedFiles: IFile[] = files.map((file, index) => ({
-        id: Date.now() + index,
-        fileName: file.fileName,
-        fileType: "PDF" as FileType,
-        fileSize: file.fileSize,
-        url: urls[index],
-      }));
-      setFiles(uploadedFiles);
+
+      const uploadedFiles: (IFile & { isNew?: boolean })[] = newFiles.map(
+        (file, index) => ({
+          ...file,
+          url: urls[index],
+          isNew: false,
+        })
+      );
+
+      setFiles((prev) => [...prev.filter((f) => !f.isNew), ...uploadedFiles]);
+
       setUploadStatus("Файлы успешно загружены");
     } catch (err) {
       console.error(err);
