@@ -39,22 +39,23 @@ export function useRoomTracksWithPresentations({
     useMemo(() => {
       if (!tracks) return presentations;
 
-      // Копия, чтобы не мутировать оригинал
-      let trackArray: TrackReferenceOrPlaceholder[] = tracks.map((t) =>
-        t.publication
-          ? t
-          : ({
-              ...t,
-              publication: undefined,
-            } as TrackReferenceOrPlaceholder)
-      );
+      const trackArray: TrackReferenceOrPlaceholder[] = tracks
+        .map((t) =>
+          t.publication
+            ? t
+            : ({
+                ...t,
+                publication: undefined,
+              } as TrackReferenceOrPlaceholder)
+        )
+        .filter(
+          (t) => !t.participant.isLocal || !t.participant.permissions?.hidden
+        );
 
-      // Пробегаем по всем презентациям
       const result: (TrackReferenceOrPlaceholder | Presentation)[] = [];
 
       presentations.forEach((p) => {
         if (p.mode === "presentationWithCamera") {
-          // Находим камеру участника, который ведёт презентацию
           const cameraTrackIndex = trackArray.findIndex(
             (t) =>
               t.source === Track.Source.Camera &&
@@ -74,7 +75,6 @@ export function useRoomTracksWithPresentations({
           }
         }
 
-        // Локальные презентации вверх списка
         if (p.local) {
           result.unshift(p);
         } else {
@@ -82,7 +82,6 @@ export function useRoomTracksWithPresentations({
         }
       });
 
-      // Добавляем оставшиеся треки (камеры/экраны без презентаций)
       return [...result, ...trackArray];
     }, [tracks, presentations]);
 
