@@ -1,4 +1,5 @@
 import {
+  isTrackReference,
   TrackReferenceOrPlaceholder,
   useTracks,
 } from "@livekit/components-react";
@@ -62,8 +63,12 @@ export function useRoomTracksWithPresentations({
 
           if (cameraTrackIndex !== -1) {
             const [cameraTrack] = trackArray.splice(cameraTrackIndex, 1);
-            // Проверяем, что это реальный трек (а не placeholder)
-            if ("publication" in cameraTrack && cameraTrack.publication) {
+
+            if (
+              isTrackReference(cameraTrack) &&
+              cameraTrack.publication.track &&
+              !cameraTrack.publication.isMuted
+            ) {
               p = { ...p, video: cameraTrack };
             }
           }
