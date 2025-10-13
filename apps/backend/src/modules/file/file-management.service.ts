@@ -207,7 +207,7 @@ export class FileManagementService {
     skip = 0,
     take = 10,
     types: FileType[] = [],
-  ): Promise<any[]> {
+  ) {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
       include: { allowedParticipants: true },

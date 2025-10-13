@@ -48,6 +48,9 @@ export class GetDto {
   cancelled: boolean;
 
   @ApiProperty()
+  finished: boolean;
+
+  @ApiProperty()
   canShareScreen: PermissionLevel;
 
   @ApiProperty()

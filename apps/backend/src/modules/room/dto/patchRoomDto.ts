@@ -59,11 +59,15 @@ export class PatchRoomDto {
   @IsBoolean()
   cancelled?: boolean;
 
-  @IsEnum(PermissionLevel)
   @IsOptional()
-  canShareScreen: PermissionLevel = PermissionLevel.ALL;
+  @IsBoolean()
+  finished?: boolean;
 
   @IsEnum(PermissionLevel)
   @IsOptional()
-  canStartPresentation: PermissionLevel = PermissionLevel.ALL;
+  canShareScreen?: PermissionLevel = PermissionLevel.ALL;
+
+  @IsEnum(PermissionLevel)
+  @IsOptional()
+  canStartPresentation?: PermissionLevel = PermissionLevel.ALL;
 }
