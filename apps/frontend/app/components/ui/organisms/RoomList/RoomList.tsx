@@ -44,6 +44,16 @@ export default function RoomList({
     modal: undefined,
   });
 
+  const onUpdateRoom = (room: IRoom) => {
+    setRooms((prev) =>
+      prev.map((r) => (r.id === room.id ? { ...room, r } : r))
+    );
+  };
+
+  const onCreateRoom = (room: IRoom) => {
+    setRooms((prev) => [room, ...prev]);
+  };
+
   const isMobile = useMediaQuery("(max-width:700px)");
 
   useEffect(() => {
@@ -154,7 +164,11 @@ export default function RoomList({
       )}
 
       {modalState?.modal === Modal.Create && (
-        <RoomModal mode={modalState.modal} onClose={onModalClose} />
+        <RoomModal
+          mode={modalState.modal}
+          onClose={onModalClose}
+          onCreateRoom={onCreateRoom}
+        />
       )}
 
       {modalState?.modal === Modal.Edit && (
@@ -162,6 +176,7 @@ export default function RoomList({
           mode={modalState.modal}
           onClose={onModalClose}
           initialData={modalState.room}
+          onUpdateRoom={onUpdateRoom}
         />
       )}
     </>

@@ -20,8 +20,8 @@ import { roomService } from "@/app/services/room.service";
 import { useUser } from "@/app/hooks/useUser";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
 import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
-import { fileService, FileType, IFile } from "@/app/services/file.service";
-import { Permissions, Role, IRoom } from "@/app/types/room.types";
+import { fileService, IFile } from "@/app/services/file.service";
+import { Permissions, Role } from "@/app/types/room.types";
 import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
 import { FileCard } from "../FileCard/FileCard";
 import { RoomModalProps } from "./types";
@@ -30,6 +30,8 @@ export default function RoomModal({
   mode,
   initialData,
   onClose,
+  onUpdateRoom,
+  onCreateRoom,
 }: RoomModalProps) {
   const router = useRouter();
   const { user } = useUser();
@@ -59,7 +61,7 @@ export default function RoomModal({
   const [allowEarlyJoin, setAllowEarlyJoin] = useState(
     initialData?.allowEarlyJoin ?? true
   );
-  const [isConnectInstantly, setIsConnectInstantly] = useState(true);
+  const [isConnectInstantly, setIsConnectInstantly] = useState(false);
   const [canShareScreen, setCanShareScreen] = useState<Role>(
     initialData?.canShareScreen ?? "ALL"
   );
@@ -229,6 +231,7 @@ export default function RoomModal({
         });
 
         await handleUploadFiles(room.shortId);
+        onCreateRoom?.(room);
 
         if (isConnectInstantly) {
           let nextUrl = `/room/${room.shortId}`;
@@ -238,7 +241,7 @@ export default function RoomModal({
           onClose();
         }
       } else if (mode === "edit" && initialData) {
-        await roomService.updateRoom(initialData.shortId, {
+        const room = await roomService.updateRoom(initialData.shortId, {
           name,
           description,
           startAt: startDate,
@@ -254,6 +257,8 @@ export default function RoomModal({
         });
 
         await handleUploadFiles(initialData.shortId);
+
+        onUpdateRoom?.(room);
         onClose();
       }
     } catch (err) {

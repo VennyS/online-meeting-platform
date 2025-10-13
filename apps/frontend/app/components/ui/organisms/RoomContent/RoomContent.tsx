@@ -5,7 +5,6 @@ import "@livekit/components-styles";
 import {
   FocusLayoutContainer,
   RoomAudioRenderer,
-  TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/hooks/useUser";
