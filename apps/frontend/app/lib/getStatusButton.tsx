@@ -6,7 +6,7 @@ export const getStatusButton = (room: IRoom) => {
     ? "Отменена"
     : new Date(room.startAt) > new Date()
     ? "Предстоящая"
-    : new Date(room.startAt) < new Date()
+    : room.finished
     ? "Завершена"
     : "Идет";
 
@@ -14,7 +14,7 @@ export const getStatusButton = (room: IRoom) => {
     ? "error"
     : new Date(room.startAt) > new Date()
     ? "info"
-    : new Date(room.startAt) < new Date()
+    : room.finished
     ? "success"
     : "warning";
 

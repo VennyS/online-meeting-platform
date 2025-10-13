@@ -43,6 +43,7 @@ export interface IRoom {
   waitingRoomEnabled: boolean;
   allowEarlyJoin: boolean;
   cancelled: boolean;
+  finished: boolean;
   timeZone: string;
   haveFiles: boolean;
   haveReports: boolean;
