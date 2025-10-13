@@ -455,12 +455,14 @@ export class RedisService {
         );
       }
 
-      sessions.push({
-        startTime: sessionStartTime,
-        endTime,
-        duration,
-        participants,
-      });
+      if (duration === undefined || duration > 0) {
+        sessions.push({
+          startTime: sessionStartTime,
+          endTime,
+          duration,
+          participants,
+        });
+      }
     }
 
     return { sessions };
