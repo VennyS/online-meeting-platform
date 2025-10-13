@@ -17,10 +17,10 @@ import {
 } from "@mui/material";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
-import { roomService } from "@/app/services/room.service";
-import { IPrequisites, RoomWSMessage } from "@/app/types/room.types";
+import { RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
+import { usePrequisites } from "@/app/providers/prequisites.provider";
 
 export default function PrejoinPage() {
   const { roomId } = useParams();
@@ -32,21 +32,7 @@ export default function PrejoinPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isRoomOwner, setIsRoomOwner] = useState(false);
-  const [isPrequisitesLoading, setIsPrequisitesLoading] = useState(true);
-  const [prequisites, setPrequisites] = useState<IPrequisites>({
-    guestAllowed: false,
-    passwordRequired: false,
-    waitingRoomEnabled: false,
-    isOwner: false,
-    allowEarlyJoin: false,
-    name: "",
-    description: "",
-    startAt: new Date(),
-    cancelled: false,
-    isFinished: false,
-    isBlackListed: false,
-  });
+  const { prequisites, isLoading: isPrequisitesLoading } = usePrequisites();
 
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
@@ -56,31 +42,17 @@ export default function PrejoinPage() {
   } | null>(null);
 
   useEffect(() => {
-    const checkPrerequisites = async () => {
-      if (!roomId) return;
+    if (isPrequisitesLoading) return;
 
-      try {
-        setIsPrequisitesLoading(true);
-        const data = await roomService.prequisites(roomId as string);
-        setPrequisites(data);
-        setIsRoomOwner(data.isOwner);
+    if (prequisites.isBlackListed) router.replace("/404");
 
-        if (data.isBlackListed) router.replace("/404");
-
-        if (!data.allowEarlyJoin && new Date(data.startAt) > new Date()) {
-          startCountdown(data.startAt);
-        }
-      } catch (err) {
-        if (err instanceof AxiosError && err.response?.status === 404) {
-          router.replace("/404");
-        }
-      } finally {
-        setIsPrequisitesLoading(false);
-      }
-    };
-
-    checkPrerequisites();
-  }, [roomId, user]);
+    if (
+      !prequisites.allowEarlyJoin &&
+      new Date(prequisites.startAt) > new Date()
+    ) {
+      startCountdown(prequisites.startAt);
+    }
+  }, [prequisites]);
 
   useEffect(() => {
     if (isUserLoading || isPrequisitesLoading) return;
@@ -111,13 +83,13 @@ export default function PrejoinPage() {
       !isPrequisitesLoading &&
       user &&
       !user.isGuest &&
-      isRoomOwner &&
+      prequisites.isOwner &&
       roomId &&
       !prequisites.isFinished
     ) {
       handleRoomOwnerAccess();
     }
-  }, [user, isRoomOwner, roomId]);
+  }, [user, prequisites.isOwner, roomId]);
 
   const handleRoomOwnerAccess = async () => {
     try {
