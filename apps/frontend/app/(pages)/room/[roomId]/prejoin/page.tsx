@@ -208,8 +208,34 @@ export default function PrejoinPage() {
     new Date(prequisites.startAt) > new Date() &&
     !!timeLeft;
 
-  if (prequisites.isFinished) return <Typography>Встреча завершена</Typography>;
-  if (prequisites.cancelled) return <Typography>Встреча отменена</Typography>;
+  if (prequisites.isFinished)
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        p={2}
+        sx={{ backgroundColor: "primary.main", boxSizing: "border-box" }}
+      >
+        <Typography variant="h4" color="white">
+          Встреча завершена
+        </Typography>
+      </Box>
+    );
+  if (prequisites.cancelled) return;
+  <Box
+    display="flex"
+    justifyContent="center"
+    alignItems="center"
+    minHeight="100vh"
+    p={2}
+    sx={{ backgroundColor: "primary.main", boxSizing: "border-box" }}
+  >
+    <Typography variant="h4" color="white">
+      Встреча отменена
+    </Typography>
+  </Box>;
 
   return (
     <Box
