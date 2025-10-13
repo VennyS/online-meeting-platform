@@ -133,7 +133,27 @@ export default function RoomList({
 
         <Divider />
         <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
-          {isMobile ? (
+          {rooms.length === 0 ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <Typography fontWeight={400}>
+                История встреч отсутствует, но Вам выдалась возможность положить
+                ей начало
+              </Typography>
+              <Button
+                onClick={() => setModalState({ modal: Modal.Create })}
+                variant="outlined"
+              >
+                Новая встреча
+              </Button>
+            </Box>
+          ) : isMobile ? (
             <RoomCardGrid
               rooms={rooms}
               onModalOpen={(params) => setModalState(params)}

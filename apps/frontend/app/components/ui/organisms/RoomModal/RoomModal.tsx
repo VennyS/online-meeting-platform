@@ -430,6 +430,16 @@ export default function RoomModal({
           )}
         </Box>
 
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={isConnectInstantly}
+              onChange={(e) => setIsConnectInstantly(e.target.checked)}
+            />
+          }
+          label="Присоединиться сразу после создания"
+        />
+
         <Button variant="contained" onClick={handleSubmit} sx={{ mt: 2 }}>
           {mode === "edit" ? "Сохранить" : "Создать"}
         </Button>
