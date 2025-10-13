@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { RoomServiceClient } from 'livekit-server-sdk';
+import { RoomMetadata } from './interfaces/roomMetadata.interface';
 
 @Injectable()
 export class LivekitService {
@@ -7,16 +8,20 @@ export class LivekitService {
 
   constructor(private readonly client: RoomServiceClient) {}
 
-  async listParticipants(roomName: string) {
-    try {
-      return await this.client.listParticipants(roomName);
-    } catch (error) {
-      this.logger.error(
-        `Error listing participants for ${roomName}: ${error.message}`,
-        error.stack,
-      );
-      return [];
-    }
+  async createRoom(
+    roomName: string,
+    startAt: Date,
+    durationMinutes: number | null,
+  ) {
+    const metadata: RoomMetadata = {
+      startAt: startAt,
+      durationMinutes: durationMinutes,
+    };
+
+    await this.client.createRoom({
+      name: roomName,
+      metadata: JSON.stringify(metadata),
+    });
   }
 
   async removeParticipant(roomName: string, identity: string): Promise<void> {
