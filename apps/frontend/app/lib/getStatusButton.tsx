@@ -1,7 +1,11 @@
 import { Button } from "@mui/material";
 import { IRoom } from "../types/room.types";
+import {
+  RoomWithStatus,
+  Status,
+} from "../components/ui/organisms/RoomList/types";
 
-export const getStatusButton = (room: IRoom) => {
+export const getRoomStatus = (room: IRoom): Status => {
   const label = room.cancelled
     ? "Отменена"
     : new Date(room.startAt) > new Date()
@@ -18,14 +22,21 @@ export const getStatusButton = (room: IRoom) => {
     ? "success"
     : "warning";
 
+  return {
+    label,
+    color,
+  };
+};
+
+export const getStatusButton = (room: RoomWithStatus) => {
   return (
     <Button
       variant="outlined"
       size="small"
       sx={{ pointerEvents: "none" }}
-      color={color}
+      color={room.color}
     >
-      {label}
+      {room.label}
     </Button>
   );
 };
