@@ -25,7 +25,7 @@ import { Role } from "@/app/types/room.types";
 import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
 import { FileCard } from "../FileCard/FileCard";
 import { RoomData, RoomModalProps, RoomSchema } from "./types";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 export default function RoomModal({
@@ -42,6 +42,7 @@ export default function RoomModal({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<RoomData>({
     resolver: zodResolver(RoomSchema),
@@ -51,7 +52,7 @@ export default function RoomModal({
       startAt: formatDateTimeLocal(
         initialData?.startAt ? new Date(initialData.startAt) : now
       ),
-      durationMinutes: initialData?.durationMinutes,
+      durationMinutes: initialData?.durationMinutes ?? undefined,
       isPublic: initialData?.isPublic ?? false,
       showHistoryToNewbies: initialData?.showHistoryToNewbies ?? false,
       waitingRoomEnabled: initialData?.waitingRoomEnabled ?? false,
@@ -146,7 +147,6 @@ export default function RoomModal({
 
   const handleDelete = async (fileId: number) => {
     try {
-      // Если файл уже загружен на сервер (имеет настоящий ID)
       if (files.find((f) => f.id === fileId)?.url.includes("blob:") === false) {
         await fileService.delete(fileId);
       }
@@ -158,7 +158,6 @@ export default function RoomModal({
 
   const handleRename = async (file: IFile) => {
     try {
-      // Если файл уже загружен на сервер
       if (!file.url.includes("blob:")) {
         await fileService.patch(file.id, file.fileName);
       }
@@ -319,31 +318,47 @@ export default function RoomModal({
           />
           <FormControl fullWidth sx={{ mt: "16px !important" }}>
             <InputLabel>Может делиться экраном</InputLabel>
-            <Select
-              {...register("canShareScreen")}
-              label="Может делиться экраном"
-              error={!!errors.canShareScreen}
-            >
-              {roleOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
+            <Controller
+              name="canShareScreen"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  label="Может делиться экраном"
+                  value={field.value || "ALL"}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  error={!!errors.canShareScreen}
+                >
+                  {roleOptions.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+            />
           </FormControl>
           <FormControl fullWidth sx={{ mt: "16px !important" }}>
             <InputLabel>Может делиться презентацией</InputLabel>
-            <Select
-              {...register("canStartPresentation")}
-              label="Может делиться презентацией"
-              error={!!errors.canStartPresentation}
-            >
-              {roleOptions.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </Select>
+            <Controller
+              name="canStartPresentation"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  label="Может делиться презентацией"
+                  value={field.value || "ALL"}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  error={!!errors.canStartPresentation}
+                >
+                  {roleOptions.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+            />
           </FormControl>
           <FormControlLabel
             control={<Checkbox {...register("isConnectInstantly")} />}

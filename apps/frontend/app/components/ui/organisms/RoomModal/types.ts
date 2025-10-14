@@ -6,8 +6,8 @@ export type RoomModalProps = {
   mode: "create" | "edit";
   initialData?: RoomWithStatus;
   onClose: () => void;
-  onUpdateRoom?: (room: RoomWithStatus) => void;
-  onCreateRoom?: (room: RoomWithStatus) => void;
+  onUpdateRoom?: (room: IRoom) => void;
+  onCreateRoom?: (room: IRoom) => void;
 };
 
 export const RoomSchema = z.object({

@@ -59,14 +59,18 @@ export default function RoomList({
     setModalState(params);
   };
 
-  const onUpdateRoom = (room: RoomWithStatus) => {
+  const onUpdateRoom = (room: IRoom) => {
+    const newRoom = { ...room, ...getRoomStatus(room) };
+
     setRooms((prev) =>
-      prev.map((r) => (r.id === room.id ? { ...room, r } : r))
+      prev.map((r) => (r.id === newRoom.id ? { ...newRoom, r } : r))
     );
   };
 
-  const onCreateRoom = (room: RoomWithStatus) => {
-    setRooms((prev) => [room, ...prev]);
+  const onCreateRoom = (room: IRoom) => {
+    const newRoom = { ...room, ...getRoomStatus(room) };
+
+    setRooms((prev) => [newRoom, ...prev]);
   };
 
   const isMobile = useMediaQuery("(max-width:700px)");
