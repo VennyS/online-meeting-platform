@@ -4,7 +4,6 @@ import { RoomRepository } from 'src/repositories/room.repository';
 import { CreateRoomDto } from './dto/createRoomDto';
 import bcrypt from 'bcrypt';
 import { LivekitService } from '../../common/modules/livekit/livekit.service';
-import { isMeetingFinished } from 'src/common/utils/room.utils';
 import { Prequisites } from './interfaces/prequisites.interface';
 import { RedisService } from '../../common/modules/redis/redis.service';
 import { AddParticipantsDto } from './dto/addParticipantsDto';
@@ -64,20 +63,11 @@ export class RoomService {
     userId: number | null,
     ip: string,
   ): Promise<Prequisites> {
-    let numParticipants = 0;
-    try {
-      const participants = await this.livekit.listParticipants(room.shortId);
-      numParticipants = participants.length;
-    } catch (livekitError) {
-      numParticipants = 0;
-    }
-
-    const isFinished = isMeetingFinished({
-      startAt: room.startAt,
-      durationMinutes: room.durationMinutes,
-      numParticipants,
-      gracePeriod: 5 * 60_000,
-    });
+    await this.livekit.createRoom(
+      room.shortId,
+      room.startAt,
+      room.durationMinutes,
+    );
 
     const isBlackListed = await this.redis.isInBlacklist(room.shortId, ip);
 
@@ -91,7 +81,7 @@ export class RoomService {
       allowEarlyJoin: room.allowEarlyJoin,
       isOwner: userId ? room.ownerId === userId : false,
       cancelled: room.cancelled,
-      isFinished: isFinished,
+      isFinished: room.finished,
       isBlackListed: isBlackListed,
     };
 

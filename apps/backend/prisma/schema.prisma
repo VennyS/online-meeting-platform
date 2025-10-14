@@ -25,6 +25,7 @@ model Room {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   cancelled            Boolean            @default(false)
+  finished             Boolean            @default(false)
 
   canShareScreen       PermissionLevel    @default(ALL)
   canStartPresentation PermissionLevel    @default(ALL)

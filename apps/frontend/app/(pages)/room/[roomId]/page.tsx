@@ -10,6 +10,7 @@ import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
 import { FocusProvider } from "@/app/providers/focus.provider";
+import { usePrequisites } from "@/app/providers/prequisites.provider";
 
 export default function MeetingRoom() {
   const { roomId } = useParams();
@@ -17,6 +18,8 @@ export default function MeetingRoom() {
   const { token, setToken, user } = useUser();
   const { ws, connect } = useWebSocket();
   const router = useRouter();
+
+  const { prequisites, isLoading } = usePrequisites();
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
@@ -56,7 +59,12 @@ export default function MeetingRoom() {
       <LiveKitRoom
         serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
         token={token!}
-        connect
+        connect={
+          !!token &&
+          !isLoading &&
+          !prequisites.isFinished &&
+          !prequisites.cancelled
+        }
         className={styles.roomContainer}
       >
         {user && (

@@ -17,6 +17,7 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
     >
       {rooms.map((room) => (
         <Card
+          onClick={() => onModalOpen({ modal: Modal.Edit, room: room })}
           key={room.id}
           variant="outlined"
           sx={{
@@ -56,12 +57,13 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   onModalOpen({
                     modal: Modal.Reports,
                     shortId: room.shortId,
-                  })
-                }
+                  });
+                }}
               >
                 Отчёты
               </Button>
@@ -70,43 +72,52 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation();
                   onModalOpen({
                     modal: Modal.Files,
                     shortId: room.shortId,
-                  })
-                }
+                  });
+                }}
               >
                 Файлы
               </Button>
             )}
           </Box>
 
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            mt={2}
-            flexWrap="wrap"
-          >
-            <Button
-              onClick={() => onModalOpen({ modal: Modal.Edit, room: room })}
-              variant="outlined"
-              color="primary"
-              size="small"
-            >
-              Изменить
-            </Button>
-            <Button
-              component={Link}
-              href={`/room/${room.shortId}`}
-              variant="contained"
-              color="primary"
-              size="small"
-            >
-              Зайти
-            </Button>
-          </Stack>
+          {room.label === "Предстоящая" && (
+            <>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                mt={2}
+                flexWrap="wrap"
+              >
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onModalOpen({ modal: Modal.Edit, room: room });
+                  }}
+                  variant="outlined"
+                  color="primary"
+                  size="small"
+                >
+                  Изменить
+                </Button>
+                <Button
+                  component={Link}
+                  onClick={(e) => e.stopPropagation()}
+                  href={`/room/${room.shortId}`}
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                >
+                  Зайти
+                </Button>
+              </Stack>
+            </>
+          )}
         </Card>
       ))}
     </Box>

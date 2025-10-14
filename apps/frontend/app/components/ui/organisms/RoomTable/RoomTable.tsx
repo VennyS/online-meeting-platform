@@ -11,6 +11,7 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
       {rooms.map((room) => (
         <Box
           key={room.id}
+          onClick={() => onModalOpen({ modal: Modal.Edit, room: room })}
           sx={{
             backgroundColor: "rgb(255, 255, 255)",
             color: "rgb(17, 24, 39)",
@@ -50,9 +51,10 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
                 variant="outlined"
                 color="primary"
                 size="small"
-                onClick={() =>
-                  onModalOpen({ modal: Modal.Reports, shortId: room.shortId })
-                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onModalOpen({ modal: Modal.Reports, shortId: room.shortId });
+                }}
                 disabled={!room.haveReports}
               >
                 Отчёты
@@ -60,27 +62,34 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() =>
-                  onModalOpen({ modal: Modal.Files, shortId: room.shortId })
-                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onModalOpen({ modal: Modal.Files, shortId: room.shortId });
+                }}
                 disabled={!room.haveFiles}
               >
                 Файлы
               </Button>
               <Button
-                onClick={() => onModalOpen({ modal: Modal.Edit, room: room })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onModalOpen({ modal: Modal.Edit, room: room });
+                }}
                 variant="outlined"
                 color="primary"
                 size="small"
+                disabled={room.label != "Предстоящая"}
               >
                 Изменить
               </Button>
               <Button
                 component={Link}
                 href={`/room/${room.shortId}`}
+                onClick={(e) => e.stopPropagation()}
                 variant="contained"
                 color="primary"
                 size="small"
+                disabled={room.label != "Предстоящая"}
               >
                 Зайти
               </Button>

@@ -27,6 +27,7 @@ import CenterFocusStrongOutlinedIcon from "@mui/icons-material/CenterFocusStrong
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import dynamic from "next/dynamic";
+import styles from "./ParticipantTile.module.css";
 interface ParticipantTileProps extends HTMLAttributes<HTMLDivElement> {
   trackReference: TrackReferenceOrPlaceholder | Presentation;
   disableSpeakingIndicator?: boolean | undefined;
@@ -81,7 +82,8 @@ export const ParticipantTile: (
       : participantName;
 
   const isNotFocusTrack = !!focusTrack && trackReference != focusTrack;
-  const isFocusTrack = !!focusTrack && trackReference == focusTrack;
+  const isFocusTrack =
+    (!!focusTrack && trackReference == focusTrack) || !focusTrack;
 
   return (
     <Box
@@ -105,31 +107,42 @@ export const ParticipantTile: (
       }}
     >
       {isPres ? (
-        <PDFViewer
-          isAuthor={trackReference.local && isFocusTrack}
-          {...trackReference}
-          onPageChange={
-            trackReference.local
-              ? (page) => changePage(trackReference.presentationId, page)
-              : undefined
-          }
-          onZoomChange={
-            trackReference.local
-              ? (zoom) => changeZoom(trackReference.presentationId, zoom)
-              : undefined
-          }
-          onScrollChange={
-            trackReference.local
-              ? (pos) => changeScroll(trackReference.presentationId, pos)
-              : undefined
-          }
-          onChangePresentationMode={
-            trackReference.local
-              ? (mode) =>
-                  changePresentationMode(trackReference.presentationId, mode)
-              : undefined
-          }
-        />
+        <>
+          <PDFViewer
+            isAuthor={trackReference.local && isFocusTrack}
+            {...trackReference}
+            onPageChange={
+              trackReference.local
+                ? (page) => changePage(trackReference.presentationId, page)
+                : undefined
+            }
+            onZoomChange={
+              trackReference.local
+                ? (zoom) => changeZoom(trackReference.presentationId, zoom)
+                : undefined
+            }
+            onScrollChange={
+              trackReference.local
+                ? (pos) => changeScroll(trackReference.presentationId, pos)
+                : undefined
+            }
+            onChangePresentationMode={
+              trackReference.local
+                ? (mode) =>
+                    changePresentationMode(trackReference.presentationId, mode)
+                : undefined
+            }
+          />
+
+          {!!trackReference.video && isFocusTrack && (
+            <VideoTrack
+              className={styles.presentationVideoTrack}
+              title={`Камера ${trackReference.participant.name}`}
+              trackRef={trackReference.video}
+              manageSubscription={autoManageSubscription}
+            />
+          )}
+        </>
       ) : hasVideo ? (
         <VideoTrack
           title={title}

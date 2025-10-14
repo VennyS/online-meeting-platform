@@ -1,5 +1,6 @@
 "use client";
 
+import { PrequisitesProvider } from "@/app/providers/prequisites.provider";
 import { WebSocketProvider } from "@/app/providers/websocket.provider";
 
 export default function MainLayout({
@@ -7,5 +8,9 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <WebSocketProvider>{children}</WebSocketProvider>;
+  return (
+    <PrequisitesProvider>
+      <WebSocketProvider>{children}</WebSocketProvider>
+    </PrequisitesProvider>
+  );
 }

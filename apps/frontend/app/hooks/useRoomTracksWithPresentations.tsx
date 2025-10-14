@@ -1,4 +1,5 @@
 import {
+  isTrackReference,
   TrackReferenceOrPlaceholder,
   useTracks,
 } from "@livekit/components-react";
@@ -36,26 +37,52 @@ export function useRoomTracksWithPresentations({
 
   const normalizedTracks: (TrackReferenceOrPlaceholder | Presentation)[] =
     useMemo(() => {
-      const trackArray: (TrackReferenceOrPlaceholder | Presentation)[] = tracks
-        ? tracks.map((t) =>
-            t.publication
-              ? t
-              : ({
-                  ...t,
-                  publication: undefined,
-                } as TrackReferenceOrPlaceholder)
-          )
-        : [];
+      if (!tracks) return presentations;
+
+      const trackArray: TrackReferenceOrPlaceholder[] = tracks
+        .map((t) =>
+          t.publication
+            ? t
+            : ({
+                ...t,
+                publication: undefined,
+              } as TrackReferenceOrPlaceholder)
+        )
+        .filter(
+          (t) => !t.participant.isLocal || !t.participant.permissions?.hidden
+        );
+
+      const result: (TrackReferenceOrPlaceholder | Presentation)[] = [];
 
       presentations.forEach((p) => {
+        if (p.mode === "presentationWithCamera") {
+          const cameraTrackIndex = trackArray.findIndex(
+            (t) =>
+              t.source === Track.Source.Camera &&
+              t.participant.sid === p.participant.sid
+          );
+
+          if (cameraTrackIndex !== -1) {
+            const [cameraTrack] = trackArray.splice(cameraTrackIndex, 1);
+
+            if (
+              isTrackReference(cameraTrack) &&
+              cameraTrack.publication.track &&
+              !cameraTrack.publication.isMuted
+            ) {
+              p = { ...p, video: cameraTrack };
+            }
+          }
+        }
+
         if (p.local) {
-          trackArray.unshift(p);
+          result.unshift(p);
         } else {
-          trackArray.push(p);
+          result.push(p);
         }
       });
 
-      return trackArray;
+      return [...result, ...trackArray];
     }, [tracks, presentations]);
 
   return normalizedTracks;

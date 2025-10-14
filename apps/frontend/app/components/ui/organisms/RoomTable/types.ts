@@ -1,7 +1,7 @@
-import { IRoom } from "@/app/types/room.types";
 import { ModalState } from "../RoomList/RoomList";
+import { RoomWithStatus } from "../RoomList/types";
 
 export type RoomTableProps = {
-  rooms: IRoom[];
+  rooms: RoomWithStatus[];
   onModalOpen: (params: ModalState) => void;
 };

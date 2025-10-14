@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
 import { IRoom } from "@/app/types/room.types";
-import { RoomListProps } from "./types";
+import { RoomListProps, RoomWithStatus } from "./types";
 
 import {
   Box,
   Button,
+  CircularProgress,
   Divider,
   Paper,
   Typography,
@@ -19,6 +20,7 @@ import { RoomFilesModal } from "../RoomFilesModal/RoomFilesModal";
 import RoomCardGrid from "../RoomCardGrid/RoomCardGrid";
 import { RoomTable } from "../RoomTable/RoomTable";
 import RoomModal from "../RoomModal/RoomModal";
+import { getRoomStatus } from "@/app/lib/getStatusButton";
 
 export enum Modal {
   Files = "chat",
@@ -31,18 +33,45 @@ export type ModalState =
   | { modal: Modal.Files; shortId: string }
   | { modal: Modal.Reports; shortId: string }
   | { modal: Modal.Create }
-  | { modal: Modal.Edit; room: IRoom }
+  | { modal: Modal.Edit; room: RoomWithStatus }
   | { modal: undefined };
 
 export default function RoomList({
   fetchMode = "user",
   initialRooms = [],
 }: RoomListProps) {
-  const [rooms, setRooms] = useState<IRoom[]>(initialRooms);
+  const [rooms, setRooms] = useState<RoomWithStatus[]>(
+    initialRooms.map((room) => ({ ...room, ...getRoomStatus(room) }))
+  );
   const [loading, setLoading] = useState(false);
   const [modalState, setModalState] = useState<ModalState>({
     modal: undefined,
   });
+
+  const onModalOpen = (params: ModalState) => {
+    if (params.modal === Modal.Edit) {
+      if (params.room.label !== "Предстоящая") return;
+
+      setModalState(params);
+      return;
+    }
+
+    setModalState(params);
+  };
+
+  const onUpdateRoom = (room: IRoom) => {
+    const newRoom = { ...room, ...getRoomStatus(room) };
+
+    setRooms((prev) =>
+      prev.map((r) => (r.id === newRoom.id ? { ...newRoom, r } : r))
+    );
+  };
+
+  const onCreateRoom = (room: IRoom) => {
+    const newRoom = { ...room, ...getRoomStatus(room) };
+
+    setRooms((prev) => [newRoom, ...prev]);
+  };
 
   const isMobile = useMediaQuery("(max-width:700px)");
 
@@ -56,7 +85,7 @@ export default function RoomList({
           fetchMode === "all"
             ? await roomService.getAll()
             : await roomService.getRooms();
-        setRooms(data);
+        setRooms(data.map((room) => ({ ...room, ...getRoomStatus(room) })));
       } catch (err) {
         console.error("Ошибка при загрузке комнат:", err);
       } finally {
@@ -123,16 +152,37 @@ export default function RoomList({
 
         <Divider />
         <Box sx={{ padding: { xs: "12px", sm: "16px" } }}>
-          {isMobile ? (
-            <RoomCardGrid
-              rooms={rooms}
-              onModalOpen={(params) => setModalState(params)}
-            />
+          {rooms.length === 0 ? (
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: loading ? "center" : "space-between",
+                alignItems: "center",
+                gap: 2,
+                mt: loading ? "12px" : null,
+              }}
+            >
+              {loading ? (
+                <CircularProgress />
+              ) : (
+                <>
+                  <Typography fontWeight={400}>
+                    История встреч отсутствует, но Вам выдалась возможность
+                    положить ей начало
+                  </Typography>
+                  <Button
+                    onClick={() => setModalState({ modal: Modal.Create })}
+                    variant="outlined"
+                  >
+                    Новая встреча
+                  </Button>
+                </>
+              )}
+            </Box>
+          ) : isMobile ? (
+            <RoomCardGrid rooms={rooms} onModalOpen={onModalOpen} />
           ) : (
-            <RoomTable
-              rooms={rooms}
-              onModalOpen={(params) => setModalState(params)}
-            />
+            <RoomTable rooms={rooms} onModalOpen={onModalOpen} />
           )}
         </Box>
       </Paper>
@@ -154,7 +204,11 @@ export default function RoomList({
       )}
 
       {modalState?.modal === Modal.Create && (
-        <RoomModal mode={modalState.modal} onClose={onModalClose} />
+        <RoomModal
+          mode={modalState.modal}
+          onClose={onModalClose}
+          onCreateRoom={onCreateRoom}
+        />
       )}
 
       {modalState?.modal === Modal.Edit && (
@@ -162,6 +216,7 @@ export default function RoomList({
           mode={modalState.modal}
           onClose={onModalClose}
           initialData={modalState.room}
+          onUpdateRoom={onUpdateRoom}
         />
       )}
     </>

@@ -68,6 +68,7 @@ export class RoomRepository {
           cancelled: true,
           canShareScreen: true,
           canStartPresentation: true,
+          finished: true,
           _count: {
             select: {
               files: true,

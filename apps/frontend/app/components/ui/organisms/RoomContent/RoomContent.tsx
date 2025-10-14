@@ -5,7 +5,6 @@ import "@livekit/components-styles";
 import {
   FocusLayoutContainer,
   RoomAudioRenderer,
-  TrackReferenceOrPlaceholder,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/hooks/useUser";
@@ -97,6 +96,7 @@ export const RoomContent = ({
                   {carouselTracks.map((t) => {
                     return (
                       <ParticipantTile
+                        key={t.participant.identity + t.source}
                         trackReference={t}
                         className={styles.carouselTile}
                       />

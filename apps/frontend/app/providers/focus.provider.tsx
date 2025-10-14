@@ -35,6 +35,34 @@ export const FocusProvider = ({ children }: { children: React.ReactNode }) => {
     setShow(true);
   }, [tracks]);
 
+  useEffect(() => {
+    if (!focusTrack) return;
+
+    const updated = tracks.find((t) => {
+      if (isPresentation(focusTrack) && isPresentation(t)) {
+        return focusTrack.presentationId === t.presentationId;
+      }
+
+      if (
+        isTrackReferenceOrPlaceholder(focusTrack) &&
+        isTrackReferenceOrPlaceholder(t)
+      ) {
+        return (
+          focusTrack.participant.sid === t.participant.sid &&
+          focusTrack.publication?.trackSid === t.publication?.trackSid
+        );
+      }
+
+      return false;
+    });
+
+    if (!updated) {
+      setFocusTrack(null);
+    } else if (updated !== focusTrack) {
+      setFocusTrack(updated);
+    }
+  }, [tracks]);
+
   const clearFocus = () => setFocusTrack(null);
 
   const isFocused = (track: FocusTarget) => {

@@ -106,9 +106,9 @@ export const RoomReportsModal = ({
                   )}
                 </Typography>
 
-                {session.duration && (
+                {!!session.duration && (
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    Длительность: {Math.round(session.duration / 60)} мин
+                    Длительность: {Math.round(session.duration)} мин
                   </Typography>
                 )}
 

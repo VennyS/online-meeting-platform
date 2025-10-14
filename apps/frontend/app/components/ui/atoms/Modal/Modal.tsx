@@ -18,7 +18,12 @@ export const Modal = ({ children, onClose, title }: ModalProps) => {
       scroll="body"
       slotProps={{
         paper: {
-          sx: { borderRadius: 2, p: "20px", bgcolor: "grey.100" },
+          sx: {
+            borderRadius: 2,
+            p: "20px",
+            bgcolor: "grey.100",
+            boxSizing: "border-box",
+          },
         },
       }}
     >
@@ -26,7 +31,7 @@ export const Modal = ({ children, onClose, title }: ModalProps) => {
         sx={{
           display: "flex",
           justifyContent: !!title ? "space-between" : "flex-end",
-          pb: "8px",
+          mb: "16px",
         }}
       >
         {title && (

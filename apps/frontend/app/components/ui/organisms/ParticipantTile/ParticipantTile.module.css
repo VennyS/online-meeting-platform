@@ -1,0 +1,7 @@
+.presentationVideoTrack {
+  position: absolute;
+  max-width: 150px;
+  max-height: 150px;
+  right: 24px;
+  bottom: 12px;
+}

@@ -62,9 +62,12 @@ export function usePagination(
 }
 
 export function GridLayout({ tracks, ...props }: GridLayoutProps) {
-  const gridEl = React.createRef<HTMLDivElement>();
+  const gridEl = React.useRef<HTMLDivElement>(null);
 
-  const { layout } = useGridLayout(gridEl, tracks.length);
+  const { layout } = useGridLayout(
+    gridEl as React.RefObject<HTMLDivElement>,
+    tracks.length
+  );
   const pagination = usePagination(layout.maxTiles, tracks);
 
   return (
@@ -74,14 +77,12 @@ export function GridLayout({ tracks, ...props }: GridLayoutProps) {
       className={`lk-grid-layout ${props.className}`}
       data-lk-pagination={pagination.totalPageCount > 1}
     >
-      {pagination.tracks.map((track, index) => {
-        return (
-          <ParticipantTile
-            key={track.source + track.participant.sid + index}
-            trackReference={track}
-          />
-        );
-      })}
+      {pagination.tracks.map((track, index) => (
+        <ParticipantTile
+          key={track.source + track.participant.sid + index}
+          trackReference={track}
+        />
+      ))}
     </div>
   );
 }
