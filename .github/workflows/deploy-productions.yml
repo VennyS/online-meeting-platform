@@ -1,0 +1,36 @@
+name: Deploy prod CI
+
+on:
+  push:
+    branches: ["ci/github-actions"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd online-meeting-platform/
+            echo "Pulling latest code..."
+            git fetch --all
+            git reset --hard origin/ci/github-actions
+
+            echo "Cleaning old Docker stuff"
+            docker compose down
+            docker system prune -af
+
+            echo "Building and starting containers..."
+            docker compose up -d 
+
+            echo "Deploy complete!"
