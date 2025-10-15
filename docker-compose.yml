@@ -20,6 +20,7 @@ services:
       - redis
 
   backend-test:
+    profiles: [dev]
     build:
       context: ./apps/test-backend
     container_name: test-backend
