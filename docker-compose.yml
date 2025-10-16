@@ -45,7 +45,6 @@ services:
     environment:
       - EGRESS_CONFIG_FILE=/config/egress.yaml
     volumes:
-      - ./infrastructure/egress/output:/output
       - ./infrastructure/egress/egress.yaml:/config/egress.yaml:ro
     command: --config /config/egress.yaml
     depends_on:
