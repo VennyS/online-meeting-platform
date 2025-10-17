@@ -1,20 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3 } from 'aws-sdk';
+import {
+  S3Client,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
 import { IFileService } from './interfaces/file.service.interface';
 
 @Injectable()
 export class S3FileService implements IFileService {
-  private s3: S3;
+  private s3: S3Client;
   private bucket: string;
 
   constructor(private configService: ConfigService) {
-    this.s3 = new S3({
+    this.s3 = new S3Client({
       endpoint: this.configService.get<string>('MINIO_ENDPOINT'),
-      accessKeyId: this.configService.get<string>('MINIO_ROOT_USER'),
-      secretAccessKey: this.configService.get<string>('MINIO_ROOT_PASSWORD'),
-      s3ForcePathStyle: true,
-      signatureVersion: 'v4',
+      credentials: {
+        accessKeyId: this.configService.get<string>('MINIO_ROOT_USER')!,
+        secretAccessKey: this.configService.get<string>('MINIO_ROOT_PASSWORD')!,
+      },
+      forcePathStyle: true,
+      region: 'us-east-1',
     });
     this.bucket = this.configService.get<string>('MINIO_BUCKET')!;
     this.createBucketIfNotExists();
@@ -22,10 +33,10 @@ export class S3FileService implements IFileService {
 
   private async createBucketIfNotExists() {
     try {
-      await this.s3.headBucket({ Bucket: this.bucket }).promise();
+      await this.s3.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch (error) {
-      if (error.statusCode === 404) {
-        await this.s3.createBucket({ Bucket: this.bucket }).promise();
+      if (error.$metadata?.httpStatusCode === 404) {
+        await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
       } else {
         throw error;
       }
@@ -49,13 +60,17 @@ export class S3FileService implements IFileService {
       size: file.size,
     });
     try {
-      await this.s3.putObject(params).promise();
+      await this.s3.send(new PutObjectCommand(params));
       console.log(`File uploaded successfully: ${key}`);
-      const url = await this.s3.getSignedUrlPromise('getObject', {
+
+      const getObjectCommand = new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        Expires: 3600,
       });
+      const url = await getSignedUrl(this.s3, getObjectCommand, {
+        expiresIn: 3600,
+      });
+
       console.log(`Generated presigned URL: ${url}`);
       return url;
     } catch (error) {
@@ -65,24 +80,31 @@ export class S3FileService implements IFileService {
   }
 
   async download(key: string): Promise<Buffer> {
-    const params = { Bucket: this.bucket, Key: key };
-    const data = await this.s3.getObject(params).promise();
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    const data = await this.s3.send(command);
     if (!data.Body) throw new NotFoundException('File not found');
-    return data.Body as Buffer;
+
+    return Buffer.from(await data.Body.transformToByteArray());
   }
 
   async delete(key: string): Promise<void> {
-    const params = { Bucket: this.bucket, Key: key };
-    await this.s3.deleteObject(params).promise();
+    const command = new DeleteObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    await this.s3.send(command);
   }
 
   async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
     try {
-      const url = await this.s3.getSignedUrlPromise('getObject', {
+      const command = new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        Expires: expiresIn,
       });
+      const url = await getSignedUrl(this.s3, command, { expiresIn });
 
       const publicBase = this.configService.get<string>('MINIO_PUBLIC_URL');
       return url.replace(

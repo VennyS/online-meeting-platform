@@ -20,6 +20,7 @@ services:
       - redis
 
   backend-test:
+    profiles: [dev]
     build:
       context: ./apps/test-backend
     container_name: test-backend
@@ -44,7 +45,6 @@ services:
     environment:
       - EGRESS_CONFIG_FILE=/config/egress.yaml
     volumes:
-      - ./infrastructure/egress/output:/output
       - ./infrastructure/egress/egress.yaml:/config/egress.yaml:ro
     command: --config /config/egress.yaml
     depends_on:
