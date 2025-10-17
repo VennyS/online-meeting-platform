@@ -1,8 +1,8 @@
-name: Build and Push Docker Images
+name: Deploy to server & update docker hub images
 
 on:
   push:
-    branches: ["ci/github-actions"]
+    branches: ["master"]
 
 jobs:
   push-images:
@@ -74,8 +74,8 @@ jobs:
             echo "Stopping current containers..."
             docker compose down
 
-            echo "Cleaning dangling images and volumes..."
-            docker image prune -af
+            echo "Cleaning dangling images..."
+            docker image prune -f
 
             echo "Starting containers..."
             docker compose up -d
