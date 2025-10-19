@@ -253,4 +253,23 @@ export class FileManagementService {
 
     return filesWithUrls;
   }
+
+  async getTotalFileSizeByUser(
+    userId: number,
+    fileTypes?: FileType[],
+  ): Promise<number> {
+    const where = {
+      userId,
+      ...(fileTypes && fileTypes.length > 0
+        ? { fileType: { in: fileTypes } }
+        : {}),
+    };
+
+    const result = await this.prisma.file.aggregate({
+      where,
+      _sum: { fileSize: true },
+    });
+
+    return result._sum.fileSize ?? 0;
+  }
 }

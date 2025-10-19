@@ -9,6 +9,7 @@ import {
   saveAccessToken,
 } from "../services/auth-token.service";
 import { usePathname } from "next/navigation";
+import { fileService, IFile } from "../services/file.service";
 
 interface AuthContextType {
   user: IUser | null;
@@ -16,6 +17,10 @@ interface AuthContextType {
   loading: boolean;
   token: string | null;
   setToken: React.Dispatch<React.SetStateAction<string | null>>;
+
+  totalPdfSize: number;
+  addFiles: (files: File[]) => void;
+  removeFiles: (files: IFile[]) => void;
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(
@@ -28,6 +33,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const pathname = usePathname();
   const [token, setToken] = React.useState<string | null>(null);
+
+  const [totalPdfSize, setTotalPdfSize] = React.useState(0);
+
+  const addFiles = (files: File[]) => {
+    const pdfSize = files
+      .filter((f) => f.type === "application/pdf")
+      .reduce((sum, f) => sum + f.size, 0);
+    setTotalPdfSize((prev) => prev + pdfSize);
+  };
+
+  const removeFiles = (files: IFile[]) => {
+    const pdfSize = files
+      .filter((f) => f.fileType === "PDF")
+      .reduce((sum, f) => sum + f.fileSize, 0);
+    setTotalPdfSize((prev) => Math.max(0, prev - pdfSize));
+  };
 
   const isRoomPage =
     (pathname?.startsWith("/room/") || pathname.startsWith("/redirect")) ??
@@ -53,8 +74,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     fetchUser();
   }, []);
 
+  React.useEffect(() => {
+    const fetchTotalPdfWeight = async () => {
+      try {
+        const { totalSize } = await fileService.getTotalSize("PDF");
+        setTotalPdfSize(totalSize);
+      } catch (err) {
+        console.error("Failed to fetch total PDF size:", err);
+      }
+    };
+
+    fetchTotalPdfWeight();
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, token, setToken }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        loading,
+        token,
+        setToken,
+        totalPdfSize,
+        addFiles,
+        removeFiles,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

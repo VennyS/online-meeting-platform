@@ -89,4 +89,25 @@ export const fileService = {
     });
     return response.data;
   },
+
+  async getTotalSize(
+    types?: FileType | FileType[]
+  ): Promise<{ totalSize: number }> {
+    const normalizedTypes = Array.isArray(types) ? types : types ? [types] : [];
+
+    const response = await axiosClassic.get<{ totalSize: number }>(
+      `/file/storage/size`,
+      {
+        params: { types: normalizedTypes },
+        paramsSerializer: (params) =>
+          new URLSearchParams(
+            Object.entries(params).flatMap(([key, value]) =>
+              Array.isArray(value) ? value.map((v) => [key, v]) : [[key, value]]
+            )
+          ).toString(),
+      }
+    );
+
+    return response.data;
+  },
 };

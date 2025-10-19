@@ -23,6 +23,7 @@ import { ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ListFilesQueryDto } from './dto/listFilesQueryDto';
 import type { AuthTokenPayload } from 'src/common/utils/auth.utils';
 import { PatchFileDto } from './dto/patchFileDto';
+import { FileTypesQueryDto } from './dto/FileTypesQueryDto';
 
 @Controller('file')
 export class FileController {
@@ -64,6 +65,19 @@ export class FileController {
       }
       throw error;
     }
+  }
+
+  @Get('storage/size')
+  @UseGuards(AuthGuard({ required: true }))
+  async getUserContraints(
+    @User('id') userId: number,
+    @Query() query: FileTypesQueryDto,
+  ) {
+    const totalSize = await this.fileService.getTotalFileSizeByUser(
+      userId,
+      query.types,
+    );
+    return { totalSize };
   }
 
   @ApiConsumes('multipart/form-data')
