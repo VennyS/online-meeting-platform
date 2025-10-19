@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   RoomCompositeOptions,
   EgressClient,
@@ -12,6 +12,7 @@ import { RedisService } from 'src/common/modules/redis/redis.service';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { format } from 'date-fns';
 import { createEgressLivekitToken } from 'src/common/utils/auth.utils';
+import { WaitingRoomGateway } from '../waiting-room/waiting-room.gateway';
 
 @Injectable()
 export class RecordingService {
@@ -22,6 +23,8 @@ export class RecordingService {
     private readonly fileManagementService: FileManagementService,
     private readonly redis: RedisService,
     private readonly roomRepo: RoomRepository,
+    @Inject(forwardRef(() => WaitingRoomGateway))
+    private readonly waitingRoomGateway: WaitingRoomGateway,
   ) {
     const API_KEY = process.env.LIVEKIT_API_KEY!;
     const API_SECRET = process.env.LIVEKIT_API_SECRET!;
@@ -112,7 +115,7 @@ export class RecordingService {
     const room = await this.roomRepo.findByShortId(roomShortId);
     if (!room) return;
 
-    await this.fileManagementService.createFileRecord({
+    const recording = await this.fileManagementService.createFileRecord({
       roomId: room.id,
       userId: userId ?? 0,
       fileKey: fileName,
@@ -158,6 +161,26 @@ export class RecordingService {
         userId ?? 0,
         txtFile,
       );
+    }
+
+    if (userId) {
+      const totalVideoSize =
+        await this.fileManagementService.getTotalFileSizeByUser(userId, [
+          FileType.VIDEO,
+        ]);
+
+      if (totalVideoSize > 1024) {
+        this.waitingRoomGateway.sendToUser(
+          roomShortId,
+          String(userId),
+          'recording_storage_overflow',
+          {
+            totalVideoSize,
+            constraint: 1024,
+            causedById: recording.id,
+          },
+        );
+      }
     }
 
     await this.redis.deleteEgressUser(event.egressId);

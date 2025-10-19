@@ -27,7 +27,7 @@ export class FileManagementService {
     fileSize: number;
     mimeType?: string;
   }) {
-    await this.prisma.file.create({
+    return await this.prisma.file.create({
       data: {
         roomId: data.roomId,
         userId: data.userId,
