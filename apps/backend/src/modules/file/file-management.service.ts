@@ -97,7 +97,7 @@ export class FileManagementService {
         fileKey: key,
         fileType,
         fileName: originalFileName,
-        fileSize: file.size,
+        fileSize: Math.round(file.size / 1024),
         mimeType: file.mimetype,
       },
     });

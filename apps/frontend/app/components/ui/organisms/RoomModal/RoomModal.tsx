@@ -104,7 +104,7 @@ export default function RoomModal({
         id: Date.now() + index,
         fileName: file.name,
         fileType: "PDF",
-        fileSize: file.size,
+        fileSize: Math.round(file.size / 1024),
         url: URL.createObjectURL(file),
         isNew: true,
       })
