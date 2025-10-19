@@ -37,7 +37,7 @@ export default function RoomModal({
   onCreateRoom,
 }: RoomModalProps) {
   const router = useRouter();
-  const { totalPdfSize: totalPdfSizeInStorage, user } = useUser();
+  const { totalPdfSize: totalPdfSizeInStorage, user, removeFiles } = useUser();
   const now = new Date();
 
   const {
@@ -437,6 +437,7 @@ export default function RoomModal({
         <UserFilesModal
           isOpen={isFilesModalOpen}
           onClose={() => setIsFilesModalOpen(false)}
+          onDelete={removeFiles}
         />
       )}
     </Modal>

@@ -3,21 +3,27 @@
 import { useEffect, useState } from "react";
 import { Box, Button, Stack, Typography, Alert } from "@mui/material";
 import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
-import { fileService, IFile } from "@/app/services/file.service";
+import { fileService, FileType, IFile } from "@/app/services/file.service";
 import { FileCard } from "../FileCard/FileCard";
-import { useUser } from "@/app/hooks/useUser";
 
 interface UserFilesModalProps {
   isOpen: boolean;
   onClose: () => void;
+  fileType?: FileType | FileType[];
+  onDelete: (file: IFile[]) => void;
+  children?: React.ReactNode;
 }
 
-export function UserFilesModal({ isOpen, onClose }: UserFilesModalProps) {
+export function UserFilesModal({
+  isOpen,
+  onClose,
+  fileType = "PDF",
+  onDelete,
+  children,
+}: UserFilesModalProps) {
   const [files, setFiles] = useState<IFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { removeFiles } = useUser();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -25,7 +31,7 @@ export function UserFilesModal({ isOpen, onClose }: UserFilesModalProps) {
     const fetchFiles = async () => {
       setLoading(true);
       try {
-        const data = await fileService.listUser("PDF");
+        const data = await fileService.listUser(fileType);
         setFiles(data);
       } catch {
         setError("Не удалось загрузить ваши файлы");
@@ -39,7 +45,7 @@ export function UserFilesModal({ isOpen, onClose }: UserFilesModalProps) {
 
   const handleDelete = async (fileId: number) => {
     try {
-      removeFiles(files.filter((f) => f.id === fileId));
+      onDelete(files.filter((f) => f.id === fileId));
       await fileService.delete(fileId);
       setFiles((prev) => prev.filter((f) => f.id !== fileId));
     } catch {
@@ -72,6 +78,9 @@ export function UserFilesModal({ isOpen, onClose }: UserFilesModalProps) {
         {!loading && files.length === 0 && (
           <Typography>Файлы не найдены</Typography>
         )}
+
+        {children}
+
         {!loading &&
           files.map((file) => (
             <FileCard

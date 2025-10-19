@@ -24,6 +24,8 @@ import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
 import { useFocus } from "@/app/providers/focus.provider";
 import { GridLayout } from "../GridLayout/GridLayout";
 import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
+import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
+import { Typography } from "@mui/material";
 
 export const RoomContent = ({
   roomId,
@@ -37,7 +39,8 @@ export const RoomContent = ({
   });
 
   const { user } = useUser();
-  const { openedRightPanel } = useParticipantsContext();
+  const { openedRightPanel, overflowInfo, resetOverflowInfo, deleteFiles } =
+    useParticipantsContext();
   const [files, setFiles] = useState<IFile[]>([]);
 
   const panels = [
@@ -70,6 +73,20 @@ export const RoomContent = ({
 
     handleFetchFiles();
   }, [roomId]);
+
+  const onCloseModal = async () => {
+    if (!overflowInfo || overflowInfo.totalVideoSize < overflowInfo.constraint)
+      return;
+
+    await fileService.delete(overflowInfo.causedById);
+    resetOverflowInfo();
+  };
+
+  useEffect(() => {
+    return () => {
+      onCloseModal();
+    };
+  }, []);
 
   const { focusTrack } = useFocus();
   const carouselTracks = tracks.filter((t) => {
@@ -128,6 +145,20 @@ export const RoomContent = ({
       ))}
 
       {!hideControls && <ControlBar haveFiles={files.length > 0} />}
+      {!!overflowInfo && (
+        <UserFilesModal
+          isOpen={!!overflowInfo}
+          fileType={"VIDEO"}
+          onClose={onCloseModal}
+          onDelete={deleteFiles}
+        >
+          <Typography variant="h3">
+            Хранилище записей переполнено, удалите ненужные файлы или закройте
+            модальное окно, чтобы удалить текущую запись. Закрытие вкладки
+            приведет к такому же результату.
+          </Typography>
+        </UserFilesModal>
+      )}
 
       <RoomAudioRenderer />
     </div>

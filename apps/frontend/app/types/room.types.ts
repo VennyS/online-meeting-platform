@@ -201,7 +201,11 @@ export type RoomWSMessage =
       }
     >
   | WSMessage<"recording_started", { egressId: string }>
-  | WSMessage<"recording_finished", { egressId: string }>;
+  | WSMessage<"recording_finished", { egressId: string }>
+  | WSMessage<
+      "recording_storage_overflow",
+      { totalVideoSize: number; constraint: number; causedById: number }
+    >;
 
 export type RoomWSSendMessage =
   | WSMessage<
