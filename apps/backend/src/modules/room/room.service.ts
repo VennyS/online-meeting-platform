@@ -11,6 +11,8 @@ import { AddParticipantResponseDto } from './dto/addParticipantsResponseDto';
 import { PatchRoomDto } from './dto/patchRoomDto';
 import { GetMeetingReportsDto } from './dto/getMeetingReportDto';
 import { GetDto } from './dto/getDto';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { isMeetingFinished } from 'src/common/utils/room.utils';
 
 @Injectable()
 export class RoomService {
@@ -19,6 +21,32 @@ export class RoomService {
     private readonly livekit: LivekitService,
     private readonly redis: RedisService,
   ) {}
+
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async checkPendingFinishedRooms() {
+    const pendingRooms = await this.roomRepo.findPendingToFinish();
+
+    for (const room of pendingRooms) {
+      let numParticipants = 0;
+      try {
+        const participants = await this.livekit.listParticipants(room.shortId);
+        numParticipants = participants.length;
+      } catch (livekitError) {
+        numParticipants = 0;
+      }
+
+      const isFinished = isMeetingFinished({
+        startAt: room.startAt,
+        durationMinutes: room.durationMinutes,
+        numParticipants,
+        gracePeriod: 5 * 60_000,
+      });
+
+      if (isFinished) {
+        await this.roomRepo.markAsFinished(room.shortId);
+      }
+    }
+  }
 
   async getAllByUserId(userId: number): Promise<GetDto[]> {
     return await this.roomRepo.getAllByUserId(userId);

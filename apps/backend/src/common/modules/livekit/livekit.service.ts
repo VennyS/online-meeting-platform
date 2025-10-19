@@ -24,6 +24,18 @@ export class LivekitService {
     });
   }
 
+  async listParticipants(roomName: string) {
+    try {
+      return await this.client.listParticipants(roomName);
+    } catch (error) {
+      this.logger.error(
+        `Error listing participants for ${roomName}: ${error.message}`,
+        error.stack,
+      );
+      return [];
+    }
+  }
+
   async removeParticipant(roomName: string, identity: string): Promise<void> {
     try {
       await this.client.removeParticipant(roomName, identity);

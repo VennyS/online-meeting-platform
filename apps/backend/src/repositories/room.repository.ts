@@ -45,6 +45,20 @@ export class RoomRepository {
     return !this.findByShortId(shortId);
   }
 
+  async findPendingToFinish() {
+    return this.prisma.room.findMany({
+      select: { shortId: true, startAt: true, durationMinutes: true },
+      where: { cancelled: false, finished: false },
+    });
+  }
+
+  async markAsFinished(shortId: string) {
+    return this.prisma.room.update({
+      where: { shortId },
+      data: { finished: true },
+    });
+  }
+
   async getAllByUserId(userId: number): Promise<GetDto[]> {
     return this.prisma.room
       .findMany({
