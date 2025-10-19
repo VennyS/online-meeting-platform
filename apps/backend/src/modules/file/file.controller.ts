@@ -29,7 +29,7 @@ import { FileTypesQueryDto } from './dto/FileTypesQueryDto';
 export class FileController {
   constructor(private fileService: FileManagementService) {}
 
-  @Get(':shortId')
+  @Get('room/:shortId')
   @ApiQuery({
     name: 'skip',
     required: false,
@@ -65,6 +65,16 @@ export class FileController {
       }
       throw error;
     }
+  }
+
+  @Get()
+  @UseGuards(AuthGuard({ required: true }))
+  async listUserFiles(
+    @User('id') userId: number,
+    @Query() query: FileTypesQueryDto,
+  ) {
+    const files = await this.fileService.listUserFiles(userId, query.types);
+    return files;
   }
 
   @Get('storage/size')

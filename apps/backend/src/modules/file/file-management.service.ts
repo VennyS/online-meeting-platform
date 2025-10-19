@@ -254,6 +254,40 @@ export class FileManagementService {
     return filesWithUrls;
   }
 
+  async listUserFiles(userId: number, types: FileType[] = []) {
+    const files = await this.prisma.file.findMany({
+      where: {
+        userId,
+        ...(types.length > 0 ? { fileType: { in: types } } : {}),
+      },
+      select: {
+        id: true,
+        fileName: true,
+        fileType: true,
+        fileSize: true,
+        fileKey: true,
+        roomId: true,
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    const filesWithUrls = await Promise.all(
+      files.map(async (file) => {
+        const url = await this.fileService.getPresignedUrl(file.fileKey);
+        return {
+          id: file.id,
+          roomId: file.roomId,
+          fileName: file.fileName,
+          fileType: file.fileType,
+          fileSize: file.fileSize,
+          url,
+        };
+      }),
+    );
+
+    return filesWithUrls;
+  }
+
   async getTotalFileSizeByUser(
     userId: number,
     fileTypes?: FileType[],

@@ -48,12 +48,19 @@ export const FileCard = ({
             variant="standard"
             fullWidth
             value={file.fileName}
-            onChange={(e) => onNameChange(file.id, e.target.value)}
+            onChange={(e) => onNameChange?.(file.id, e.target.value)}
             onBlur={() => (onRename ? onRename(file) : () => {})}
+            disabled={!onRename}
             slotProps={{
               input: {
                 disableUnderline: true,
-                sx: { fontSize: "0.95rem", fontWeight: 500, p: 0 },
+                sx: {
+                  fontSize: "0.95rem",
+                  fontWeight: 500,
+                  p: 0,
+                  color: "inherit",
+                  WebkitTextFillColor: "currentColor",
+                },
               },
             }}
           />

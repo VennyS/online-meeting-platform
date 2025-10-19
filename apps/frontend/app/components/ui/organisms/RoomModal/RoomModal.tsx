@@ -27,6 +27,7 @@ import { FileCard } from "../FileCard/FileCard";
 import { RoomData, RoomModalProps, RoomSchema } from "./types";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
 
 export default function RoomModal({
   mode,
@@ -36,7 +37,7 @@ export default function RoomModal({
   onCreateRoom,
 }: RoomModalProps) {
   const router = useRouter();
-  const { user } = useUser();
+  const { totalPdfSize: totalPdfSizeInStorage, user } = useUser();
   const now = new Date();
 
   const {
@@ -67,6 +68,16 @@ export default function RoomModal({
   const [files, setFiles] = useState<(IFile & { isNew?: boolean })[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
+
+  const totalPdfSizeMb =
+    (totalPdfSizeInStorage +
+      (files ?? []).reduce((sum, item) => sum + item.fileSize, 0)) /
+    1024;
+
+  const isAnyPdfFile = totalPdfSizeInStorage > 0;
+
+  const isPdfStorageOverflowed = totalPdfSizeMb > 100;
 
   const roleOptions: { label: string; value: Role }[] = [
     { label: "Только владелец", value: "OWNER" },
@@ -78,7 +89,7 @@ export default function RoomModal({
     if (mode === "edit" && initialData?.shortId) {
       const fetchFiles = async () => {
         try {
-          const data = await fileService.list(initialData.shortId, 0, 50);
+          const data = await fileService.listRoom(initialData.shortId, 0, 50);
           setFiles(data);
         } catch {
           setError("Не удалось загрузить файлы комнаты");
@@ -365,8 +376,12 @@ export default function RoomModal({
             label="Присоединиться сразу после создания"
           />
 
-          <Box>
-            <Button variant="outlined" component="label">
+          <Stack spacing={1.5}>
+            <Button
+              variant="outlined"
+              component="label"
+              disabled={isPdfStorageOverflowed}
+            >
               Выберите PDF файлы
               <input
                 type="file"
@@ -382,7 +397,7 @@ export default function RoomModal({
               </Typography>
             )}
             {files.length > 0 && (
-              <Stack spacing={1.5} mt={2}>
+              <Stack spacing={1} mt={2}>
                 {files.map((file) => (
                   <FileCard
                     key={file.id}
@@ -394,13 +409,36 @@ export default function RoomModal({
                 ))}
               </Stack>
             )}
-          </Box>
+
+            {isPdfStorageOverflowed && (
+              <>
+                <Typography>
+                  Хранилище PDF файлов переполнено. Удалите файлы для текущей
+                  встречи
+                </Typography>
+                {isAnyPdfFile && (
+                  <>
+                    <Typography>или файлы старых встреч</Typography>
+                    <Button onClick={() => setIsFilesModalOpen(true)}>
+                      Посмотреть файлы прошлых встреч
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </Stack>
 
           <Button variant="contained" sx={{ mt: 2 }} type="submit">
             {mode === "edit" ? "Сохранить" : "Создать"}
           </Button>
         </Stack>
       </form>
+      {isFilesModalOpen && (
+        <UserFilesModal
+          isOpen={isFilesModalOpen}
+          onClose={() => setIsFilesModalOpen(false)}
+        />
+      )}
     </Modal>
   );
 }
