@@ -53,7 +53,7 @@ export default function RoomModal({
       startAt: formatDateTimeLocal(
         initialData?.startAt ? new Date(initialData.startAt) : now
       ),
-      durationMinutes: initialData?.durationMinutes ?? undefined,
+      durationMinutes: initialData?.durationMinutes ?? 60,
       isPublic: initialData?.isPublic ?? false,
       showHistoryToNewbies: initialData?.showHistoryToNewbies ?? false,
       waitingRoomEnabled: initialData?.waitingRoomEnabled ?? false,
