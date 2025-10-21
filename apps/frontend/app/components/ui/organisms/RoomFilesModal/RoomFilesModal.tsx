@@ -22,7 +22,7 @@ export const RoomFilesModal = ({
     const fetchFiles = async () => {
       setLoading(true);
       try {
-        const data = await fileService.list(shortId, 0, 50);
+        const data = await fileService.listRoom(shortId, 0, 50);
         setFiles(data);
       } catch {
         setError("Не удалось загрузить файлы встречи");

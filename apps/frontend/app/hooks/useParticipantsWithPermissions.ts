@@ -21,6 +21,7 @@ import {
   UserPermissions,
 } from "../types/room.types";
 import stringToColor from "../lib/stringToColor";
+import { IFile } from "../services/file.service";
 
 export enum Panel {
   Chat = "chat",
@@ -38,6 +39,13 @@ export interface ParticipantsWithPermissions {
   isRecording: boolean;
   openedRightPanel: Panel | undefined;
   unreadCount: number;
+  overflowInfo:
+    | {
+        totalVideoSize: number;
+        constraint: number;
+        causedById: number;
+      }
+    | undefined;
   updateRolePermissions: (
     targetRole: RoomRole,
     permission: keyof Permissions,
@@ -67,6 +75,8 @@ export interface ParticipantsWithPermissions {
   startRecording: () => void;
   stopRecording: () => void;
   handleChangeOpenPanel: (panel: Panel | undefined) => void;
+  deleteFiles: (files: IFile[]) => void;
+  resetOverflowInfo: () => void;
 }
 
 export type PresentationMode = "presentationWithCamera" | "presentationOnly";
@@ -129,11 +139,20 @@ export function useParticipantsWithPermissions(
   const remoteParticipants = participants.filter((p) => !p.isLocal);
   const [isRecording, setIsRecording] = useState(false);
   const [egressId, setEgressId] = useState<string>();
+  const [overflowInfo, setOverflowInfo] = useState<{
+    totalVideoSize: number;
+    constraint: number;
+    causedById: number;
+  }>();
 
   const room = useRoomContext();
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [openedRightPanel, setOpenedRightPanel] = useState<Panel>();
+
+  const resetOverflowInfo = () => {
+    setOverflowInfo(undefined);
+  };
 
   const handleChangeOpenPanel = (panel: Panel | undefined) => {
     if (panel !== openedRightPanel) {
@@ -171,6 +190,18 @@ export function useParticipantsWithPermissions(
   ) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ event, data }));
+  }
+
+  function deleteFiles(files: IFile[]) {
+    const sizeOfFiles = files.reduce((acc, file) => acc + file.fileSize, 0);
+    setOverflowInfo((prev) => {
+      if (!prev) return prev;
+      return {
+        totalVideoSize: prev.totalVideoSize - sizeOfFiles,
+        constraint: prev.constraint,
+        causedById: prev.causedById,
+      };
+    });
   }
 
   function updateRolePermissions(
@@ -442,6 +473,10 @@ export function useParticipantsWithPermissions(
           setIsRecording(false);
           setEgressId(undefined);
           break;
+
+        case "recording_storage_overflow":
+          setOverflowInfo(data);
+          break;
       }
     });
   }, [ws, localUserId, presentations]);
@@ -510,6 +545,7 @@ export function useParticipantsWithPermissions(
     isRecording,
     openedRightPanel,
     unreadCount,
+    overflowInfo,
     updateRolePermissions,
     updateUserRole,
     approveGuest,
@@ -525,5 +561,7 @@ export function useParticipantsWithPermissions(
     startRecording,
     stopRecording,
     handleChangeOpenPanel,
+    deleteFiles,
+    resetOverflowInfo,
   };
 }

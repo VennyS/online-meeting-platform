@@ -85,39 +85,39 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
             )}
           </Box>
 
-          {room.label === "Предстоящая" && (
-            <>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                mt={2}
-                flexWrap="wrap"
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            mt={2}
+            flexWrap="wrap"
+          >
+            {room.label === "Предстоящая" && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onModalOpen({ modal: Modal.Edit, room: room });
+                }}
+                variant="outlined"
+                color="primary"
+                size="small"
               >
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onModalOpen({ modal: Modal.Edit, room: room });
-                  }}
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                >
-                  Изменить
-                </Button>
-                <Button
-                  component={Link}
-                  onClick={(e) => e.stopPropagation()}
-                  href={`/room/${room.shortId}`}
-                  variant="contained"
-                  color="primary"
-                  size="small"
-                >
-                  Зайти
-                </Button>
-              </Stack>
-            </>
-          )}
+                Изменить
+              </Button>
+            )}
+            {(room.label === "Предстоящая" || room.label === "Идет") && (
+              <Button
+                component={Link}
+                onClick={(e) => e.stopPropagation()}
+                href={`/room/${room.shortId}`}
+                variant="contained"
+                color="primary"
+                size="small"
+              >
+                Зайти
+              </Button>
+            )}
+          </Stack>
         </Card>
       ))}
     </Box>

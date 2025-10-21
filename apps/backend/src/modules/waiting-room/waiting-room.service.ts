@@ -619,7 +619,16 @@ export class WaitingRoomService {
     try {
       egressInfo = await this.recording.startRecording(roomId, userId);
     } catch (e) {
-      return;
+      const msg = JSON.stringify({
+        event: 'recording_error',
+        data: {},
+      });
+
+      for (const conn of roomConnections.values()) {
+        if (conn.ws.readyState === conn.ws.OPEN) {
+          conn.ws.send(msg);
+        }
+      }
     }
 
     if (!egressInfo) return;
@@ -639,7 +648,20 @@ export class WaitingRoomService {
   }
 
   async stopRecording(egressId: string, roomConnections: Map<string, any>) {
-    await this.recording.stopRecording(egressId);
+    try {
+      await this.recording.stopRecording(egressId);
+    } catch (e) {
+      const msg = JSON.stringify({
+        event: 'recording_finished',
+        data: { egressId },
+      });
+
+      for (const conn of roomConnections.values()) {
+        if (conn.ws.readyState === conn.ws.OPEN) {
+          conn.ws.send(msg);
+        }
+      }
+    }
 
     const msg = JSON.stringify({
       event: 'recording_finished',

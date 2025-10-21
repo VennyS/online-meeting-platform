@@ -74,7 +74,7 @@ export class LivekitWebhookController {
       }
 
       this.logger.log(`Marking room ${event.room.name} as finished`);
-      await this.roomRepo.update(event.room.name, { finished: true });
+      await this.roomRepo.markAsFinished(event.room.name);
 
       return { ok: true, updated: true };
     }
