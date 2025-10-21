@@ -23,12 +23,13 @@ import { ApiBody, ApiConsumes, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { ListFilesQueryDto } from './dto/listFilesQueryDto';
 import type { AuthTokenPayload } from 'src/common/utils/auth.utils';
 import { PatchFileDto } from './dto/patchFileDto';
+import { FileTypesQueryDto } from './dto/FileTypesQueryDto';
 
 @Controller('file')
 export class FileController {
   constructor(private fileService: FileManagementService) {}
 
-  @Get(':shortId')
+  @Get('room/:shortId')
   @ApiQuery({
     name: 'skip',
     required: false,
@@ -64,6 +65,29 @@ export class FileController {
       }
       throw error;
     }
+  }
+
+  @Get()
+  @UseGuards(AuthGuard({ required: true }))
+  async listUserFiles(
+    @User('id') userId: number,
+    @Query() query: FileTypesQueryDto,
+  ) {
+    const files = await this.fileService.listUserFiles(userId, query.types);
+    return files;
+  }
+
+  @Get('storage/size')
+  @UseGuards(AuthGuard({ required: true }))
+  async getUserContraints(
+    @User('id') userId: number,
+    @Query() query: FileTypesQueryDto,
+  ) {
+    const totalSize = await this.fileService.getTotalFileSizeByUser(
+      userId,
+      query.types,
+    );
+    return { totalSize };
   }
 
   @ApiConsumes('multipart/form-data')

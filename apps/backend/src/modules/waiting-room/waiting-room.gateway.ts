@@ -39,6 +39,12 @@ export class WaitingRoomGateway
 
   constructor(private readonly waitingRoomService: WaitingRoomService) {}
 
+  sendToUser(roomShortId: string, userId: string, type: string, payload: any) {
+    const roomConnections = this.connections.get(roomShortId);
+    const user = roomConnections?.get(userId);
+    user?.ws.send(JSON.stringify({ type, payload }));
+  }
+
   async handleConnection(ws: WebSocket, req: any) {
     try {
       const url = new URL(req.url, `http://${req.headers.host}`);

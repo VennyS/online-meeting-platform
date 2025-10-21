@@ -20,6 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.911.0",
+    "@aws-sdk/s3-request-presigner": "^3.911.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -27,10 +29,10 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.6",
     "@nestjs/platform-ws": "^11.1.6",
+    "@nestjs/schedule": "^6.0.1",
     "@nestjs/swagger": "github:nestjs/swagger",
     "@nestjs/websockets": "^11.1.6",
     "@prisma/client": "^6.16.3",
-    "aws-sdk": "^2.1692.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",

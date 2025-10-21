@@ -89,7 +89,7 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
                 variant="contained"
                 color="primary"
                 size="small"
-                disabled={room.label != "Предстоящая"}
+                disabled={room.label != "Предстоящая" && room.label != "Идет"}
               >
                 Зайти
               </Button>

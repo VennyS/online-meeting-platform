@@ -5,5 +5,5 @@ export type FileCardProps = {
   onRename?: (file: IFile) => void;
   onDownload: (file: IFile) => void;
   onDelete: (fileId: number) => void;
-  onNameChange: (fileId: number, newName: string) => void;
+  onNameChange?: (fileId: number, newName: string) => void;
 };
