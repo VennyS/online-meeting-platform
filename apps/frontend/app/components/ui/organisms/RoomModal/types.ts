@@ -35,8 +35,10 @@ export const RoomSchema = z.object({
       }
     ),
   durationMinutes: z
-    .number()
-    .min(1, "Продолжительность должна быть положительной")
+    .union([
+      z.number().min(1, "Продолжительность должна быть положительной"),
+      z.nan(),
+    ])
     .optional(),
   isPublic: z.boolean().optional(),
   showHistoryToNewbies: z.boolean().optional(),
