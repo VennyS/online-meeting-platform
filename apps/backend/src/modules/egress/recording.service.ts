@@ -1,10 +1,10 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import {
-  RoomCompositeOptions,
   EgressClient,
   S3Upload,
   EncodedFileOutput,
   EncodedFileType,
+  WebOptions,
 } from 'livekit-server-sdk';
 import { FileType } from '@prisma/client';
 import { FileManagementService } from 'src/modules/file/file-management.service';
@@ -65,12 +65,12 @@ export class RecordingService {
     const customBaseUrl = `${process.env.RECORDING_ROUTE}/${room.shortId}/recording?livekitToken=${token}`;
 
     try {
-      const result = await this.egressClient.startRoomCompositeEgress(
-        roomName,
+      const result = await this.egressClient.startWebEgress(
+        customBaseUrl,
         fileOutput,
         {
-          customBaseUrl: customBaseUrl,
-        } as RoomCompositeOptions,
+          awaitStartSignal: true,
+        } as WebOptions,
       );
 
       await this.redis.setEgressUser(result.egressId, Number(userId));
