@@ -43,18 +43,27 @@ export class RedisService {
 
   constructor(private readonly client: Redis) {}
 
-  async setEgressUser(egressId: string, userId: number) {
+  async setEgressData(egressId: string, userId: number, roomShortId: string) {
     const key = `egress:${egressId}`;
-    await this.client.set(key, userId.toString(), 'EX', 60 * 60 * 24); // 1 день
+    const value = JSON.stringify({ userId, roomShortId });
+    await this.client.set(key, value, 'EX', 60 * 60 * 24); // 1 день
   }
 
-  async getEgressUser(egressId: string): Promise<number | null> {
+  async getEgressData(
+    egressId: string,
+  ): Promise<{ userId: number; roomShortId: string } | null> {
     const key = `egress:${egressId}`;
-    const val = await this.client.get(key);
-    return val ? Number(val) : null;
+    const raw = await this.client.get(key);
+    if (!raw) return null;
+
+    const data = JSON.parse(raw);
+    return {
+      userId: Number(data.userId),
+      roomShortId: String(data.roomShortId),
+    };
   }
 
-  async deleteEgressUser(egressId: string) {
+  async deleteEgressData(egressId: string) {
     const key = `egress:${egressId}`;
     await this.client.del(key);
   }

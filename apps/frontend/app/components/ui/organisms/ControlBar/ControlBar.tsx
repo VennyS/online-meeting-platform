@@ -61,7 +61,7 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   }, [room]);
 
   const handleRecordingClick = () => {
-    setRecordingPending(true);
+    setRecordingPending(!isRecording);
     isRecording ? stopRecording() : startRecording();
   };
 
