@@ -27,6 +27,8 @@ import Badge from "@mui/material/Badge";
 import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
 import { CircularProgress, Menu, MenuItem, useMediaQuery } from "@mui/material";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/app/hooks/useUser";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const {
@@ -38,6 +40,9 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
     stopRecording,
     startRecording,
   } = useParticipantsContext();
+  const { user } = useUser();
+
+  const router = useRouter();
 
   const isMobile = useMediaQuery("(max-width:540px)");
 
@@ -71,6 +76,16 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
       disabled: disconnectButtonDisalbed,
     },
   } = useDisconnectButton({ stopTracks: true });
+
+  const onDisconnectButtonClickWrapped = () => {
+    onDisconnectButtonClick();
+    if (user && !user.isGuest) {
+      router.push("/");
+      return;
+    }
+    router.replace("/farewell");
+  };
+
   const {
     toggle: microToggle,
     enabled: microEnabled,
@@ -285,7 +300,7 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
         )}
         <IconButton
           title="Выйти из комнаты"
-          onClick={onDisconnectButtonClick}
+          onClick={onDisconnectButtonClickWrapped}
           disabled={disconnectButtonDisalbed}
           sx={{
             bgcolor: "error.main",

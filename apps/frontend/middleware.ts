@@ -13,7 +13,11 @@ export async function middleware(req: NextRequest) {
 
   console.log("[MIDDLEWARE] Запрос:", pathname);
 
-  if (pathname.includes("/prejoin") || pathname.startsWith("/room/")) {
+  if (
+    pathname.includes("/prejoin") ||
+    pathname.startsWith("/room/") ||
+    pathname.endsWith("/farewell")
+  ) {
     return NextResponse.next();
   }
 

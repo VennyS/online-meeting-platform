@@ -16,28 +16,19 @@ export const RoomSchema = z.object({
   startAt: z
     .string()
     .nonempty("Дата начала обязательна")
-    .refine(
-      (val) => {
-        const date = new Date(val);
-        if (isNaN(date.getTime())) return false;
+    .transform((val) => {
+      const date = new Date(val);
 
-        const now = new Date();
-
-        now.setSeconds(0, 0);
-        date.setSeconds(0, 0);
-
-        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-
-        return date >= fiveMinutesAgo;
-      },
-      {
-        message: "Дата не должна быть в прошлом",
+      if (isNaN(date.getTime()) || date < new Date()) {
+        return new Date().toISOString();
       }
-    ),
+
+      return val;
+    }),
   durationMinutes: z
     .union([
       z.number().min(1, "Продолжительность должна быть положительной"),
-      z.nan(),
+      z.nan().transform(() => 60),
     ])
     .optional(),
   isPublic: z.boolean().optional(),

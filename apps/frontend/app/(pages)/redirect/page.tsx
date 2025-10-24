@@ -1,5 +1,6 @@
 "use client";
 
+import { Box, Button, Typography } from "@mui/material";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -13,25 +14,26 @@ function RedirectContent() {
   const decoded = decodeURIComponent(to);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Вы покидаете сайт</h2>
-      <p>Сейчас вы перейдёте по внешней ссылке:</p>
-      <p style={{ wordBreak: "break-word" }}>{decoded}</p>
-      <Link
-        href={decoded}
-        style={{
-          display: "inline-block",
-          marginTop: 10,
-          padding: "8px 16px",
-          background: "#0070f3",
-          color: "#fff",
-          borderRadius: 4,
-          textDecoration: "none",
-        }}
-      >
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+      }}
+    >
+      <Typography variant="h4">Вы покидаете сайт</Typography>
+      <Typography variant="body1">
+        Сейчас вы перейдёте по внешней ссылке:
+      </Typography>
+      <Typography variant="body1" sx={{ wordBreak: "break-word", mb: 2 }}>
+        {decoded}
+      </Typography>
+      <Button href={decoded} variant="contained" LinkComponent={Link}>
         Перейти
-      </Link>
-    </div>
+      </Button>
+    </Box>
   );
 }
 
