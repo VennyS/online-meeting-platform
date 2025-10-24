@@ -92,7 +92,6 @@ export class LivekitWebhookController {
       }
 
       await this.recordingService.handleEgressFinished({
-        roomShortId: egress.roomName,
         fileName: file.filename,
         size: file.size ? Number(file.size) : undefined,
         mimeType: 'video/mp4',

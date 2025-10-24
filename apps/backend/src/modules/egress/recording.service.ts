@@ -32,7 +32,7 @@ export class RecordingService {
     this.egressClient = new EgressClient(LIVEKIT_URL, API_KEY, API_SECRET);
   }
 
-  async startRecording(roomName: string, userId: string) {
+  async startRecording(shortId: string, userId: string) {
     const s3Config = new S3Upload({
       accessKey: process.env.MINIO_ROOT_USER!,
       secret: process.env.MINIO_ROOT_PASSWORD!,
@@ -41,7 +41,7 @@ export class RecordingService {
       forcePathStyle: true,
     });
 
-    const room = await this.roomRepo.findByShortId(roomName);
+    const room = await this.roomRepo.findByShortId(shortId);
     if (!room) return;
 
     const fileKey = `rooms/${room.id}/user/${userId}/${Date.now()}.mp4`;
@@ -59,7 +59,7 @@ export class RecordingService {
     const token = await createEgressLivekitToken(room.shortId);
 
     this.logger.log(
-      `Room name: ${roomName}, S3 Filepath: ${fileOutput.filepath}`,
+      `Room shortId: ${shortId}, S3 Filepath: ${fileOutput.filepath}`,
     );
 
     const customBaseUrl = `${process.env.RECORDING_ROUTE}/${room.shortId}/recording?livekitToken=${token}`;
@@ -73,7 +73,7 @@ export class RecordingService {
         } as WebOptions,
       );
 
-      await this.redis.setEgressUser(result.egressId, Number(userId));
+      await this.redis.setEgressData(result.egressId, Number(userId), shortId);
 
       this.logger.log(`Egress started, jobId: ${result.egressId}`);
       return result;
@@ -100,7 +100,6 @@ export class RecordingService {
   }
 
   async handleEgressFinished(event: {
-    roomShortId: string;
     fileName: string;
     size?: number;
     mimeType?: string;
@@ -108,12 +107,21 @@ export class RecordingService {
     startTime: bigint;
     endTime: bigint;
   }) {
-    const { roomShortId, fileName, size, mimeType } = event;
+    const { fileName, size, mimeType } = event;
 
-    const userId = await this.redis.getEgressUser(event.egressId);
+    const egressData = await this.redis.getEgressData(event.egressId);
+    if (!egressData) {
+      this.logger.warn(`No egress data found for egressId: ${event.egressId}`);
+      return;
+    }
+
+    const { userId, roomShortId } = egressData;
 
     const room = await this.roomRepo.findByShortId(roomShortId);
-    if (!room) return;
+    if (!room) {
+      this.logger.debug(`Room with shortId: ${roomShortId} doesn't exists`);
+      return;
+    }
 
     const recording = await this.fileManagementService.createFileRecord({
       roomId: room.id,
@@ -183,7 +191,7 @@ export class RecordingService {
       }
     }
 
-    await this.redis.deleteEgressUser(event.egressId);
+    await this.redis.deleteEgressData(event.egressId);
 
     this.logger.log(`Recording saved to DB: ${fileName}`);
   }
