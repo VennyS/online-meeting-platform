@@ -19,8 +19,6 @@ async function bootstrap() {
     }),
   );
 
-  app.useWebSocketAdapter(new WsAdapter(app));
-
   app.use('/livekit-webhook', async (req, res, next) => {
     try {
       (req as any).rawBody = await rawBody(req);

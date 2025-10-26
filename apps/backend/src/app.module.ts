@@ -6,6 +6,7 @@ import { WaitingRoomModule } from './modules/waiting-room/waiting-room.module';
 import { FileModule } from './modules/file/file.module';
 import { EgressModule } from './modules/egress/egress.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { WsModule } from './modules/ws/ws.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     FileModule,
     EgressModule,
     ScheduleModule.forRoot(),
+    WsModule,
   ],
 })
 export class AppModule {}
