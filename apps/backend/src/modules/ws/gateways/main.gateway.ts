@@ -3,13 +3,17 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket, Server } from 'socket.io';
+import { Server } from 'socket.io';
 import { ConnectionService } from '../services/connection.service';
-import { RoomMetadata } from '../interfaces/room-metadata.interface';
+import {
+  Connection,
+  RoomMetadata,
+} from '../interfaces/room-metadata.interface';
 import { Logger } from '@nestjs/common';
 import { Mainservice } from '../services/main.service';
 import { RoomInfo } from '../interfaces/room.interface';
 import { TypedSocket } from '../interfaces/socket-data.interface';
+import { getClientIP } from 'src/common/utils/socket.utils';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class MainGateway implements OnGatewayConnection {
@@ -35,7 +39,7 @@ export class MainGateway implements OnGatewayConnection {
     let roomInfo: RoomInfo | null;
 
     try {
-      roomInfo = await this.mainService.getRoomInfo(userId, roomShortId);
+      roomInfo = await this.mainService.getRoomInfo(roomShortId, userId);
     } catch (e) {
       this.logger.error('Error happened while fetching room info', e);
       socket.emit('connection_error', {
@@ -56,19 +60,28 @@ export class MainGateway implements OnGatewayConnection {
       return;
     }
 
+    const ip = getClientIP(socket);
+
     socket.data.roomShortId = roomShortId;
     socket.data.userId = userId;
     socket.data.username = username;
     socket.data.isHost = roomInfo.isHost;
+    socket.data.ip = ip;
 
     const roomMeta: RoomMetadata = {
       roomshortId: roomShortId,
       name: roomInfo.name,
       startedAt: new Date(),
       showHistoryToNewbies: roomInfo.showHistoryToNewbies,
+      host: roomInfo.isHost ? socket : undefined,
+    };
+
+    const userConnection: Connection = {
+      socketId: socket.id,
     };
 
     this.connectionService.addRoom(roomMeta);
+    this.connectionService.addConnection(userId, ip, userConnection);
 
     socket.emit('connection_success', {
       roomName: roomInfo.name,

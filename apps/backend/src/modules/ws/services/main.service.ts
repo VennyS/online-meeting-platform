@@ -6,10 +6,10 @@ import { RoomInfo } from '../interfaces/room.interface';
 export class Mainservice {
   constructor(private readonly roomRepository: RoomRepository) {}
 
-  async getRoomInfo(roomId: string, userId: string): Promise<RoomInfo | null> {
+  async getRoomInfo(roomId: string, userId: number): Promise<RoomInfo | null> {
     const room = await this.roomRepository.findByShortId(roomId);
     return {
-      isHost: room?.ownerId.toString() === userId,
+      isHost: room?.ownerId === userId,
       showHistoryToNewbies: room ? room.showHistoryToNewbies : false,
       name: room ? room.name : '',
     };

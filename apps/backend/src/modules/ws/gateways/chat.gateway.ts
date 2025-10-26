@@ -35,7 +35,7 @@ export class ChatGateway implements OnGatewayConnection {
 
     try {
       const messages = await this.chatService.getMessages(roomShortId!);
-      socket.emit('previousMessages', messages);
+      socket.emit('init_chat', messages);
     } catch (error) {
       this.logger.error('Error fetching messages', error);
     }
@@ -49,10 +49,8 @@ export class ChatGateway implements OnGatewayConnection {
     },
     @ConnectedSocket() socket: TypedSocket,
   ) {
-    const { roomShortId } = socket.handshake.auth;
-
     this.logger.debug('New message received', data);
 
-    this.chatService.newMessage(roomShortId!, data.message);
+    this.chatService.newMessage(socket.data.roomShortId, data.message);
   }
 }
