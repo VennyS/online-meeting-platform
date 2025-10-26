@@ -6,11 +6,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket, Server } from 'socket.io';
+import { Server } from 'socket.io';
 import { ChatService } from '../services/chat.service';
 import { ConnectionService } from '../services/connection.service';
 import { Logger } from '@nestjs/common';
 import { Message } from '../interfaces/message.interface';
+import type { TypedSocket } from '../interfaces/socket-data.interface';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class ChatGateway implements OnGatewayConnection {
@@ -24,18 +25,16 @@ export class ChatGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  async handleConnection(socket: Socket) {
+  async handleConnection(socket: TypedSocket) {
     this.logger.debug('New client connected to ChatGateway');
 
-    const { roomShortId } = socket.handshake.auth as {
-      roomShortId: string;
-    };
+    const { roomShortId } = socket.handshake.auth;
 
-    const roomMetadata = this.connectionService.getMetadata(roomShortId);
+    const roomMetadata = this.connectionService.getMetadata(roomShortId!);
     if (!roomMetadata || !roomMetadata.showHistoryToNewbies) return;
 
     try {
-      const messages = await this.chatService.getMessages(roomShortId);
+      const messages = await this.chatService.getMessages(roomShortId!);
       socket.emit('previousMessages', messages);
     } catch (error) {
       this.logger.error('Error fetching messages', error);
@@ -48,14 +47,12 @@ export class ChatGateway implements OnGatewayConnection {
     data: {
       message: Omit<Message, 'id' | 'createdAt'>;
     },
-    @ConnectedSocket() socket: Socket,
+    @ConnectedSocket() socket: TypedSocket,
   ) {
-    const { roomShortId } = socket.handshake.auth as {
-      roomShortId: string;
-    };
+    const { roomShortId } = socket.handshake.auth;
 
     this.logger.debug('New message received', data);
 
-    this.chatService.newMessage(roomShortId, data.message);
+    this.chatService.newMessage(roomShortId!, data.message);
   }
 }

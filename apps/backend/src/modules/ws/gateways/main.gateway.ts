@@ -9,6 +9,7 @@ import { RoomMetadata } from '../interfaces/room-metadata.interface';
 import { Logger } from '@nestjs/common';
 import { Mainservice } from '../services/main.service';
 import { RoomInfo } from '../interfaces/room.interface';
+import { TypedSocket } from '../interfaces/socket-data.interface';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class MainGateway implements OnGatewayConnection {
@@ -22,12 +23,8 @@ export class MainGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  async handleConnection(socket: Socket) {
-    const { roomShortId, userId, username } = socket.handshake.auth as {
-      roomShortId?: string;
-      userId?: string;
-      username?: string;
-    };
+  async handleConnection(socket: TypedSocket) {
+    const { roomShortId, userId, username } = socket.handshake.auth;
 
     if (!roomShortId || !userId || !username) {
       this.logger.debug('Missed any of connection params');
