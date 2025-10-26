@@ -1,0 +1,127 @@
+import {
+  ConnectedSocket,
+  MessageBody,
+  OnGatewayConnection,
+  SubscribeMessage,
+  WebSocketGateway,
+  WebSocketServer,
+} from '@nestjs/websockets';
+import type { TypedSocket } from '../interfaces/socket-data.interface';
+import { BlacklistService } from '../services/blacklist.service';
+import { Logger } from '@nestjs/common';
+import { BlacklistEntry } from '../interfaces/blacklist-entry.interface';
+import { ConnectionService } from '../services/connection.service';
+import { Server } from 'socket.io';
+
+@WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
+export class BlacklistGateway implements OnGatewayConnection {
+  private readonly logger = new Logger(BlacklistGateway.name);
+
+  @WebSocketServer()
+  server: Server;
+
+  constructor(
+    private readonly connectionService: ConnectionService,
+    private readonly blacklistService: BlacklistService,
+  ) {}
+
+  async handleConnection(socket: TypedSocket) {
+    const { isHost } = socket.data;
+
+    if (!isHost) return;
+
+    let blacklistedUsers: BlacklistEntry[];
+
+    try {
+      blacklistedUsers = await this.blacklistService.getBlacklistedUsers(
+        socket.data.roomShortId,
+      );
+    } catch (e) {
+      this.logger.error('Error fetching blacklisted users', e);
+      return;
+    }
+
+    if (blacklistedUsers.length === 0) {
+      this.logger.debug('No blacklisted users found for this room');
+      return;
+    }
+
+    socket.emit('blacklist_init', blacklistedUsers);
+  }
+
+  @SubscribeMessage('add_to_blacklist')
+  async addToBlackList(
+    @MessageBody() data: Omit<BlacklistEntry, 'ip'>,
+    @ConnectedSocket() socket: TypedSocket,
+  ) {
+    const excludedUser = this.connectionService.getConnection({
+      userId: data.userId,
+    });
+    if (!excludedUser) {
+      this.logger.debug(
+        `No connection found for userId: ${data.userId} to blacklist`,
+      );
+      return;
+    }
+
+    const socketToExclude: TypedSocket | undefined =
+      this.server.sockets.sockets.get(excludedUser.socketId);
+
+    if (!socketToExclude) {
+      this.logger.debug(
+        `No socket found for socketId: ${excludedUser.socketId} to blacklist`,
+      );
+      return;
+    }
+
+    const blacklistEntry: BlacklistEntry = {
+      userId: data.userId,
+      name: data.name,
+      ip: socketToExclude.data.ip,
+    };
+
+    try {
+      await this.blacklistService.addToBlacklist(
+        socketToExclude.data.roomShortId,
+        blacklistEntry,
+      );
+    } catch (e) {
+      this.logger.error('Error adding user to blacklist', e);
+      return;
+    }
+
+    this.notifyAboutUpdatedBlacklist(socketToExclude.data.roomShortId);
+  }
+
+  @SubscribeMessage('remove_from_blacklist')
+  async removeFromBlacklist(
+    @MessageBody() data: Pick<BlacklistEntry, 'ip'>,
+    @ConnectedSocket() socket: TypedSocket,
+  ) {
+    const { isHost, userId, roomShortId } = socket.data;
+
+    if (!isHost) {
+      this.logger.debug(
+        `User ${userId} not host to add to blacklist in room ${roomShortId}`,
+      );
+      return;
+    }
+
+    await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
+
+    this.notifyAboutUpdatedBlacklist(roomShortId);
+  }
+
+  private async notifyAboutUpdatedBlacklist(roomShortId: string) {
+    const roomData = this.connectionService.getMetadata(roomShortId);
+    if (!roomData?.host) {
+      this.logger.debug(`Host isn't in room, don't send notification to him`);
+      return;
+    }
+
+    const blacklist =
+      await this.blacklistService.getBlacklistedUsers(roomShortId);
+
+    roomData.host.emit('blacklist_updated', blacklist);
+  }
+}
