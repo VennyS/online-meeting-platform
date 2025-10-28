@@ -2,20 +2,17 @@ import { Logger } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
-  OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
 import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { Server } from 'socket.io';
-import {
-  RecordingService,
-  RecordingStartError,
-} from '../services/recording.service';
+import { RecordingService } from '../services/recording.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
-export class RecordingGateway {
+export class RecordingGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(RecordingGateway.name);
 
   constructor(private readonly recordingService: RecordingService) {}
@@ -40,13 +37,13 @@ export class RecordingGateway {
         `Room ${roomShortId} recording by userId: ${userId} failed`,
         e,
       );
-      if (e instanceof RecordingStartError) {
-        socket.emit('recording_error');
-      }
+      socket.emit('recording_error');
       return;
     }
 
-    this.server.sockets.emit('recording_started', egressId);
+    this.server.sockets
+      .to(`room-${roomShortId}`)
+      .emit('recording_started', egressId);
   }
 
   @SubscribeMessage('recording_finished')
@@ -54,7 +51,7 @@ export class RecordingGateway {
     @ConnectedSocket() socket: TypedSocket,
     @MessageBody() data: { egressId: string },
   ) {
-    const { isHost } = socket.data;
+    const { isHost, roomShortId } = socket.data;
     if (!isHost) return;
 
     try {
@@ -67,6 +64,22 @@ export class RecordingGateway {
       return;
     }
 
-    this.server.sockets.emit('recording_finished', { egressId: data.egressId });
+    this.server.sockets
+      .to(roomShortId)
+      .emit('recording_finished', { egressId: data.egressId });
+  }
+
+  handleDisconnect(socket: TypedSocket) {
+    const { roomShortId, userId } = socket.data;
+
+    this.logger.debug(
+      `Stopping egress started by ${userId} in ${roomShortId} due disconnect`,
+    );
+
+    try {
+      this.recordingService.stopRecording(userId);
+    } catch (e) {
+      this.logger.error('Stop recording error', e);
+    }
   }
 }

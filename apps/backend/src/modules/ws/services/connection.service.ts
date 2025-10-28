@@ -9,6 +9,7 @@ export class ConnectionService {
   private rooms = new Map<string, RoomMetadata>();
   private userToSocket = new Map<number, Connection>();
   private ipToSocket = new Map<string, Connection>();
+  private guestsToSocket = new Map<number, Connection>();
 
   addRoom(meta: RoomMetadata) {
     this.rooms.set(meta.roomshortId, meta);
@@ -21,6 +22,18 @@ export class ConnectionService {
   addConnection(userId: number, ip: string, connection: Connection) {
     this.userToSocket.set(userId, connection);
     this.ipToSocket.set(ip, connection);
+  }
+
+  getGuest(guestId: number) {
+    return this.guestsToSocket.get(guestId);
+  }
+
+  addGuest(guestId: number, connection: Connection) {
+    this.guestsToSocket.set(guestId, connection);
+  }
+
+  removeGuest(guestId: number) {
+    this.guestsToSocket.delete(guestId);
   }
 
   getConnection(

@@ -26,8 +26,6 @@ export class ChatGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    this.logger.debug('New client connected to ChatGateway');
-
     const { roomShortId } = socket.handshake.auth;
 
     const roomMetadata = this.connectionService.getMetadata(roomShortId!);

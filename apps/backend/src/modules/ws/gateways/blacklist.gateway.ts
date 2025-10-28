@@ -54,6 +54,14 @@ export class BlacklistGateway implements OnGatewayConnection {
     @MessageBody() data: Omit<BlacklistEntry, 'ip'>,
     @ConnectedSocket() socket: TypedSocket,
   ) {
+    const { roomShortId, userId, isHost } = socket.data;
+    if (!isHost) {
+      this.logger.debug(
+        `User ${userId} not host attempt to add to blacklist in room ${roomShortId}`,
+      );
+      return;
+    }
+
     const excludedUser = this.connectionService.getConnection({
       userId: data.userId,
     });
@@ -102,7 +110,7 @@ export class BlacklistGateway implements OnGatewayConnection {
 
     if (!isHost) {
       this.logger.debug(
-        `User ${userId} not host to add to blacklist in room ${roomShortId}`,
+        `User ${userId} not host attempt to remove from blacklist in room ${roomShortId}`,
       );
       return;
     }
@@ -113,15 +121,12 @@ export class BlacklistGateway implements OnGatewayConnection {
   }
 
   private async notifyAboutUpdatedBlacklist(roomShortId: string) {
-    const roomData = this.connectionService.getMetadata(roomShortId);
-    if (!roomData?.host) {
-      this.logger.debug(`Host isn't in room, don't send notification to him`);
-      return;
-    }
-
     const blacklist =
       await this.blacklistService.getBlacklistedUsers(roomShortId);
 
-    roomData.host.emit('blacklist_updated', blacklist);
+    this.server
+      .of('/')
+      .to(`hosts-${roomShortId}`)
+      .emit('blacklist_updated', blacklist);
   }
 }

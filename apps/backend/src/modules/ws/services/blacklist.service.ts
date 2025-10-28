@@ -21,6 +21,10 @@ export class BlacklistService {
       blacklistEntry.name,
       blacklistEntry.userId,
     );
+    await this.livekit.removeParticipant(
+      roomShortId,
+      String(blacklistEntry.userId),
+    );
   }
 
   async removeFromBlacklist(roomShortId: string, ip: string) {
