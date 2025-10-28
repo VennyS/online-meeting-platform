@@ -8,6 +8,10 @@ import {
   BulkMeetingSessionDto,
   BulkParticipantDto,
 } from 'src/repositories/room.repository';
+import {
+  Permissions,
+  RoomRole,
+} from 'src/modules/ws/interfaces/administation.interface';
 
 export type Guest = {
   guestId: string;
@@ -16,7 +20,7 @@ export type Guest = {
 };
 
 export type BlacklistEntry = {
-  userId?: string;
+  userId: number;
   ip: string;
   name: string;
 };
@@ -46,7 +50,13 @@ export class RedisService {
   async setEgressData(egressId: string, userId: number, roomShortId: string) {
     const key = `egress:${egressId}`;
     const value = JSON.stringify({ userId, roomShortId });
-    await this.client.set(key, value, 'EX', 60 * 60 * 24); // 1 день
+    await this.client.set(key, value, 'EX', 60 * 60 * 24);
+    await this.client.set(
+      `user_egress:${userId}`,
+      egressId,
+      'EX',
+      60 * 60 * 24,
+    );
   }
 
   async getEgressData(
@@ -63,9 +73,30 @@ export class RedisService {
     };
   }
 
-  async deleteEgressData(egressId: string) {
+  async getEgressDataByUserId(
+    userId: number,
+  ): Promise<{ egressId: string; roomShortId: string } | null> {
+    const egressId = await this.client.get(`user_egress:${userId}`);
+    if (!egressId) return null;
+
+    const key = `egress:${egressId}`;
+    const raw = await this.client.get(key);
+    if (!raw) return null;
+
+    const data = JSON.parse(raw);
+    return {
+      egressId,
+      roomShortId: String(data.roomShortId),
+    };
+  }
+
+  async deleteEgressData(egressId: string, userId?: number) {
     const key = `egress:${egressId}`;
     await this.client.del(key);
+
+    if (!userId) return;
+
+    await this.client.del(`user_egress:${userId}`);
   }
 
   // --- Сообщения комнаты ---
@@ -117,49 +148,62 @@ export class RedisService {
   }
 
   // --- Роли ---
-  async getRoles(roomId: string) {
-    return this.client.hgetall(`room:${roomId}:roles`);
+  async getRoles(roomId: string): Promise<Record<string, RoomRole>> {
+    return (await this.client.hgetall(`room:${roomId}:roles`)) as Record<
+      string,
+      RoomRole
+    >;
   }
 
-  async setRole(roomId: string, userId: string, role: string) {
+  async setRole(roomId: string, userId: string, role: RoomRole) {
     await this.client.hset(`room:${roomId}:roles`, userId, role);
   }
 
-  async getRole(roomId: string, userId: string) {
-    return this.client.hget(`room:${roomId}:roles`, userId);
+  async getRole(roomId: string, userId: string): Promise<RoomRole | null> {
+    return (await this.client.hget(
+      `room:${roomId}:roles`,
+      userId,
+    )) as RoomRole | null;
   }
 
   // --- Права ---
-  async getPermissions(roomId: string) {
+  async getPermissions(roomId: string): Promise<Record<RoomRole, Permissions>> {
     const raw = await this.client.hgetall(`room:${roomId}:permissions`);
-    const parsed: Record<string, any> = {};
+    const parsed: Record<RoomRole, Permissions> = {} as Record<
+      RoomRole,
+      Permissions
+    >;
+
     for (const [role, perms] of Object.entries(raw)) {
       try {
-        parsed[role] = JSON.parse(perms as string);
+        parsed[role as RoomRole] = JSON.parse(perms as string) as Permissions;
       } catch {
-        parsed[role] = {};
+        parsed[role as RoomRole] = {} as Permissions;
       }
     }
+
     return parsed;
   }
 
   async setPermission(
     roomId: string,
-    targetRole: string,
-    permission: string,
-    value: any,
-  ) {
+    targetRole: RoomRole,
+    permission: keyof Permissions,
+    value: boolean,
+  ): Promise<Permissions> {
     const key = `room:${roomId}:permissions`;
     const stored = await this.client.hget(key, targetRole);
-    let rolePermissions = {};
+    let rolePermissions: Partial<Permissions> = {};
+
     if (stored) {
       try {
-        rolePermissions = JSON.parse(stored);
+        rolePermissions = JSON.parse(stored) as Partial<Permissions>;
       } catch {}
     }
+
     rolePermissions[permission] = value;
     await this.client.hset(key, targetRole, JSON.stringify(rolePermissions));
-    return rolePermissions;
+    return rolePermissions as Permissions;
   }
 
   async setPermissions(
@@ -263,7 +307,7 @@ export class RedisService {
     roomId: string,
     ip: string,
     name: string,
-    userId?: string,
+    userId: number,
   ): Promise<void> {
     const key = `room:${roomId}:blacklist`;
     const blacklist = await this.getBlacklist(roomId);

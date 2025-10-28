@@ -190,8 +190,7 @@ export class RecordingService {
         );
       }
     }
-
-    await this.redis.deleteEgressData(event.egressId);
+    await this.redis.deleteEgressData(event.egressId, userId);
 
     this.logger.log(`Recording saved to DB: ${fileName}`);
   }
