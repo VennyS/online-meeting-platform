@@ -1,5 +1,6 @@
 import {
   OnGatewayConnection,
+  OnGatewayDisconnect,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
@@ -14,14 +15,18 @@ import { Mainservice } from '../services/main.service';
 import { RoomInfo } from '../interfaces/room.interface';
 import { TypedSocket } from '../interfaces/socket-data.interface';
 import { getClientIP } from 'src/common/utils/socket.utils';
+import { AnalyticsService } from '../services/analytics.service';
+import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
-export class MainGateway implements OnGatewayConnection {
+export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(MainGateway.name);
 
   constructor(
     private readonly connectionService: ConnectionService,
     private readonly mainService: Mainservice,
+    private readonly analyticsService: AnalyticsService,
+    private readonly livekitService: LivekitService,
   ) {}
 
   @WebSocketServer()
@@ -73,7 +78,6 @@ export class MainGateway implements OnGatewayConnection {
       name: roomInfo.name,
       startedAt: new Date(),
       showHistoryToNewbies: roomInfo.showHistoryToNewbies,
-      host: roomInfo.isHost ? socket : undefined,
     };
 
     const userConnection: Connection = {
@@ -83,11 +87,33 @@ export class MainGateway implements OnGatewayConnection {
     this.connectionService.addRoom(roomMeta);
     this.connectionService.addConnection(userId, ip, userConnection);
 
+    if (roomInfo.isHost) {
+      socket.join(`hosts-${roomShortId}`);
+    }
+
+    socket.join(`room-${roomShortId}`);
+
     socket.emit('connection_success', {
       roomName: roomInfo.name,
       message: 'Successfully connected to room',
     });
 
-    this.logger.log(`${username} connected to room ${roomShortId}`);
+    this.analyticsService.join(roomShortId, String(userId), username, ip);
+
+    this.logger.log(`${username} ${userId} connected to room ${roomShortId}`);
+  }
+
+  async handleDisconnect(socket: TypedSocket) {
+    const { roomShortId, userId } = socket.data;
+
+    this.analyticsService.leave(roomShortId, String(userId));
+
+    const isEmpty = await this.livekitService.isEmpty(roomShortId);
+
+    if (isEmpty) {
+      this.analyticsService.saveAndClear(roomShortId);
+    }
+
+    this.logger.log(`User ${userId} left the room ${roomShortId}`);
   }
 }

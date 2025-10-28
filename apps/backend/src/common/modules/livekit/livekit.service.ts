@@ -48,4 +48,17 @@ export class LivekitService {
       throw error;
     }
   }
+
+  async isEmpty(roomName: string): Promise<boolean> {
+    try {
+      const participants = await this.listParticipants(roomName);
+      return participants.length === 0;
+    } catch (error) {
+      this.logger.error(
+        `Error checking if room ${roomName} is empty: ${error.message}`,
+        error.stack,
+      );
+      return true;
+    }
+  }
 }
