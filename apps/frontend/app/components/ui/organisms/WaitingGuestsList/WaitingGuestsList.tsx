@@ -7,10 +7,10 @@ import {
   Button,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { useParticipantsContext } from "@/app/providers/participants.provider";
+import { useWaitingHostContext } from "@/app/providers/waiting.host.provider";
 
 const WaitingGuestsList = () => {
-  const { waitingGuests, approveGuest, rejectGuest } = useParticipantsContext();
+  const { waitingGuests, approveGuest, rejectGuest } = useWaitingHostContext();
 
   if (!waitingGuests || waitingGuests.length === 0) return null;
 

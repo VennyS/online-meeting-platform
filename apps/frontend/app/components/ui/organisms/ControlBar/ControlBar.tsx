@@ -24,12 +24,12 @@ import {
 import { RoomEvent, Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
-import { Panel } from "@/app/hooks/useParticipantsWithPermissions";
 import { CircularProgress, Menu, MenuItem, useMediaQuery } from "@mui/material";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
 import { useRecordingContext } from "@/app/providers/recording.provider";
+import { useWaitingHostContext } from "@/app/providers/waiting.host.provider";
 import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 import { Panel } from "@/app/hooks/useRoomLayout";
 
@@ -37,16 +37,11 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const { openedRightPanel, unreadCount, handleChangeOpenPanel } =
     useRoomLayoutContext();
 
+  const { waitingGuests } = useWaitingHostContext();
   const { startRecording, stopRecording } = useRecordingContext();
 
   const {
     local: { permissions },
-    openedRightPanel,
-    unreadCount,
-    waitingGuests,
-    handleChangeOpenPanel,
-    stopRecording,
-    startRecording,
   } = useParticipantsContext();
   const { user } = useUser();
 
