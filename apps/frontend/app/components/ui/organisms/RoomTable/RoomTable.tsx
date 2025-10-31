@@ -53,7 +53,10 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onModalOpen({ modal: Modal.Reports, shortId: room.shortId });
+                  onModalOpen({
+                    modal: Modal.Reports,
+                    roomShortId: room.shortId,
+                  });
                 }}
                 disabled={!room.haveReports}
               >
@@ -64,7 +67,10 @@ export function RoomTable({ rooms, onModalOpen }: RoomTableProps) {
                 size="small"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onModalOpen({ modal: Modal.Files, shortId: room.shortId });
+                  onModalOpen({
+                    modal: Modal.Files,
+                    roomShortId: room.shortId,
+                  });
                 }}
                 disabled={!room.haveFiles}
               >

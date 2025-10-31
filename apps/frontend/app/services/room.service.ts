@@ -11,27 +11,27 @@ export const roomService = {
     return response.data;
   },
 
-  async prequisites(shortId: string) {
+  async prequisites(roomShortId: string) {
     const response = await axiosClassic.get<Prequisites>(
-      `/room/${shortId}/prequisites`
+      `/room/${roomShortId}/prequisites`
     );
     return response.data;
   },
 
-  async getHistory(shortId: string) {
+  async getHistory(roomShortId: string) {
     const response = await axiosClassic.get<{ messages: any[] }>(
-      `/room/${shortId}/history`
+      `/room/${roomShortId}/history`
     );
     return response.data.messages;
   },
 
-  async sendMessage(shortId: string, text: string, user: IUser) {
+  async sendMessage(roomShortId: string, text: string, user: IUser) {
     const from = {
       id: user.id,
       firstName: user.firstName,
     };
 
-    const response = await axiosClassic.post(`/room/${shortId}/messages`, {
+    const response = await axiosClassic.post(`/room/${roomShortId}/messages`, {
       text,
       from,
     });
@@ -48,21 +48,24 @@ export const roomService = {
     return response.data;
   },
 
-  async updateRoom(shortId: string, data: UpdateRoomDto) {
-    const response = await axiosClassic.patch<Room>(`/room/${shortId}`, data);
-    return response.data;
-  },
-
-  async getMeetingReports(shortId: string) {
-    const response = await axiosClassic.get<MeetingReports>(
-      `/room/${shortId}/reports`
+  async updateRoom(roomShortId: string, data: UpdateRoomDto) {
+    const response = await axiosClassic.patch<Room>(
+      `/room/${roomShortId}`,
+      data
     );
     return response.data;
   },
 
-  async downloadMeetingReportsExcel(shortId: string) {
+  async getMeetingReports(roomShortId: string) {
+    const response = await axiosClassic.get<MeetingReports>(
+      `/room/${roomShortId}/reports`
+    );
+    return response.data;
+  },
+
+  async downloadMeetingReportsExcel(roomShortId: string) {
     const response = await axiosClassic.get<Blob>(
-      `/room/${shortId}/reports/excel`,
+      `/room/${roomShortId}/reports/excel`,
       {
         responseType: "blob",
       }
@@ -76,9 +79,9 @@ export const roomService = {
     a.remove();
   },
 
-  async downloadMeetingReportsCsv(shortId: string) {
+  async downloadMeetingReportsCsv(roomShortId: string) {
     const response = await axiosClassic.get<string>(
-      `/room/${shortId}/reports/csv`,
+      `/room/${roomShortId}/reports/csv`,
       {
         responseType: "text",
       }

@@ -1,5 +1,5 @@
 export type RoomReportsProps = {
-  shortId: string;
+  roomShortId: string;
   isOpen: boolean;
   onClose: () => void;
 };

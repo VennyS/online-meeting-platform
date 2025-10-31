@@ -8,10 +8,10 @@ import WaitingGuestsList from "../WaitingGuestsList/WaitingGuestsList";
 import PermissionsList from "../PermissionsList/PermissionsList";
 
 export function ParticipantsPanel({
-  roomId,
+  roomShortId,
   roomName,
 }: {
-  roomId: string;
+  roomShortId: string;
   roomName: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -26,7 +26,7 @@ export function ParticipantsPanel({
       hour: "2-digit",
       minute: "2-digit",
     });
-    const meetingLink = `${window.location.origin}/room/${roomId}`;
+    const meetingLink = `${window.location.origin}/room/${roomShortId}`;
 
     return `Встреча: ${roomName}
 Дата: ${meetingDate} (Москва)

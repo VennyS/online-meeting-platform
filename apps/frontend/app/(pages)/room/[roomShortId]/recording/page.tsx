@@ -20,7 +20,7 @@ const RecordingPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("livekitToken");
-  const { roomId: roomShortId } = useParams();
+  const { roomShortId } = useParams();
   const { socket, connect } = useWebSocket();
 
   const egressId = 0;
@@ -67,7 +67,9 @@ const RecordingPageContent = ({ roomShortId }: { roomShortId: string }) => {
     }
   }, [localInfo]);
 
-  return <RoomContent roomId={roomShortId} roomName="recording" hideControls />;
+  return (
+    <RoomContent roomShortId={roomShortId} roomName="recording" hideControls />
+  );
 };
 
 export default RecordingPage;

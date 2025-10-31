@@ -61,7 +61,7 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
                   e.stopPropagation();
                   onModalOpen({
                     modal: Modal.Reports,
-                    shortId: room.shortId,
+                    roomShortId: room.shortId,
                   });
                 }}
               >
@@ -76,7 +76,7 @@ const RoomCardGrid = ({ rooms, onModalOpen }: RoomCardGridProps) => {
                   e.stopPropagation();
                   onModalOpen({
                     modal: Modal.Files,
-                    shortId: room.shortId,
+                    roomShortId: room.shortId,
                   });
                 }}
               >

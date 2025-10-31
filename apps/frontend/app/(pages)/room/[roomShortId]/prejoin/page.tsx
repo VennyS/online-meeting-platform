@@ -23,7 +23,7 @@ import { io } from "socket.io-client";
 import { RoomSocket } from "@/app/types/socket.types";
 
 export default function PrejoinPage() {
-  const { roomId } = useParams();
+  const { roomShortId } = useParams();
   const router = useRouter();
   const { user, setUser, setToken, loading: isUserLoading } = useUser();
 
@@ -92,19 +92,22 @@ export default function PrejoinPage() {
       user &&
       !user.isGuest &&
       prequisites.isOwner &&
-      roomId &&
+      roomShortId &&
       !prequisites.isFinished
     ) {
       handleRoomOwnerAccess();
     }
-  }, [user, prequisites.isOwner, roomId]);
+  }, [user, prequisites.isOwner, roomShortId]);
 
   const handleRoomOwnerAccess = async () => {
     try {
       const fullName = `${user!.firstName} ${user!.lastName}`;
-      const response = await authService.getToken(roomId as string, fullName);
+      const response = await authService.getToken(
+        roomShortId as string,
+        fullName
+      );
       setToken(response.token);
-      router.replace(`/room/${roomId}`);
+      router.replace(`/room/${roomShortId}`);
     } catch (err) {
       console.error("Error accessing room as owner:", err);
     }
@@ -118,7 +121,7 @@ export default function PrejoinPage() {
       path: "/ws",
       transports: ["websocket"],
       auth: {
-        roomShortId: roomId as string,
+        roomShortId: roomShortId as string,
         username: userName,
       },
     });
@@ -166,7 +169,7 @@ export default function PrejoinPage() {
       profileImage: "",
       isGuest: true,
     });
-    router.replace(`/room/${roomId}`);
+    router.replace(`/room/${roomShortId}`);
   };
 
   const handleAccessRequest = async () => {
@@ -181,7 +184,7 @@ export default function PrejoinPage() {
     if (prequisites.passwordRequired) {
       try {
         const response = await authService.getToken(
-          roomId as string,
+          roomShortId as string,
           userName,
           password,
           userId
@@ -205,7 +208,7 @@ export default function PrejoinPage() {
     if (!livekitToken) {
       try {
         const response = await authService.getToken(
-          roomId as string,
+          roomShortId as string,
           userName,
           password,
           userId

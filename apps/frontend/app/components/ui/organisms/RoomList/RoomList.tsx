@@ -30,8 +30,8 @@ export enum Modal {
 }
 
 export type ModalState =
-  | { modal: Modal.Files; shortId: string }
-  | { modal: Modal.Reports; shortId: string }
+  | { modal: Modal.Files; roomShortId: string }
+  | { modal: Modal.Reports; roomShortId: string }
   | { modal: Modal.Create }
   | { modal: Modal.Edit; room: RoomWithStatus }
   | { modal: undefined };
@@ -187,17 +187,17 @@ export default function RoomList({
         </Box>
       </Paper>
 
-      {modalState?.modal === Modal.Reports && modalState.shortId && (
+      {modalState?.modal === Modal.Reports && modalState.roomShortId && (
         <RoomReportsModal
-          shortId={modalState.shortId}
+          roomShortId={modalState.roomShortId}
           isOpen
           onClose={onModalClose}
         />
       )}
 
-      {modalState?.modal === Modal.Files && modalState.shortId && (
+      {modalState?.modal === Modal.Files && modalState.roomShortId && (
         <RoomFilesModal
-          shortId={modalState.shortId}
+          roomShortId={modalState.roomShortId}
           isOpen
           onClose={onModalClose}
         />

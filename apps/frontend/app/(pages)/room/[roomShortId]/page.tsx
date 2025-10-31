@@ -18,7 +18,7 @@ import { PresentationProvider } from "@/app/providers/presentation.provider";
 import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
 
 export default function MeetingRoom() {
-  const { roomId } = useParams();
+  const { roomShortId } = useParams();
   const [roomName, setRoomName] = useState<string>("");
   const { token, setToken, user } = useUser();
   const { socket, connect } = useWebSocket();
@@ -30,21 +30,24 @@ export default function MeetingRoom() {
 
   useEffect(() => {
     if (!token) {
-      router.replace(`/room/${roomId}/prejoin`);
+      router.replace(`/room/${roomShortId}/prejoin`);
     }
-  }, [token, user, roomId, router]);
+  }, [token, user, roomShortId, router]);
 
   useEffect(() => {
-    if (!roomId || !user || !token) return;
-    connect(roomId as string, user.id, fullName);
-  }, [roomId, user]);
+    if (!roomShortId || !user || !token) return;
+    connect(roomShortId as string, user.id, fullName);
+  }, [roomShortId, user]);
 
   useEffect(() => {
-    if (!roomId || !user || user.isGuest) return;
+    if (!roomShortId || !user || user.isGuest) return;
 
     const fetchToken = async () => {
       try {
-        const response = await authService.getToken(roomId as string, fullName);
+        const response = await authService.getToken(
+          roomShortId as string,
+          fullName
+        );
         setToken(response.token);
         setRoomName(response.metadata.name);
       } catch (err) {
@@ -53,7 +56,7 @@ export default function MeetingRoom() {
     };
 
     fetchToken();
-  }, [roomId, user]);
+  }, [roomShortId, user]);
 
   if (!token && user) {
     return <div>Loading...</div>;
@@ -81,7 +84,7 @@ export default function MeetingRoom() {
                     <WaitingHostProvider socket={socket}>
                       <RoomLayoutProvider>
                         <RoomContent
-                          roomId={roomId as string}
+                          roomShortId={roomShortId as string}
                           roomName={roomName}
                         />
                       </RoomLayoutProvider>

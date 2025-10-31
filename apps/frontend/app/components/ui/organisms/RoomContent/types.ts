@@ -1,5 +1,5 @@
 export type RoomContentProps = {
-  roomId: string;
+  roomShortId: string;
   roomName: string;
   hideControls?: boolean;
 };

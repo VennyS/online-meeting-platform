@@ -1,5 +1,5 @@
 export type RoomFilesModalProps = {
-  shortId: string;
+  roomShortId: string;
   isOpen: boolean;
   onClose: () => void;
 };

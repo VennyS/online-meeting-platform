@@ -17,7 +17,7 @@ export const PrequisitesProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { roomId } = useParams();
+  const { roomShortId } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
   const [prequisites, setPrequisites] = useState<Prequisites>({
@@ -36,11 +36,11 @@ export const PrequisitesProvider = ({
 
   useEffect(() => {
     const checkPrerequisites = async () => {
-      if (!roomId) return;
+      if (!roomShortId) return;
 
       try {
         setIsLoading(true);
-        const data = await roomService.prequisites(roomId as string);
+        const data = await roomService.prequisites(roomShortId as string);
 
         setPrequisites(data);
       } catch (err) {
@@ -53,7 +53,7 @@ export const PrequisitesProvider = ({
     };
 
     checkPrerequisites();
-  }, [roomId]);
+  }, [roomShortId]);
 
   return (
     <PrequisitesContext.Provider value={{ prequisites, isLoading }}>

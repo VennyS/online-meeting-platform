@@ -3,7 +3,7 @@ import { FileType, RoomFile } from "../types/files.types";
 import { UploadFileResponse } from "./dto/upload-file.response";
 
 export const fileService = {
-  async uploadFiles(shortId: string, files: File[]): Promise<string[]> {
+  async uploadFiles(roomShortId: string, files: File[]): Promise<string[]> {
     const invalidFiles = files.filter(
       (file) => file.type !== "application/pdf"
     );
@@ -17,7 +17,7 @@ export const fileService = {
     });
 
     const response = await axiosClassic.post<UploadFileResponse>(
-      `/file/${shortId}/batch`,
+      `/file/${roomShortId}/batch`,
       formData,
       {
         headers: {
@@ -30,7 +30,7 @@ export const fileService = {
   },
 
   async listRoom(
-    shortId: string,
+    roomShortId: string,
     skip = 0,
     take = 10,
     types?: FileType | FileType[]
@@ -44,7 +44,7 @@ export const fileService = {
         : [];
 
       const response = await axiosClassic.get<RoomFile[]>(
-        `/file/room/${shortId}`,
+        `/file/room/${roomShortId}`,
         {
           params: {
             skip,

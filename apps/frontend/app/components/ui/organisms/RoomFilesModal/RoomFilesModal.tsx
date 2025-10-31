@@ -9,7 +9,7 @@ import { FileCard } from "../FileCard/FileCard";
 import { RoomFile } from "@/app/types/files.types";
 
 export const RoomFilesModal = ({
-  shortId,
+  roomShortId,
   isOpen,
   onClose,
 }: RoomFilesModalProps) => {
@@ -23,7 +23,7 @@ export const RoomFilesModal = ({
     const fetchFiles = async () => {
       setLoading(true);
       try {
-        const data = await fileService.listRoom(shortId, 0, 50);
+        const data = await fileService.listRoom(roomShortId, 0, 50);
         setFiles(data);
       } catch {
         setError("Не удалось загрузить файлы встречи");
@@ -33,7 +33,7 @@ export const RoomFilesModal = ({
     };
 
     fetchFiles();
-  }, [shortId, isOpen]);
+  }, [roomShortId, isOpen]);
 
   const handleDelete = async (fileId: number) => {
     try {

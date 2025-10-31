@@ -16,7 +16,7 @@ import { RoomReportsProps } from "./types";
 import { Modal } from "../../atoms/Modal/Modal";
 
 export const RoomReportsModal = ({
-  shortId,
+  roomShortId,
   isOpen,
   onClose,
 }: RoomReportsProps) => {
@@ -31,7 +31,7 @@ export const RoomReportsModal = ({
       setLoading(true);
       setError(null);
       try {
-        const data = await roomService.getMeetingReports(shortId);
+        const data = await roomService.getMeetingReports(roomShortId);
         setReports(data);
       } catch (err) {
         setError("Не удалось загрузить отчёты о встречах");
@@ -41,7 +41,7 @@ export const RoomReportsModal = ({
     };
 
     fetchReports();
-  }, [shortId, isOpen]);
+  }, [roomShortId, isOpen]);
 
   return (
     <Modal title="Отчёты о встречах" onClose={onClose}>

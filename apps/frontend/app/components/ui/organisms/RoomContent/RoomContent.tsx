@@ -29,7 +29,7 @@ import { RoomFile } from "@/app/types/files.types";
 import { Panel } from "@/app/types/room-layout.types";
 
 export const RoomContent = ({
-  roomId,
+  roomShortId,
   roomName,
   hideControls = false,
 }: RoomContentProps) => {
@@ -55,7 +55,9 @@ export const RoomContent = ({
     {
       key: Panel.Participants,
       title: "Участники",
-      content: <ParticipantsPanel roomId={roomId} roomName={roomName} />,
+      content: (
+        <ParticipantsPanel roomShortId={roomShortId} roomName={roomName} />
+      ),
     },
     {
       key: Panel.Files,
@@ -67,7 +69,7 @@ export const RoomContent = ({
   useEffect(() => {
     const handleFetchFiles = async () => {
       try {
-        const files = await fileService.listRoom(roomId, 0, 10, "PDF");
+        const files = await fileService.listRoom(roomShortId, 0, 10, "PDF");
         setFiles(files);
       } catch (err) {
         console.error("Error fetching files:", err);
@@ -75,7 +77,7 @@ export const RoomContent = ({
     };
 
     handleFetchFiles();
-  }, [roomId]);
+  }, [roomShortId]);
 
   const onCloseModal = async () => {
     if (!overflowInfo || overflowInfo.totalVideoSize < overflowInfo.constraint)
