@@ -7,10 +7,10 @@ import {
   Button,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { useParticipantsContext } from "@/app/providers/participants.provider";
+import { useBlacklistContext } from "@/app/providers/blacklist.provider";
 
 const Blacklist = () => {
-  const { blacklist, removeFromBlackList } = useParticipantsContext();
+  const { blacklist, removeFromBlackList } = useBlacklistContext();
 
   if (blacklist.length === 0) return null;
 

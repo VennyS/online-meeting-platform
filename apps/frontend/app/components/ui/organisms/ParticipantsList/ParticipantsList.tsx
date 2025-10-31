@@ -14,10 +14,12 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import React, { useState } from "react";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import { RoomRoleMap } from "@/app/types/room.types";
+import { useBlacklistContext } from "@/app/providers/blacklist.provider";
 
 const ParticipantsList = () => {
-  const { local, remote, updateUserRole, addToBlackList } =
-    useParticipantsContext();
+  const { local, remote, updateUserRole } = useParticipantsContext();
+
+  const { addToBlackList } = useBlacklistContext();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
