@@ -32,12 +32,13 @@ export class ChatGateway implements OnGatewayConnection {
 
     const { roomShortId } = socket.data;
 
-    const roomMetadata = this.connectionService.getMetadata(roomShortId!);
+    const roomMetadata = this.connectionService.getMetadata(roomShortId);
     if (!roomMetadata || !roomMetadata.showHistoryToNewbies) return;
 
     try {
       const messages = await this.chatService.getMessages(roomShortId!);
-      socket.emit('init_chat', messages);
+      if (!messages || messages.length <= 0) return;
+      socket.emit('init_chat', { messages: messages });
     } catch (error) {
       this.logger.error('Error fetching messages', error);
     }

@@ -66,7 +66,7 @@ export class AdministrationGateway implements OnGatewayConnection {
 
     if (!roles) return;
 
-    socket.emit('roles_updated', roles);
+    socket.emit('roles_updated', { roles: roles });
   }
 
   @SubscribeMessage('update_permission')
@@ -78,10 +78,10 @@ export class AdministrationGateway implements OnGatewayConnection {
 
     if (!isHost) return;
 
-    let permissions;
+    let permissions: Permissions;
 
     try {
-      permissions = this.administationService.setPermission(
+      permissions = await this.administationService.setPermission(
         socket.data.roomShortId,
         data,
       );
@@ -90,7 +90,7 @@ export class AdministrationGateway implements OnGatewayConnection {
       return;
     }
 
-    this.server.of('/').to(`room-${roomShortId}`).emit('permissions_updated', {
+    this.server.to(`room-${roomShortId}`).emit('permissions_updated', {
       role: data.targetRole,
       permissions,
     });
@@ -112,7 +112,7 @@ export class AdministrationGateway implements OnGatewayConnection {
       return;
     }
 
-    this.server.of('/').to(`room-${roomShortId}`).emit('role_updated', {
+    this.server.to(`room-${roomShortId}`).emit('role_updated', {
       userId: data.targetUserId,
       role: data.newRole,
     });

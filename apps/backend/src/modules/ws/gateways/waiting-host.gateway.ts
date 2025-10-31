@@ -1,6 +1,7 @@
 import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import {
   ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   SubscribeMessage,
   WebSocketGateway,
@@ -35,21 +36,7 @@ export class WaitingHostGateway implements OnGatewayConnection {
 
     if (!isHost) return;
 
-    let guests: Guest[] = [];
-
-    try {
-      guests = await this.waitingService.getGuests(roomShortId);
-    } catch (e) {
-      this.logger.error('Error while fetching guests', e);
-      return;
-    }
-
-    if (guests.length <= 0) return;
-
-    this.server
-      .of('/')
-      .to(`hosts-${roomShortId}`)
-      .emit('waiting_queue_updated', { guests });
+    await this.notifyHost(roomShortId);
   }
 
   @SubscribeMessage('host_approval')
@@ -70,19 +57,10 @@ export class WaitingHostGateway implements OnGatewayConnection {
       return;
     }
 
-    const guestSocket: TypedSocket | undefined =
-      this.server.sockets.sockets.get(guestConnection.socketId);
-
-    if (!guestSocket) {
-      this.logger.debug(`Guest socket were not found ${data.guestId}`);
-      return;
-    }
-
-    await this.waitingService.removeGuest(roomShortId, data.guestId);
-    this.connectionService.removeGuest(data.guestId);
     const quest = await this.waitingService.getGuest(roomShortId, data.guestId);
     if (!quest) {
       this.logger.warn(`Guest were not found in cache ${data.guestId}`);
+      return;
     }
 
     const token = await createLivekitToken(
@@ -93,10 +71,33 @@ export class WaitingHostGateway implements OnGatewayConnection {
       'guest',
     );
 
+    await this.waitingService.removeGuest(roomShortId, data.guestId);
+    this.connectionService.removeGuest(data.guestId);
+
+    await this.notifyHost(roomShortId);
+
     if (data.approved) {
-      guestSocket.emit('guest_approved', { token });
+      guestConnection.socket.emit('guest_approved', {
+        token,
+        guestId: data.guestId,
+      });
     } else {
-      guestSocket.emit('guest_rejected');
+      guestConnection.socket.emit('guest_rejected');
     }
+  }
+
+  async notifyHost(roomShortId: string) {
+    let guests: Guest[] = [];
+
+    try {
+      guests = await this.waitingService.getGuests(roomShortId);
+    } catch (e) {
+      this.logger.error('Error while fetching guests', e);
+      return;
+    }
+
+    this.server
+      .to(`hosts-${roomShortId}`)
+      .emit('waiting_queue_updated', { guests });
   }
 }

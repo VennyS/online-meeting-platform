@@ -106,7 +106,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.analyticsService.join(roomShortId, String(userId), username, ip);
 
-    this.logger.log(`${username} ${userId} connected to room ${roomShortId}`);
+    this.logger.log(`${username}${userId} connected to room ${roomShortId}`);
   }
 
   async handleDisconnect(socket: TypedSocket) {

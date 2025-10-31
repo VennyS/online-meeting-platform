@@ -32,6 +32,8 @@ export class PresentationGateway
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
+    await this.init.waitForReady();
+
     let presentations: Presentation[] = [];
 
     try {
@@ -56,7 +58,7 @@ export class PresentationGateway
       scroll: p.scroll,
     }));
 
-    socket.emit('presentations_state', data);
+    socket.emit('presentations_init', data);
     this.logger.log(
       `Sent presentations state for room ${socket.data.roomShortId} to client`,
     );
@@ -87,7 +89,6 @@ export class PresentationGateway
     }
 
     this.server
-      .of('/')
       .to(`room-${roomShortId}`)
       .emit('presentation_finished', { presentationId });
 
@@ -119,7 +120,9 @@ export class PresentationGateway
       mode: data.mode || 'presentationWithCamera',
     };
 
-    this.server.sockets.to(`room-${roomShortId}`).emit('presentation_started', {
+    await this.presentationService.set(roomShortId, presentation);
+
+    this.server.to(`room-${roomShortId}`).emit('presentation_started', {
       fileId: presentation.fileId,
       presentationId: presentation.presentationId,
       url: presentation.url,
@@ -150,12 +153,10 @@ export class PresentationGateway
       socket.emit('presentation_error');
     }
 
-    this.server.sockets
-      .to(`room-${roomShortId}`)
-      .emit('presentation_page_changed', {
-        presentationId: data.presentationId,
-        page: data.page,
-      });
+    this.server.to(`room-${roomShortId}`).emit('presentation_page_changed', {
+      presentationId: data.presentationId,
+      page: data.page,
+    });
   }
 
   @SubscribeMessage('presentation_zoom_changed')
@@ -178,7 +179,7 @@ export class PresentationGateway
       return;
     }
 
-    this.server.to(roomShortId).emit('presentation_zoom_changed', {
+    this.server.to(`room-${roomShortId}`).emit('presentation_zoom_changed', {
       presentationId: data.presentationId,
       zoom: data.zoom,
     });
@@ -186,7 +187,8 @@ export class PresentationGateway
 
   @SubscribeMessage('presentation_scroll_changed')
   async changeScroll(
-    @MessageBody() data: { presentationId: string; x: number; y: number },
+    @MessageBody()
+    data: { presentationId: string; scroll: { x: number; y: number } },
     @ConnectedSocket() socket: TypedSocket,
   ) {
     const { roomShortId, userId } = socket.data;
@@ -197,17 +199,16 @@ export class PresentationGateway
         data.presentationId,
         String(userId),
         'scroll',
-        { x: data.x, y: data.y },
+        data.scroll,
       );
     } catch (e) {
       socket.emit('presentation_error');
       return;
     }
 
-    this.server.to(roomShortId).emit('presentation_scroll_changed', {
+    this.server.to(`room-${roomShortId}`).emit('presentation_scroll_changed', {
       presentationId: data.presentationId,
-      x: data.x,
-      y: data.y,
+      scroll: data.scroll,
     });
   }
 
@@ -235,7 +236,7 @@ export class PresentationGateway
       return;
     }
 
-    this.server.to(roomShortId).emit('presentation_mode_changed', {
+    this.server.to(`room-${roomShortId}`).emit('presentation_mode_changed', {
       presentationId: data.presentationId,
       mode: data.mode,
     });
@@ -258,7 +259,7 @@ export class PresentationGateway
       return;
     }
 
-    this.server.to(roomShortId).emit('presentation_finished', {
+    this.server.to(`room-${roomShortId}`).emit('presentation_finished', {
       presentationId: data.presentationId,
     });
   }

@@ -3,7 +3,6 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
-import { WsAdapter } from '@nestjs/platform-ws';
 import rawBody from 'raw-body';
 
 async function bootstrap() {

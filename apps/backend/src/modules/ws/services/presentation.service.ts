@@ -14,6 +14,10 @@ export class PresentationService {
     return await this.redis.getPresentations(roomShortId);
   }
 
+  async set(roomShortId: string, presentation: Presentation) {
+    await this.redis.setPresentation(roomShortId, presentation);
+  }
+
   async changePresentation<T extends keyof Presentation>(
     roomShortId: string,
     presentationId: string,
@@ -39,15 +43,7 @@ export class PresentationService {
       throw Error('Presentation error');
     }
 
-    if (field === 'scroll' && typeof value === 'object') {
-      const currentField = presentation[field] || {};
-      presentation[field] = {
-        ...currentField,
-        ...value,
-      } as Presentation[T];
-    } else {
-      presentation[field] = value;
-    }
+    presentation[field] = value;
 
     await this.redis.setPresentation(roomShortId, presentation);
   }

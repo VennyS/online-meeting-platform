@@ -53,7 +53,7 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    socket.emit('blacklist_init', blacklistedUsers);
+    socket.emit('blacklist_init', { blacklist: blacklistedUsers });
   }
 
   @SubscribeMessage('add_to_blacklist')
@@ -116,7 +116,7 @@ export class BlacklistGateway implements OnGatewayConnection {
 
     await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
 
-    this.notifyAboutUpdatedBlacklist(roomShortId);
+    await this.notifyAboutUpdatedBlacklist(roomShortId);
   }
 
   private async notifyAboutUpdatedBlacklist(roomShortId: string) {
@@ -124,8 +124,7 @@ export class BlacklistGateway implements OnGatewayConnection {
       await this.blacklistService.getBlacklistedUsers(roomShortId);
 
     this.server
-      .of('/')
       .to(`hosts-${roomShortId}`)
-      .emit('blacklist_updated', blacklist);
+      .emit('blacklist_updated', { blacklist: blacklist });
   }
 }

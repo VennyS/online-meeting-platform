@@ -67,7 +67,7 @@ export class AdministrationService {
   async setPermission(
     roomShortId: string,
     { targetRole, permission, value }: UpdatePermissionData,
-  ) {
+  ): Promise<Permissions> {
     return await this.redis.setPermission(
       roomShortId,
       targetRole,

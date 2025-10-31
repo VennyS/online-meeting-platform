@@ -5,9 +5,9 @@ import { RedisService } from 'src/common/modules/redis/redis.service';
 export class WaitingService {
   constructor(private readonly redis: RedisService) {}
 
-  async addGuest(rommShortId: string, name: string, guestId: number) {
-    await this.redis.pushWaitingGuest(rommShortId, {
-      guestId,
+  async addGuest(roomShortId: string, name: string, guestId: number) {
+    await this.redis.pushWaitingGuest(roomShortId, {
+      guestId: String(guestId),
       name,
       requestedAt: new Date().toISOString(),
     });
