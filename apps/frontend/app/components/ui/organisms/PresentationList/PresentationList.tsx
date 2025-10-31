@@ -1,14 +1,13 @@
 import { Box, Button, List, ListItem, ListItemText } from "@mui/material";
 import Typography from "@mui/material/Typography";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
-import { useParticipantsContext } from "@/app/providers/participants.provider";
 import PresentToAllOutlinedIcon from "@mui/icons-material/PresentToAllOutlined";
 import CancelPresentationOutlinedIcon from "@mui/icons-material/CancelPresentationOutlined";
 import { PresentationListProps } from "./types";
+import { usePresentationContext } from "@/app/providers/presentation.provider";
 
 export const PresentationList = ({ files }: PresentationListProps) => {
-  const { presentations, startPresentation, finishPresentation } =
-    useParticipantsContext();
+  const { presentations, start, finishPresentation } = usePresentationContext();
   const localPresentation = presentations.find((p) => p.local);
   const localFileId = localPresentation?.fileId;
   const localFileIdNumber = localFileId ? Number(localFileId) : undefined;
@@ -45,7 +44,7 @@ export const PresentationList = ({ files }: PresentationListProps) => {
               size="small"
               onClick={
                 localFileIdNumber !== file.id
-                  ? () => startPresentation(file.id, file.url)
+                  ? () => start(file.id, file.url)
                   : () => finishPresentation(localPresentation!.presentationId)
               }
               sx={{ p: "4px" }}

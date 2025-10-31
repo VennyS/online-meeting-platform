@@ -1,4 +1,3 @@
-import { Presentation } from "@/app/hooks/useParticipantsWithPermissions";
 import {
   TrackReferenceOrPlaceholder,
   useGridLayout,

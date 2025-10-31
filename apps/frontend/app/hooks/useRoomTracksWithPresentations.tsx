@@ -5,8 +5,8 @@ import {
 } from "@livekit/components-react";
 import { RoomEvent, Track } from "livekit-client";
 import { useMemo } from "react";
-import { Presentation } from "./useParticipantsWithPermissions";
-import { useParticipantsContext } from "../providers/participants.provider";
+import { usePresentationContext } from "../providers/presentation.provider";
+import { Presentation } from "./usePresentation";
 
 interface UseRoomTracksWithPresentationsOptions {
   includeCamera?: boolean;
@@ -19,7 +19,7 @@ export function useRoomTracksWithPresentations({
   includeScreen = true,
   withPlaceholder = true,
 }: UseRoomTracksWithPresentationsOptions) {
-  const { presentations } = useParticipantsContext();
+  const { presentations } = usePresentationContext();
 
   const sources = [
     ...(includeCamera

@@ -11,12 +11,18 @@ import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomConte
 import { useWebSocket } from "@/app/hooks/useWebSocket";
 import { FocusProvider } from "@/app/providers/focus.provider";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
+import { BlacklistProvider } from "@/app/providers/blacklist.provider";
+import { WaitingHostProvider } from "@/app/providers/waiting.host.provider";
+import { RecordingProvider } from "@/app/providers/recording.provider";
+import { ChatProvider } from "@/app/providers/chat.provider";
+import { PresentationProvider } from "@/app/providers/presentation.provider";
+import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
 
 export default function MeetingRoom() {
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState<string>("");
   const { token, setToken, user } = useUser();
-  const { ws, connect } = useWebSocket();
+  const { socket, connect } = useWebSocket();
   const router = useRouter();
 
   const { prequisites, isLoading } = usePrequisites();
@@ -68,10 +74,25 @@ export default function MeetingRoom() {
         className={styles.roomContainer}
       >
         {user && (
-          <ParticipantsProvider localUserId={user.id} ws={ws}>
-            <FocusProvider>
-              <RoomContent roomId={roomId as string} roomName={roomName} />
-            </FocusProvider>
+          <ParticipantsProvider socket={socket}>
+            <PresentationProvider socket={socket}>
+              <ChatProvider socket={socket}>
+                <RecordingProvider socket={socket}>
+                  <BlacklistProvider socket={socket}>
+                    <WaitingHostProvider socket={socket}>
+                      <FocusProvider>
+                        <RoomLayoutProvider>
+                          <RoomContent
+                            roomId={roomId as string}
+                            roomName={roomName}
+                          />
+                        </RoomLayoutProvider>
+                      </FocusProvider>
+                    </WaitingHostProvider>
+                  </BlacklistProvider>
+                </RecordingProvider>
+              </ChatProvider>
+            </PresentationProvider>
           </ParticipantsProvider>
         )}
       </LiveKitRoom>

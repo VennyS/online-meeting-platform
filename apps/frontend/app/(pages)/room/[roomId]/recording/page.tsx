@@ -10,9 +10,9 @@ import {
 } from "next/navigation";
 import React, { useEffect } from "react";
 import styles from "./page.module.css";
-import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { FocusProvider } from "@/app/providers/focus.provider";
+import { ParticipantsProvider } from "@/app/providers/participants.provider";
 
 const EGRESS_CREDENTIAL = "egress";
 
@@ -21,7 +21,7 @@ const RecordingPage = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get("livekitToken");
   const { roomId: roomShortId } = useParams();
-  const { ws, connect } = useWebSocket();
+  const { socket, connect } = useWebSocket();
 
   const egressId = 0;
 
@@ -43,7 +43,7 @@ const RecordingPage = () => {
         connect
         className={styles.roomContainer}
       >
-        <ParticipantsProvider localUserId={egressId} ws={ws}>
+        <ParticipantsProvider socket={socket}>
           <FocusProvider>
             <RecordingPageContent roomShortId={roomShortId as string} />
           </FocusProvider>

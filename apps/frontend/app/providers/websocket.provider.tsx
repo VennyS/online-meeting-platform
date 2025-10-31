@@ -1,15 +1,15 @@
 "use client";
 
 import { createContext, useEffect, useState } from "react";
-import { getWebSocketUrl } from "@/app/config/websocketUrl";
+import { io, Socket } from "socket.io-client";
+import {
+  RoomClientToServerEvents,
+  RoomServerToClientEvents,
+} from "../types/room.types";
 
 interface WebSocketContextValue {
-  ws: WebSocket | null;
-  connect: (
-    roomId: string,
-    userId: number,
-    userName: string
-  ) => WebSocket | undefined;
+  socket: Socket | null;
+  connect: (roomId: string, userId: number, userName: string) => void;
   disconnect: () => void;
 }
 
@@ -27,29 +27,34 @@ export const WebSocketProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [socket, setSocket] = useState<RoomSocket | null>(null);
 
-  const connect = (
-    roomId: string,
-    userId: number,
-    userName: string
-  ): WebSocket | undefined => {
-    if (ws) return;
+  const connect = (roomShortId: string, userId: number, username: string) => {
+    if (socket) return;
 
-    const websocket = new WebSocket(getWebSocketUrl(roomId, userId, userName));
-    websocket.onopen = () => console.log("✅ WS connected");
-    websocket.onclose = () => console.log("❌ WS closed");
-    websocket.onerror = (err) => console.error("⚠ WS error", err);
+    const s = io("http://localhost:3001", {
+      path: "/ws",
+      transports: ["websocket"],
+      auth: {
+        roomShortId,
+        userId,
+        username,
+      },
+    });
 
-    setWs(websocket);
+    s.on("connect", () => console.log("✅ Socket.IO connected"));
+    s.on("disconnect", (reason) =>
+      console.log("❌ Socket.IO disconnected:", reason)
+    );
+    s.on("connect_error", (err) => console.error("⚠ Socket.IO error:", err));
 
-    return websocket;
+    setSocket(s);
   };
 
   const disconnect = () => {
-    if (ws) {
-      ws.close();
-      setWs(null);
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
     }
   };
 
@@ -58,7 +63,7 @@ export const WebSocketProvider = ({
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ ws, connect, disconnect }}>
+    <WebSocketContext.Provider value={{ socket, connect, disconnect }}>
       {children}
     </WebSocketContext.Provider>
   );
