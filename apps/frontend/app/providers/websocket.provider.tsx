@@ -17,6 +17,11 @@ export const WebSocketContext = createContext<WebSocketContextValue | null>(
   null
 );
 
+export type RoomSocket = Socket<
+  RoomServerToClientEvents,
+  RoomClientToServerEvents
+>;
+
 export const WebSocketProvider = ({
   children,
 }: {

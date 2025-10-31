@@ -17,22 +17,22 @@ import {
 } from "@mui/material";
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
-import { RoomWSMessage } from "@/app/types/room.types";
 import { AxiosError } from "axios";
-import { useWebSocket } from "@/app/hooks/useWebSocket";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
+import { io, Socket } from "socket.io-client";
+import { RoomSocket } from "@/app/providers/websocket.provider";
 
 export default function PrejoinPage() {
   const { roomId } = useParams();
   const router = useRouter();
   const { user, setUser, setToken, loading: isUserLoading } = useUser();
-  const { connect } = useWebSocket();
 
   const [guestName, setGuestName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const { prequisites, isLoading: isPrequisitesLoading } = usePrequisites();
+  const [socket, setSocket] = useState<RoomSocket | null>(null);
 
   const [timeLeft, setTimeLeft] = useState<{
     days: number;
@@ -40,6 +40,14 @@ export default function PrejoinPage() {
     minutes: number;
     seconds: number;
   } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (isPrequisitesLoading) return;
@@ -102,33 +110,42 @@ export default function PrejoinPage() {
     }
   };
 
-  const connectWebSocket = (userId: number, userName: string) => {
+  const connectWebSocket = (userName: string) => {
     setIsConnecting(true);
-    const ws = connect(roomId as string, userId, userName);
-    if (!ws) return;
 
-    ws.addEventListener("message", (event: MessageEvent) => {
-      const message: RoomWSMessage = JSON.parse(event.data);
-      const { event: evt, data } = message;
-
-      switch (evt) {
-        case "ready":
-          ws.send(
-            JSON.stringify({
-              event: "guest_join_request",
-              data: { name: userName },
-            })
-          );
-          break;
-        case "guest_approved":
-          handleApprovedAccess(userId, userName, data.token);
-          break;
-        case "guest_rejected":
-          setError("Ваш запрос был отклонён");
-          setIsConnecting(false);
-          break;
-      }
+    // Подключаемся к namespace /waiting-room
+    const newSocket = io(`http://localhost:3001/waiting-room`, {
+      path: "/ws",
+      transports: ["websocket"],
+      auth: {
+        roomShortId: roomId as string,
+        username: userName,
+      },
     });
+
+    newSocket.on("connect", () => {});
+
+    newSocket.on(
+      "guest_approved",
+      (data: { guestId: number; token: string }) => {
+        handleApprovedAccess(data.guestId, userName, data.token);
+        newSocket.disconnect();
+      }
+    );
+
+    newSocket.on("guest_rejected", () => {
+      setError("Ваш запрос был отклонён");
+      setIsConnecting(false);
+      newSocket.disconnect();
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Connection error:", error);
+      setError("Ошибка подключения к серверу");
+      setIsConnecting(false);
+    });
+
+    setSocket(newSocket);
   };
 
   const handleApprovedAccess = (
@@ -181,7 +198,7 @@ export default function PrejoinPage() {
     }
 
     if (prequisites.waitingRoomEnabled) {
-      connectWebSocket(userId, userName);
+      connectWebSocket(userName);
       return;
     }
 
@@ -223,19 +240,22 @@ export default function PrejoinPage() {
         </Typography>
       </Box>
     );
-  if (prequisites.cancelled) return;
-  <Box
-    display="flex"
-    justifyContent="center"
-    alignItems="center"
-    minHeight="100vh"
-    p={2}
-    sx={{ backgroundColor: "primary.main", boxSizing: "border-box" }}
-  >
-    <Typography variant="h4" color="white">
-      Встреча отменена
-    </Typography>
-  </Box>;
+
+  if (prequisites.cancelled)
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        p={2}
+        sx={{ backgroundColor: "primary.main", boxSizing: "border-box" }}
+      >
+        <Typography variant="h4" color="white">
+          Встреча отменена
+        </Typography>
+      </Box>
+    );
 
   return (
     <Box

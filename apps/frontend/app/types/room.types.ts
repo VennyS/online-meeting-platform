@@ -1,3 +1,30 @@
+import { Track } from "livekit-client";
+import { Message } from "../components/ui/organisms/Chat/types";
+import { TrackReference } from "@livekit/components-react";
+
+export type PresentationMode = "presentationWithCamera" | "presentationOnly";
+
+export type Presentation = {
+  id: string;
+  fileId: string;
+  presentationId: string;
+  url: string;
+  authorId: string;
+  page: number;
+  zoom: number;
+  scroll: { x: number; y: number };
+  mode: PresentationMode;
+  source: Track.Source;
+  participant: Participant;
+  local: boolean;
+  video?: TrackReference;
+};
+
+export type PresentationDto = Omit<
+  Presentation,
+  "id" | "source" | "participant" | "local" | "video"
+>;
+
 export interface CreateRoomDto {
   ownerId: number;
   name: string;
@@ -98,11 +125,6 @@ export interface IPrequisites {
   isBlackListed: boolean;
 }
 
-export interface Permissions {
-  canShareScreen?: boolean;
-  canStartPresentation?: boolean;
-}
-
 export interface UserPermissions {
   role: RoomRole;
   permissions: Permissions;
@@ -115,6 +137,11 @@ export interface BlacklistEntry {
 }
 
 export type RoomRole = "owner" | "admin" | "participant";
+
+export interface Permissions {
+  canShareScreen?: boolean;
+  canStartPresentation?: boolean;
+}
 
 export const RoomRoleMap = {
   owner: "Владелец",
@@ -253,3 +280,89 @@ export type RoomWSSendMessage =
     >
   | WSMessage<"recording_started", {}>
   | WSMessage<"recording_finished", { egressId: string }>;
+
+export interface RoomServerToClientEvents {
+  blacklist_init: (data: { blacklist: BlacklistEntry[] }) => void;
+  init_host: (data: {
+    guests: IWaitingGuest[];
+    blacklist: BlacklistEntry[];
+  }) => void;
+  ready: (data: {}) => void;
+  waiting_queue_updated: (data: { guests: IWaitingGuest[] }) => void;
+  new_guest_waiting: (data: { guest: IWaitingGuest }) => void;
+  role_updated: (data: { role: RoomRole; userId: string | number }) => void;
+  permissions_init: (data: Record<RoomRole, Permissions>) => void;
+  permissions_updated: (data: {
+    role: RoomRole;
+    permissions: Partial<Permissions>;
+  }) => void;
+  guest_approved: (data: { token: string }) => void;
+  guest_rejected: (data: {}) => void;
+  roles_updated: (data: { roles: Record<string, RoomRole> }) => void;
+  presentation_started: (data: PresentationDto) => void;
+  presentation_page_changed: (data: {
+    presentationId: string;
+    page: number;
+  }) => void;
+  presentation_zoom_changed: (data: {
+    presentationId: string;
+    zoom: number;
+  }) => void;
+  presentation_scroll_changed: (
+    data: Pick<Presentation, "presentationId" | "scroll">
+  ) => void;
+  presentation_finished: (data: { presentationId: string }) => void;
+  presentations_init: (data: { presentations: PresentationDto[] }) => void;
+  presentation_mode_changed: (data: {
+    presentationId: string;
+    mode: "presentationWithCamera" | "presentationOnly";
+  }) => void;
+  blacklist_updated: (data: { blacklist: BlacklistEntry[] }) => void;
+  recording_started: (data: { egressId: string }) => void;
+  recording_finished: (data: { egressId: string }) => void;
+  recording_storage_overflow: (data: {
+    totalVideoSize: number;
+    constraint: number;
+    causedById: number;
+  }) => void;
+  init_chat: (data: { messages: Message[] }) => void;
+}
+
+export interface RoomClientToServerEvents {
+  update_permission: (data: {
+    targetRole: RoomRole;
+    permission: keyof Permissions;
+    value: boolean;
+  }) => void;
+  ready: (data: {}) => void;
+  update_role: (data: { targetUserId: string; newRole: RoomRole }) => void;
+  host_approval: (data: { guestId: string; approved: boolean }) => void;
+  guest_join_request: (data: { name: string }) => void;
+  presentation_started: (data: {
+    fileId: number;
+    url: string;
+    mode: "presentationWithCamera" | "presentationOnly";
+  }) => void;
+  presentation_page_changed: (data: {
+    presentationId: string;
+    page: number;
+  }) => void;
+  presentation_zoom_changed: (data: {
+    presentationId: string;
+    zoom: number;
+  }) => void;
+  presentation_scroll_changed: (data: {
+    presentationId: string;
+    scroll: { x: number; y: number };
+  }) => void;
+  presentation_finished: (data: { presentationId: string }) => void;
+  presentation_mode_changed: (data: {
+    presentationId: string;
+    mode: "presentationWithCamera" | "presentationOnly";
+  }) => void;
+  add_to_blacklist: (data: { userId: string; name: string }) => void;
+  remove_from_blacklist: (data: { ip: string }) => void;
+  recording_started: (data: {}) => void;
+  recording_finished: (data: { egressId: string }) => void;
+  new_message: (data: { message: Omit<Message, "id" | "createdAt"> }) => void;
+}
