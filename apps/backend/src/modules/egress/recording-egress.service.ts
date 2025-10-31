@@ -12,19 +12,19 @@ import { RedisService } from 'src/common/modules/redis/redis.service';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { format } from 'date-fns';
 import { createEgressLivekitToken } from 'src/common/utils/auth.utils';
-import { WaitingRoomGateway } from '../waiting-room/waiting-room.gateway';
+import { RecordingGateway } from '../ws/gateways/recording.gateway';
 
 @Injectable()
-export class RecordingService {
-  private readonly logger = new Logger(RecordingService.name);
+export class RecordingEgressService {
+  private readonly logger = new Logger(RecordingEgressService.name);
   private egressClient: EgressClient;
 
   constructor(
     private readonly fileManagementService: FileManagementService,
     private readonly redis: RedisService,
     private readonly roomRepo: RoomRepository,
-    @Inject(forwardRef(() => WaitingRoomGateway))
-    private readonly waitingRoomGateway: WaitingRoomGateway,
+    @Inject(forwardRef(() => RecordingGateway))
+    private readonly recordingGateway: RecordingGateway,
   ) {
     const API_KEY = process.env.LIVEKIT_API_KEY!;
     const API_SECRET = process.env.LIVEKIT_API_SECRET!;
@@ -178,8 +178,7 @@ export class RecordingService {
         ]);
 
       if (totalVideoSize > 1024) {
-        this.waitingRoomGateway.sendToUser(
-          roomShortId,
+        this.recordingGateway.sendToUser(
           String(userId),
           'recording_storage_overflow',
           {

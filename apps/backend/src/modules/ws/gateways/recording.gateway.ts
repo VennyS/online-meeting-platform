@@ -10,15 +10,29 @@ import {
 import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { Server } from 'socket.io';
 import { RecordingService } from '../services/recording.service';
+import { ConnectionService } from '../services/connection.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class RecordingGateway implements OnGatewayDisconnect {
   private readonly logger = new Logger(RecordingGateway.name);
 
-  constructor(private readonly recordingService: RecordingService) {}
+  constructor(
+    private readonly connectionService: ConnectionService,
+    private readonly recordingService: RecordingService,
+  ) {}
 
   @WebSocketServer()
   server: Server;
+
+  sendToUser(userId: string, type: string, payload: any) {
+    const conn = this.connectionService.getConnection({
+      userId: Number(userId),
+    });
+
+    if (!conn) return;
+
+    conn?.socket?.emit(type, payload);
+  }
 
   @SubscribeMessage('recording_started')
   async startRecording(@ConnectedSocket() socket: TypedSocket) {

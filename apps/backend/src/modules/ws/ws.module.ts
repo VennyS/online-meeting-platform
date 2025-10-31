@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MainGateway } from './gateways/main.gateway';
 import { ChatGateway } from './gateways/chat.gateway';
 import { ChatService } from './services/chat.service';
@@ -20,9 +20,16 @@ import { PresentationService } from './services/presentation.service';
 import { WaitingGuestGateway } from './gateways/waiting-quest.gateway';
 import { WaitingHostGateway } from './gateways/waiting-host.gateway';
 import { WaitingService } from './services/waiting.service';
+import { AnalyticsService } from './services/analytics.service';
+import { InitService } from './services/init.service';
 
 @Module({
-  imports: [RedisModule, PrismaModule, LivekitModule, EgressModule],
+  imports: [
+    RedisModule,
+    PrismaModule,
+    LivekitModule,
+    forwardRef(() => EgressModule),
+  ],
   providers: [
     MainGateway,
     Mainservice,
@@ -39,9 +46,11 @@ import { WaitingService } from './services/waiting.service';
     WaitingGuestGateway,
     WaitingHostGateway,
     WaitingService,
+    AnalyticsService,
     ConnectionService,
     RoomRepository,
     InitService,
   ],
+  exports: [RecordingGateway],
 })
 export class WsModule {}

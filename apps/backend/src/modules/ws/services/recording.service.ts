@@ -1,14 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { EgressInfo } from 'livekit-server-sdk';
 import { RedisService } from 'src/common/modules/redis/redis.service';
-import { RecordingService as recording } from 'src/modules/egress/recording.service';
+import { RecordingEgressService } from 'src/modules/egress/recording-egress.service';
 
 @Injectable()
 export class RecordingService {
   private readonly logger = new Logger(RecordingService.name);
   constructor(
     private readonly redis: RedisService,
-    private readonly recording: recording,
+    @Inject(forwardRef(() => RecordingEgressService))
+    private readonly recording: RecordingEgressService,
   ) {}
 
   async startRecording(roomShortId: string, userId: number): Promise<string> {

@@ -1,15 +1,15 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { FileModule } from '../file/file.module';
-import { RecordingService } from './recording.service';
 import { LivekitWebhookController } from './livekit.webhook.controller';
 import { RedisModule } from 'src/common/modules/redis/redis.module';
 import { RoomRepository } from 'src/repositories/room.repository';
-import { WaitingRoomModule } from '../waiting-room/waiting-room.module';
+import { WsModule } from '../ws/ws.module';
+import { RecordingEgressService } from './recording-egress.service';
 
 @Module({
-  imports: [FileModule, RedisModule, forwardRef(() => WaitingRoomModule)],
-  providers: [RecordingService, RoomRepository],
+  imports: [FileModule, RedisModule, forwardRef(() => WsModule)],
+  providers: [RecordingEgressService, RoomRepository],
   controllers: [LivekitWebhookController],
-  exports: [RecordingService],
+  exports: [RecordingEgressService],
 })
 export class EgressModule {}

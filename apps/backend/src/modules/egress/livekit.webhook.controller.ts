@@ -1,15 +1,15 @@
 import { Controller, Logger, Post } from '@nestjs/common';
-import { RecordingService } from './recording.service';
 import { LivekitWebhook } from 'src/common/decorators/livekitwebhook.decorator';
 import { EgressStatus, WebhookEvent } from 'livekit-server-sdk';
 import { RoomRepository } from 'src/repositories/room.repository';
 import { RoomMetadata } from 'src/common/modules/livekit/interfaces/roomMetadata.interface';
+import { RecordingEgressService } from './recording-egress.service';
 @Controller('livekit-webhook')
 export class LivekitWebhookController {
   private readonly logger = new Logger(LivekitWebhookController.name);
 
   constructor(
-    private readonly recordingService: RecordingService,
+    private readonly recordingService: RecordingEgressService,
     private readonly roomRepo: RoomRepository,
   ) {}
 
