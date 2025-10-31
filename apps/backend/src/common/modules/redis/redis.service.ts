@@ -2,7 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 import { PostMessageResponseDto } from '../../../modules/room/dto/postMessageResponseDto';
 import { Message } from '../../../modules/room/interfaces/message.interface';
-import { IPresentation } from 'src/modules/waiting-room/interfaces/presentation.interface';
 import {
   BulkMeetingAnalyticsDto,
   BulkMeetingSessionDto,
@@ -12,6 +11,7 @@ import {
   Permissions,
   RoomRole,
 } from 'src/modules/ws/interfaces/administation.interface';
+import { Presentation } from 'src/modules/ws/interfaces/presentation.interface';
 
 export type Guest = {
   guestId: string;
@@ -123,6 +123,8 @@ export class RedisService {
     guestId: string,
   ): Promise<Guest | undefined> {
     const waitingList = await this.getWaitingGuests(roomId);
+    console.log(JSON.stringify(waitingList));
+    console.log(JSON.stringify(guestId));
     return waitingList.find((g) => g.guestId === guestId);
   }
 
@@ -228,7 +230,7 @@ export class RedisService {
 
   async setPresentation(
     roomId: string,
-    presentation: IPresentation & { presentationId: string },
+    presentation: Presentation & { presentationId: string },
   ) {
     const key = `room:${roomId}:presentations`;
     // Проверяем, есть ли уже презентация с таким ID
@@ -249,7 +251,7 @@ export class RedisService {
     );
   }
 
-  async getPresentations(roomId: string): Promise<IPresentation[]> {
+  async getPresentations(roomId: string): Promise<Presentation[]> {
     const key = `room:${roomId}:presentations`;
     const raw = await this.client.lrange(key, 0, -1);
     if (!raw || raw.length === 0) {
@@ -257,7 +259,7 @@ export class RedisService {
       return [];
     }
     try {
-      return raw.map((item) => JSON.parse(item) as IPresentation);
+      return raw.map((item) => JSON.parse(item) as Presentation);
     } catch (error) {
       this.logger.error(
         `Failed to parse presentations for room ${roomId}: ${error.message}`,
@@ -269,7 +271,7 @@ export class RedisService {
   async getPresentation(
     roomId: string,
     presentationId: string,
-  ): Promise<IPresentation | null> {
+  ): Promise<Presentation | null> {
     const presentations = await this.getPresentations(roomId);
     const presentation = presentations.find(
       (p) => p.presentationId === presentationId,
