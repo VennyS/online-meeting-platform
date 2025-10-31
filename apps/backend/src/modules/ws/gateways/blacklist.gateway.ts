@@ -12,6 +12,7 @@ import { Logger } from '@nestjs/common';
 import { BlacklistEntry } from '../interfaces/blacklist-entry.interface';
 import { ConnectionService } from '../services/connection.service';
 import { Server } from 'socket.io';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class BlacklistGateway implements OnGatewayConnection {
@@ -23,9 +24,12 @@ export class BlacklistGateway implements OnGatewayConnection {
   constructor(
     private readonly connectionService: ConnectionService,
     private readonly blacklistService: BlacklistService,
+    private readonly init: InitService,
   ) {}
 
   async handleConnection(socket: TypedSocket) {
+    await this.init.waitForReady();
+
     const { isHost } = socket.data;
 
     if (!isHost) return;

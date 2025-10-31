@@ -12,6 +12,7 @@ import { Server } from 'socket.io';
 import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { Guest } from 'src/common/modules/redis/redis.service';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class WaitingHostGateway implements OnGatewayConnection {
@@ -20,11 +21,14 @@ export class WaitingHostGateway implements OnGatewayConnection {
   constructor(
     private readonly connectionService: ConnectionService,
     private readonly waitingService: WaitingService,
+    private readonly init: InitService,
   ) {}
   @WebSocketServer()
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
+    await this.init.waitForReady();
+
     const { roomShortId, isHost } = socket.data;
 
     if (!isHost) return;

@@ -41,6 +41,7 @@ import { WaitingService } from './services/waiting.service';
     WaitingService,
     ConnectionService,
     RoomRepository,
+    InitService,
   ],
 })
 export class WsModule {}

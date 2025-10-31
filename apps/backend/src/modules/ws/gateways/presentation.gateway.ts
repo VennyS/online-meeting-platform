@@ -16,13 +16,17 @@ import {
 import { Presentation } from '../interfaces/presentation.interface';
 import { Logger } from '@nestjs/common';
 import { Server } from 'socket.io';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class PresentationGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(PresentationGateway.name);
-  constructor(private readonly presentationService: PresentationService) {}
+  constructor(
+    private readonly presentationService: PresentationService,
+    private readonly init: InitService,
+  ) {}
 
   @WebSocketServer()
   server: Server;

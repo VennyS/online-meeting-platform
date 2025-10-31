@@ -12,6 +12,7 @@ import { ConnectionService } from '../services/connection.service';
 import { Logger } from '@nestjs/common';
 import { Message } from '../interfaces/message.interface';
 import type { TypedSocket } from '../interfaces/socket-data.interface';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class ChatGateway implements OnGatewayConnection {
@@ -20,13 +21,16 @@ export class ChatGateway implements OnGatewayConnection {
   constructor(
     private readonly chatService: ChatService,
     private readonly connectionService: ConnectionService,
+    private readonly init: InitService,
   ) {}
 
   @WebSocketServer()
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    const { roomShortId } = socket.handshake.auth;
+    await this.init.waitForReady();
+
+    const { roomShortId } = socket.data;
 
     const roomMetadata = this.connectionService.getMetadata(roomShortId!);
     if (!roomMetadata || !roomMetadata.showHistoryToNewbies) return;

@@ -17,6 +17,7 @@ import { TypedSocket } from '../interfaces/socket-data.interface';
 import { getClientIP } from 'src/common/utils/socket.utils';
 import { AnalyticsService } from '../services/analytics.service';
 import { LivekitService } from 'src/common/modules/livekit/livekit.service';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -27,12 +28,15 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly mainService: Mainservice,
     private readonly analyticsService: AnalyticsService,
     private readonly livekitService: LivekitService,
+    private readonly init: InitService,
   ) {}
 
   @WebSocketServer()
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
+    this.init.markNotReady();
+
     const { roomShortId, userId, username } = socket.handshake.auth;
 
     if (!roomShortId || !userId || !username) {
@@ -97,6 +101,8 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
       roomName: roomInfo.name,
       message: 'Successfully connected to room',
     });
+
+    this.init.markReady();
 
     this.analyticsService.join(roomShortId, String(userId), username, ip);
 

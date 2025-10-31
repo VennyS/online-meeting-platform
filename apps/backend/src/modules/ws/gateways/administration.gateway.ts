@@ -15,17 +15,23 @@ import type {
   Permissions,
 } from '../interfaces/administation.interface';
 import { Server } from 'socket.io';
+import { InitService } from '../services/init.service';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class AdministrationGateway implements OnGatewayConnection {
-  constructor(private readonly administationService: AdministrationService) {}
+  constructor(
+    private readonly administationService: AdministrationService,
+    private readonly init: InitService,
+  ) {}
 
   @WebSocketServer()
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    this.initRoles(socket);
-    this.initPermissions(socket);
+    await this.init.waitForReady();
+
+    await this.initRoles(socket);
+    await this.initPermissions(socket);
   }
 
   async initPermissions(socket: TypedSocket) {
