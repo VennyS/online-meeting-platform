@@ -13,6 +13,7 @@ import { BlacklistEntry } from '../interfaces/blacklist-entry.interface';
 import { ConnectionService } from '../services/connection.service';
 import { Server } from 'socket.io';
 import { InitService } from '../services/init.service';
+import { extractIp } from 'src/common/utils/socket.utils';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class BlacklistGateway implements OnGatewayConnection {
@@ -89,7 +90,7 @@ export class BlacklistGateway implements OnGatewayConnection {
     const blacklistEntry: BlacklistEntry = {
       userId: data.userId,
       name: data.name,
-      ip: socketToExclude.data.ip,
+      ip: extractIp(excludedUser.socket),
     };
 
     try {

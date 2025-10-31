@@ -22,6 +22,7 @@ import { PatchRoomDto } from './dto/patchRoomDto';
 import type { Response, Request } from 'express';
 import { ReportExportService } from 'src/common/services/report.meeting.service';
 import { GetDto } from './dto/getDto';
+import { extractIp } from 'src/common/utils/socket.utils';
 
 @Controller('room')
 export class RoomController {
@@ -104,8 +105,7 @@ export class RoomController {
     @User('id') id: number | null,
     @Req() req: Request,
   ): Promise<Prequisites> {
-    const ip =
-      req.headers['x-forwarded-for']?.toString() || req.ip || 'unknown';
+    const ip = extractIp(req);
     return this.roomService.getPrequisites(room, id, ip);
   }
 
