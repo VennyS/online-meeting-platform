@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import {
   ConnectedSocket,
   OnGatewayConnection,
@@ -13,8 +13,10 @@ import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { Guest } from 'src/common/modules/redis/redis.service';
 import { createLivekitToken } from 'src/common/utils/auth.utils';
 import { InitService } from '../services/init.service';
+import { HostApprovalDto } from '../dto/waiting-host.dto';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
+@UsePipes(new ValidationPipe({ transform: true }))
 export class WaitingHostGateway implements OnGatewayConnection {
   private readonly logger = new Logger(WaitingHostGateway.name);
 
@@ -52,7 +54,7 @@ export class WaitingHostGateway implements OnGatewayConnection {
 
   @SubscribeMessage('host_approval')
   async approveGuest(
-    data: { guestId: number; approved: boolean },
+    @MessageBody() data: HostApprovalDto,
     @ConnectedSocket() socket: TypedSocket,
   ) {
     const { roomShortId, userId, isHost } = socket.data;

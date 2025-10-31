@@ -8,14 +8,16 @@ import {
 } from '@nestjs/websockets';
 import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { BlacklistService } from '../services/blacklist.service';
-import { Logger } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { BlacklistEntry } from '../interfaces/blacklist-entry.interface';
 import { ConnectionService } from '../services/connection.service';
 import { Server } from 'socket.io';
 import { InitService } from '../services/init.service';
+import { AddToBlacklistDto } from '../dto/blacklist.dto';
 import { extractIp } from 'src/common/utils/socket.utils';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
+@UsePipes(new ValidationPipe({ transform: true }))
 export class BlacklistGateway implements OnGatewayConnection {
   private readonly logger = new Logger(BlacklistGateway.name);
 
@@ -56,7 +58,7 @@ export class BlacklistGateway implements OnGatewayConnection {
 
   @SubscribeMessage('add_to_blacklist')
   async addToBlackList(
-    @MessageBody() data: Omit<BlacklistEntry, 'ip'>,
+    @MessageBody() data: AddToBlacklistDto,
     @ConnectedSocket() socket: TypedSocket,
   ) {
     const { roomShortId, userId, isHost } = socket.data;
