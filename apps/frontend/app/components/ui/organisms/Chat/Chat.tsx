@@ -10,12 +10,12 @@ import {
   Divider,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import { useChat } from "@/app/hooks/useChat";
 import { useUser } from "@/app/hooks/useUser";
 import { parseMessage } from "@/app/lib/parseMessage";
+import { useChatContext } from "@/app/providers/chat.provider";
 
 export const Chat = () => {
-  const { messages, send } = useChat();
+  const { messages, send } = useChatContext();
   const { user } = useUser();
   const [message, setMessage] = useState("");
 
