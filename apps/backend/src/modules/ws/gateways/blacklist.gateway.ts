@@ -77,16 +77,6 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    const socketToExclude: TypedSocket | undefined =
-      this.server.sockets.sockets.get(excludedUser.socketId);
-
-    if (!socketToExclude) {
-      this.logger.debug(
-        `No socket found for socketId: ${excludedUser.socketId} to blacklist`,
-      );
-      return;
-    }
-
     const blacklistEntry: BlacklistEntry = {
       userId: data.userId,
       name: data.name,
@@ -95,7 +85,7 @@ export class BlacklistGateway implements OnGatewayConnection {
 
     try {
       await this.blacklistService.addToBlacklist(
-        socketToExclude.data.roomShortId,
+        excludedUser.socket.data.roomShortId,
         blacklistEntry,
       );
     } catch (e) {
@@ -103,7 +93,9 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    this.notifyAboutUpdatedBlacklist(socketToExclude.data.roomShortId);
+    await this.notifyAboutUpdatedBlacklist(
+      excludedUser.socket.data.roomShortId,
+    );
   }
 
   @SubscribeMessage('remove_from_blacklist')

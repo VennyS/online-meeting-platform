@@ -85,7 +85,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
 
     const userConnection: Connection = {
-      socketId: socket.id,
+      socket: socket,
     };
 
     this.connectionService.addRoom(roomMeta);

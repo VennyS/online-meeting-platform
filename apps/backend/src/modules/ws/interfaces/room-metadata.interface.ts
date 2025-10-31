@@ -1,3 +1,5 @@
+import { TypedSocket } from './socket-data.interface';
+
 export interface RoomMetadata {
   roomshortId: string;
   name?: string;
@@ -6,5 +8,5 @@ export interface RoomMetadata {
 }
 
 export interface Connection {
-  socketId: string;
+  socket: TypedSocket;
 }

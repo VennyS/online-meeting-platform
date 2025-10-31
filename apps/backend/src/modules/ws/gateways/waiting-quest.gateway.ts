@@ -38,7 +38,7 @@ export class WaitingGuestGateway
     socket.data.roomShortId = roomShortId;
     socket.data.userId = guestId;
 
-    this.connectionService.addGuest(guestId, { socketId: socket.id });
+    this.connectionService.addGuest(guestId, { socket: socket });
     let guests: Guest[] = [];
 
     try {
@@ -51,7 +51,7 @@ export class WaitingGuestGateway
 
     if (guests.length <= 0) return;
 
-    this.server
+    (this.server as any as { server: Server }).server
       .of('/')
       .to(`hosts-${roomShortId}`)
       .emit('waiting_queue_updated', { guests });
@@ -60,10 +60,10 @@ export class WaitingGuestGateway
   }
 
   handleDisconnect(socket: TypedSocket) {
-    this.connectionService.removeGuest(socket.data.userId);
-    this.waitingService.removeGuest(
-      socket.data.roomShortId,
-      socket.data.userId,
-    );
+    const { userId, roomShortId } = socket.data;
+
+    this.connectionService.removeGuest(userId);
+    this.waitingService.removeGuest(roomShortId, userId);
+    this.waitingService.removeGuest(roomShortId, userId);
   }
 }
