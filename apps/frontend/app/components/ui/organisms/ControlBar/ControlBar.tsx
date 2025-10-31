@@ -30,8 +30,13 @@ import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
 import { useRecordingContext } from "@/app/providers/recording.provider";
+import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
+import { Panel } from "@/app/hooks/useRoomLayout";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
+  const { openedRightPanel, unreadCount, handleChangeOpenPanel } =
+    useRoomLayoutContext();
+
   const { startRecording, stopRecording } = useRecordingContext();
 
   const {

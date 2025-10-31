@@ -1,10 +1,10 @@
-import { useParticipantsContext } from "@/app/providers/participants.provider";
 import IconButton from "@mui/material/IconButton";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import React from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import styles from "./RightPanel.module.css";
+import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 
 const RightPanel = ({
   title,
@@ -15,7 +15,7 @@ const RightPanel = ({
   children: React.ReactNode;
   className?: string;
 }) => {
-  const { handleChangeOpenPanel } = useParticipantsContext();
+  const { handleChangeOpenPanel } = useRoomLayoutContext();
 
   return (
     <Paper

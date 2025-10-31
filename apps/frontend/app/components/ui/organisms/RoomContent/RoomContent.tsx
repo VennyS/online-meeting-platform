@@ -26,7 +26,9 @@ import { GridLayout } from "../GridLayout/GridLayout";
 import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
 import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
 import { Typography } from "@mui/material";
+import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 import { useRecordingContext } from "@/app/providers/recording.provider";
+import { Panel } from "@/app/hooks/useRoomLayout";
 
 export const RoomContent = ({
   roomId,
@@ -40,6 +42,7 @@ export const RoomContent = ({
   });
 
   const { user } = useUser();
+  const { openedRightPanel } = useRoomLayoutContext();
   const { overflowInfo, resetOverflowInfo, deleteFiles } =
     useRecordingContext();
 
