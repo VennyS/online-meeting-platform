@@ -20,14 +20,15 @@ import { roomService } from "@/app/services/room.service";
 import { useUser } from "@/app/hooks/useUser";
 import { toUtcISOString } from "@/app/lib/toUtcISOString";
 import { formatDateTimeLocal } from "@/app/lib/formatDateTimeLocal";
-import { fileService, IFile } from "@/app/services/file.service";
-import { Role } from "@/app/types/room.types";
+import { fileService } from "@/app/services/file.service";
 import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
 import { FileCard } from "../FileCard/FileCard";
 import { RoomData, RoomModalProps, RoomSchema } from "./types";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
+import { Role } from "@/app/types/administration.types";
+import { RoomFile } from "@/app/types/files.types";
 
 export default function RoomModal({
   mode,
@@ -65,7 +66,7 @@ export default function RoomModal({
     },
   });
 
-  const [files, setFiles] = useState<(IFile & { isNew?: boolean })[]>([]);
+  const [files, setFiles] = useState<(RoomFile & { isNew?: boolean })[]>([]);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
@@ -110,7 +111,7 @@ export default function RoomModal({
       return;
     }
 
-    const newFiles: (IFile & { isNew?: boolean })[] = selectedFiles.map(
+    const newFiles: (RoomFile & { isNew?: boolean })[] = selectedFiles.map(
       (file, index) => ({
         id: Date.now() + index,
         fileName: file.name,
@@ -139,7 +140,7 @@ export default function RoomModal({
 
       const urls = await fileService.uploadFiles(roomShortId, fileObjects);
 
-      const uploadedFiles: (IFile & { isNew?: boolean })[] = newFiles.map(
+      const uploadedFiles: (RoomFile & { isNew?: boolean })[] = newFiles.map(
         (file, index) => ({
           ...file,
           url: urls[index],
@@ -167,7 +168,7 @@ export default function RoomModal({
     }
   };
 
-  const handleRename = async (file: IFile) => {
+  const handleRename = async (file: RoomFile) => {
     try {
       if (!file.url.includes("blob:")) {
         await fileService.patch(file.id, file.fileName);
@@ -177,7 +178,7 @@ export default function RoomModal({
     }
   };
 
-  const handleDownload = async (file: IFile) => {
+  const handleDownload = async (file: RoomFile) => {
     try {
       const res = await fetch(file.url);
       if (!res.ok) throw new Error("Ошибка скачивания");

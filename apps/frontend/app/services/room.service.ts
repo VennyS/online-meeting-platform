@@ -1,21 +1,18 @@
 import { axiosClassic } from "../api/interceptors";
 import { IUser } from "../types/auth.types";
-import {
-  CreateRoomDto,
-  IPrequisites,
-  IRoom,
-  MeetingReports,
-  UpdateRoomDto,
-} from "../types/room.types";
+import { MeetingReports } from "../types/reports.types";
+import { Prequisites, Room } from "../types/room.types";
+import { CreateRoomDto } from "./dto/create-room.dto";
+import { UpdateRoomDto } from "./dto/update-room.dto";
 
 export const roomService = {
   async createRoom(data: CreateRoomDto) {
-    const response = await axiosClassic.post<IRoom>("/room", data);
+    const response = await axiosClassic.post<Room>("/room", data);
     return response.data;
   },
 
   async prequisites(shortId: string) {
-    const response = await axiosClassic.get<IPrequisites>(
+    const response = await axiosClassic.get<Prequisites>(
       `/room/${shortId}/prequisites`
     );
     return response.data;
@@ -42,17 +39,17 @@ export const roomService = {
   },
 
   async getRooms() {
-    const response = await axiosClassic.get<IRoom[]>("/room");
+    const response = await axiosClassic.get<Room[]>("/room");
     return response.data;
   },
 
   async getAll() {
-    const response = await axiosClassic.get<IRoom[]>("/room/all");
+    const response = await axiosClassic.get<Room[]>("/room/all");
     return response.data;
   },
 
   async updateRoom(shortId: string, data: UpdateRoomDto) {
-    const response = await axiosClassic.patch<IRoom>(`/room/${shortId}`, data);
+    const response = await axiosClassic.patch<Room>(`/room/${shortId}`, data);
     return response.data;
   },
 

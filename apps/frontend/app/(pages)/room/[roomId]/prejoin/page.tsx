@@ -19,8 +19,8 @@ import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { AxiosError } from "axios";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
-import { io, Socket } from "socket.io-client";
-import { RoomSocket } from "@/app/providers/websocket.provider";
+import { io } from "socket.io-client";
+import { RoomSocket } from "@/app/types/socket.types";
 
 export default function PrejoinPage() {
   const { roomId } = useParams();

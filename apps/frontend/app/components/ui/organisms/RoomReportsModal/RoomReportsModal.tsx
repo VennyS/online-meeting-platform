@@ -11,7 +11,7 @@ import {
   Paper,
 } from "@mui/material";
 import { roomService } from "@/app/services/room.service";
-import { MeetingReports } from "@/app/types/room.types";
+import { MeetingReports } from "@/app/types/reports.types";
 import { RoomReportsProps } from "./types";
 import { Modal } from "../../atoms/Modal/Modal";
 

@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { IPrequisites } from "../types/room.types";
+import { Prequisites } from "../types/room.types";
 import { useParams } from "next/navigation";
 import { roomService } from "../services/room.service";
 import { AxiosError } from "axios";
 import router from "next/router";
 
 interface PrequisitesContextValue {
-  prequisites: IPrequisites;
+  prequisites: Prequisites;
   isLoading: boolean;
 }
 
@@ -20,7 +20,7 @@ export const PrequisitesProvider = ({
   const { roomId } = useParams();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [prequisites, setPrequisites] = useState<IPrequisites>({
+  const [prequisites, setPrequisites] = useState<Prequisites>({
     guestAllowed: false,
     passwordRequired: false,
     waitingRoomEnabled: false,

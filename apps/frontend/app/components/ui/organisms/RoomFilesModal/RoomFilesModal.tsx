@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { Box, Typography, CircularProgress, Alert, Stack } from "@mui/material";
-import { fileService, IFile } from "@/app/services/file.service";
+import { fileService } from "@/app/services/file.service";
 import { Modal } from "../../atoms/Modal/Modal";
 import { RoomFilesModalProps } from "./types";
 import { FileCard } from "../FileCard/FileCard";
+import { RoomFile } from "@/app/types/files.types";
 
 export const RoomFilesModal = ({
   shortId,
   isOpen,
   onClose,
 }: RoomFilesModalProps) => {
-  const [files, setFiles] = useState<IFile[] | null>(null);
+  const [files, setFiles] = useState<RoomFile[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +44,7 @@ export const RoomFilesModal = ({
     }
   };
 
-  const handleRename = async (file: IFile) => {
+  const handleRename = async (file: RoomFile) => {
     try {
       await fileService.patch(file.id, file.fileName);
     } catch {
@@ -51,7 +52,7 @@ export const RoomFilesModal = ({
     }
   };
 
-  const handleDownload = async (file: IFile) => {
+  const handleDownload = async (file: RoomFile) => {
     try {
       const res = await fetch(file.url);
       if (!res.ok) throw new Error("Ошибка скачивания");

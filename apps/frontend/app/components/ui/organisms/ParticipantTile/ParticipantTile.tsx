@@ -20,14 +20,15 @@ import {
   TrackReferenceOrPlaceholder,
 } from "@livekit/components-core";
 import MicOffOutlinedIcon from "@mui/icons-material/MicOffOutlined";
-import { useFocus } from "@/app/providers/focus.provider";
 import { isPresentation } from "@/app/lib/isPresentations";
 import CenterFocusStrongOutlinedIcon from "@mui/icons-material/CenterFocusStrongOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 import dynamic from "next/dynamic";
 import styles from "./ParticipantTile.module.css";
 import { usePresentationContext } from "@/app/providers/presentation.provider";
-import { Presentation } from "@/app/hooks/usePresentation";
+import { Presentation } from "@/app/types/presentation.types";
+import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
+
 interface ParticipantTileProps extends HTMLAttributes<HTMLDivElement> {
   trackReference: TrackReferenceOrPlaceholder | Presentation;
   disableSpeakingIndicator?: boolean | undefined;
@@ -57,7 +58,8 @@ export const ParticipantTile: (
     usePresentationContext();
 
   const isSpeaking = useIsSpeaking(trackReference.participant);
-  const { focusTrack, show, isFocused, setFocusTrack } = useFocus();
+  const { focusTrack, isButtonNeeded, isFocused, setFocusTrack } =
+    useRoomLayoutContext();
 
   const { isMuted } = useTrackMutedIndicator({
     participant: trackReference.participant,
@@ -163,7 +165,7 @@ export const ParticipantTile: (
           {participantName[0].toUpperCase()}
         </Avatar>
       )}
-      {show && (
+      {isButtonNeeded && (
         <IconButton
           sx={{ position: "absolute", top: 8, right: 8, p: 0 }}
           onClick={

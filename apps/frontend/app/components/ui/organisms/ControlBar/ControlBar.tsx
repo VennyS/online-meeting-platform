@@ -31,7 +31,7 @@ import { useUser } from "@/app/hooks/useUser";
 import { useRecordingContext } from "@/app/providers/recording.provider";
 import { useWaitingHostContext } from "@/app/providers/waiting.host.provider";
 import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
-import { Panel } from "@/app/hooks/useRoomLayout";
+import { Panel } from "@/app/types/room-layout.types";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const { openedRightPanel, unreadCount, handleChangeOpenPanel } =

@@ -3,10 +3,14 @@ import {
   useRemoteParticipants,
 } from "@livekit/components-react";
 import { useEffect, useState } from "react";
-import { RoomRole, UserPermissions, Permissions } from "../types/room.types";
-import { RoomSocket } from "../providers/websocket.provider";
 import { LocalParticipant, RemoteParticipant } from "livekit-client";
 import stringToColor from "../lib/stringToColor";
+import {
+  RoomRole,
+  UserPermissions,
+  Permissions,
+} from "../types/administration.types";
+import { RoomSocket } from "../types/socket.types";
 
 export interface ParticipantsWithPermissions {
   local: ParticipantWithPermissions;

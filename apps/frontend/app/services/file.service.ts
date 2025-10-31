@@ -1,19 +1,6 @@
 import { axiosClassic } from "../api/interceptors";
-
-interface UploadFileResponse {
-  message: string;
-  urls: string[];
-}
-
-export interface IFile {
-  id: number;
-  fileName: string;
-  fileType: FileType;
-  fileSize: number;
-  url: string;
-}
-
-export type FileType = "VIDEO" | "AUDIO" | "TEXT" | "PDF";
+import { FileType, RoomFile } from "../types/files.types";
+import { UploadFileResponse } from "./dto/upload-file.response";
 
 export const fileService = {
   async uploadFiles(shortId: string, files: File[]): Promise<string[]> {
@@ -47,7 +34,7 @@ export const fileService = {
     skip = 0,
     take = 10,
     types?: FileType | FileType[]
-  ): Promise<IFile[]> {
+  ): Promise<RoomFile[]> {
     try {
       // если пришёл один тип, преобразуем его в массив
       const normalizedTypes = Array.isArray(types)
@@ -56,7 +43,7 @@ export const fileService = {
         ? [types]
         : [];
 
-      const response = await axiosClassic.get<IFile[]>(
+      const response = await axiosClassic.get<RoomFile[]>(
         `/file/room/${shortId}`,
         {
           params: {
@@ -84,7 +71,7 @@ export const fileService = {
     }
   },
 
-  async listUser(types?: FileType | FileType[]): Promise<IFile[]> {
+  async listUser(types?: FileType | FileType[]): Promise<RoomFile[]> {
     try {
       // если пришёл один тип, преобразуем его в массив
       const normalizedTypes = Array.isArray(types)
@@ -93,7 +80,7 @@ export const fileService = {
         ? [types]
         : [];
 
-      const response = await axiosClassic.get<IFile[]>(`/file`, {
+      const response = await axiosClassic.get<RoomFile[]>(`/file`, {
         params: {
           types: normalizedTypes,
         },
@@ -118,8 +105,8 @@ export const fileService = {
     await axiosClassic.delete(`/file/${fileId}`);
   },
 
-  async patch(fileId: number, fileName: string): Promise<IFile> {
-    const response = await axiosClassic.patch<IFile>(`/file/${fileId}`, {
+  async patch(fileId: number, fileName: string): Promise<RoomFile> {
+    const response = await axiosClassic.patch<RoomFile>(`/file/${fileId}`, {
       name: fileName,
     });
     return response.data;

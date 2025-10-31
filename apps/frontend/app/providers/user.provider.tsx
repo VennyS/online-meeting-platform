@@ -9,7 +9,8 @@ import {
   saveAccessToken,
 } from "../services/auth-token.service";
 import { usePathname } from "next/navigation";
-import { fileService, IFile } from "../services/file.service";
+import { fileService } from "../services/file.service";
+import { RoomFile } from "../types/files.types";
 
 interface AuthContextType {
   user: IUser | null;
@@ -20,7 +21,7 @@ interface AuthContextType {
 
   totalPdfSize: number;
   addFiles: (files: File[]) => void;
-  removeFiles: (files: IFile[]) => void;
+  removeFiles: (files: RoomFile[]) => void;
 }
 
 export const AuthContext = React.createContext<AuthContextType | undefined>(
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setTotalPdfSize((prev) => prev + pdfSize);
   };
 
-  const removeFiles = (files: IFile[]) => {
+  const removeFiles = (files: RoomFile[]) => {
     const pdfSize = files
       .filter((f) => f.fileType === "PDF")
       .reduce((sum, f) => sum + f.fileSize, 0);

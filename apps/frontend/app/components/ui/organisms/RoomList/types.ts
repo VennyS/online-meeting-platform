@@ -1,8 +1,8 @@
-import { IRoom } from "@/app/types/room.types";
+import { Room } from "@/app/types/room.types";
 
 export type RoomListProps = {
   fetchMode?: "user" | "all" | "none";
-  initialRooms?: IRoom[];
+  initialRooms?: Room[];
 };
 
 export type Status = {
@@ -10,4 +10,4 @@ export type Status = {
   color: "success" | "error" | "info" | "warning";
 };
 
-export type RoomWithStatus = IRoom & Status;
+export type RoomWithStatus = Room & Status;

@@ -13,8 +13,8 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import React, { useState } from "react";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
-import { RoomRoleMap } from "@/app/types/room.types";
 import { useBlacklistContext } from "@/app/providers/blacklist.provider";
+import { RoomRoleMap } from "@/app/types/administration.types";
 
 const ParticipantsList = () => {
   const { local, remote, updateUserRole } = useParticipantsContext();

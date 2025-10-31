@@ -1,11 +1,11 @@
 import { Button } from "@mui/material";
-import { IRoom } from "../types/room.types";
+import { Room } from "../types/room.types";
 import {
   RoomWithStatus,
   Status,
 } from "../components/ui/organisms/RoomList/types";
 
-export const getRoomStatus = (room: IRoom): Status => {
+export const getRoomStatus = (room: Room): Status => {
   const label = room.cancelled
     ? "Отменена"
     : new Date(room.startAt) > new Date()

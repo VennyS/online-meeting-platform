@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Stack, Typography, Alert } from "@mui/material";
+import { Stack, Typography, Alert } from "@mui/material";
 import { Modal } from "@/app/components/ui/atoms/Modal/Modal";
-import { fileService, FileType, IFile } from "@/app/services/file.service";
+import { fileService } from "@/app/services/file.service";
 import { FileCard } from "../FileCard/FileCard";
+import { FileType, RoomFile } from "@/app/types/files.types";
 
 interface UserFilesModalProps {
   isOpen: boolean;
   onClose: () => void;
   fileType?: FileType | FileType[];
-  onDelete: (file: IFile[]) => void;
+  onDelete: (file: RoomFile[]) => void;
   children?: React.ReactNode;
 }
 
@@ -21,7 +22,7 @@ export function UserFilesModal({
   onDelete,
   children,
 }: UserFilesModalProps) {
-  const [files, setFiles] = useState<IFile[]>([]);
+  const [files, setFiles] = useState<RoomFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +54,7 @@ export function UserFilesModal({
     }
   };
 
-  const handleDownload = async (file: IFile) => {
+  const handleDownload = async (file: RoomFile) => {
     try {
       const res = await fetch(file.url);
       if (!res.ok) throw new Error("Ошибка скачивания");

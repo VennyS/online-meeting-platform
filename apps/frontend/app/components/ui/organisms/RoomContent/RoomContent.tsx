@@ -12,21 +12,21 @@ import styles from "./RoomContent.module.css";
 import cn from "classnames";
 import { Chat } from "@/app/components/ui/organisms/Chat/Chat";
 import { ParticipantsPanel } from "@/app/components/ui/organisms/ParticipantsPanel/ParticipantsPanel";
-import { fileService, IFile } from "@/app/services/file.service";
+import { fileService } from "@/app/services/file.service";
 import PresentationList from "@/app/components/ui/organisms/PresentationList/PresentationList";
 import { RoomContentProps } from "./types";
 import ControlBar from "../ControlBar/ControlBar";
 import RightPanel from "../RightPanel/RightPanel";
 import React from "react";
 import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
-import { useFocus } from "@/app/providers/focus.provider";
 import { GridLayout } from "../GridLayout/GridLayout";
 import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
 import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
 import { Typography } from "@mui/material";
 import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 import { useRecordingContext } from "@/app/providers/recording.provider";
-import { Panel } from "@/app/hooks/useRoomLayout";
+import { RoomFile } from "@/app/types/files.types";
+import { Panel } from "@/app/types/room-layout.types";
 
 export const RoomContent = ({
   roomId,
@@ -44,7 +44,7 @@ export const RoomContent = ({
   const { overflowInfo, resetOverflowInfo, deleteFiles } =
     useRecordingContext();
 
-  const [files, setFiles] = useState<IFile[]>([]);
+  const [files, setFiles] = useState<RoomFile[]>([]);
 
   const panels = [
     {
@@ -91,7 +91,7 @@ export const RoomContent = ({
     };
   }, []);
 
-  const { focusTrack } = useFocus();
+  const { focusTrack } = useRoomLayoutContext();
   const carouselTracks = tracks.filter((t) => {
     if (!focusTrack || Array.isArray(focusTrack)) return true;
 

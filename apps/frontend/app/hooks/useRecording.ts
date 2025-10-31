@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { RoomSocket } from "../providers/websocket.provider";
-import { IFile } from "../services/file.service";
+import { RoomSocket } from "../types/socket.types";
+import { RoomFile } from "../types/files.types";
 
 export interface RecordingProviderValue {
   overflowInfo:
@@ -12,7 +12,7 @@ export interface RecordingProviderValue {
     | undefined;
   startRecording: () => void;
   stopRecording: () => void;
-  deleteFiles: (files: IFile[]) => void;
+  deleteFiles: (files: RoomFile[]) => void;
   resetOverflowInfo: () => void;
 }
 
@@ -37,7 +37,7 @@ export function useRecording(
     socket?.emit("recording_finished", { egressId });
   }
 
-  function deleteFiles(files: IFile[]) {
+  function deleteFiles(files: RoomFile[]) {
     const sizeOfFiles = files.reduce((acc, file) => acc + file.fileSize, 0);
     setOverflowInfo((prev) => {
       if (!prev) return prev;

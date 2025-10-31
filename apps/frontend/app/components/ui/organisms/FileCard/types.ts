@@ -1,9 +1,9 @@
-import { IFile } from "@/app/services/file.service";
+import { RoomFile } from "@/app/types/files.types";
 
 export type FileCardProps = {
-  file: IFile;
-  onRename?: (file: IFile) => void;
-  onDownload: (file: IFile) => void;
+  file: RoomFile;
+  onRename?: (file: RoomFile) => void;
+  onDownload: (file: RoomFile) => void;
   onDelete: (fileId: number) => void;
   onNameChange?: (fileId: number, newName: string) => void;
 };

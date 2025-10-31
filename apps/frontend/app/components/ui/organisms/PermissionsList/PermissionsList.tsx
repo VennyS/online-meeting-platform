@@ -11,8 +11,9 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useEffect, useState } from "react";
-import { Permissions, RoomRole } from "@/app/types/room.types";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
+import { RoomRole } from "@/app/types/administration.types";
+import { Permissions } from "@/app/types/administration.types";
 
 const PermissionsList = () => {
   const { local, permissionsMap, updateRolePermissions } =

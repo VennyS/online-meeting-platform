@@ -1,4 +1,3 @@
-import { RoomRole } from "@/app/types/room.types";
 import styles from "./ParticipantsPanel.module.css";
 import { useState } from "react";
 import Button from "@mui/material/Button";

@@ -1,14 +1,11 @@
 "use client";
 
 import { createContext, useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
-import {
-  RoomClientToServerEvents,
-  RoomServerToClientEvents,
-} from "../types/room.types";
+import { io } from "socket.io-client";
+import { RoomSocket } from "../types/socket.types";
 
 interface WebSocketContextValue {
-  socket: Socket | null;
+  socket: RoomSocket | null;
   connect: (roomId: string, userId: number, userName: string) => void;
   disconnect: () => void;
 }
@@ -16,11 +13,6 @@ interface WebSocketContextValue {
 export const WebSocketContext = createContext<WebSocketContextValue | null>(
   null
 );
-
-export type RoomSocket = Socket<
-  RoomServerToClientEvents,
-  RoomClientToServerEvents
->;
 
 export const WebSocketProvider = ({
   children,

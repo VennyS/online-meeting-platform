@@ -6,7 +6,7 @@ import {
 import { RoomEvent, Track } from "livekit-client";
 import { useMemo } from "react";
 import { usePresentationContext } from "../providers/presentation.provider";
-import { Presentation } from "./usePresentation";
+import { Presentation } from "../types/presentation.types";
 
 interface UseRoomTracksWithPresentationsOptions {
   includeCamera?: boolean;

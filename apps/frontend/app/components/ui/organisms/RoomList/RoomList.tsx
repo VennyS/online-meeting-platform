@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { roomService } from "@/app/services/room.service";
-import { IRoom } from "@/app/types/room.types";
+import { Room } from "@/app/types/room.types";
 import { RoomListProps, RoomWithStatus } from "./types";
 
 import {
@@ -59,7 +59,7 @@ export default function RoomList({
     setModalState(params);
   };
 
-  const onUpdateRoom = (room: IRoom) => {
+  const onUpdateRoom = (room: Room) => {
     const newRoom = { ...room, ...getRoomStatus(room) };
 
     setRooms((prev) =>
@@ -67,7 +67,7 @@ export default function RoomList({
     );
   };
 
-  const onCreateRoom = (room: IRoom) => {
+  const onCreateRoom = (room: Room) => {
     const newRoom = { ...room, ...getRoomStatus(room) };
 
     setRooms((prev) => [newRoom, ...prev]);

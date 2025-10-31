@@ -1,5 +1,5 @@
 import { TrackReferenceOrPlaceholder } from "@livekit/components-react";
-import { Presentation } from "../hooks/usePresentation";
+import { Presentation } from "../types/presentation.types";
 
 export function isTrackReferenceOrPlaceholder(
   track: TrackReferenceOrPlaceholder | Presentation | null

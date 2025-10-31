@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RoomSocket } from "../providers/websocket.provider";
+import { RoomSocket } from "../types/socket.types";
 
 export interface WaitingRoomHostProviderValue {
   waitingGuests: IWaitingGuest[];

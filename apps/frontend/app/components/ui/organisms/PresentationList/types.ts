@@ -1,5 +1,5 @@
-import { IFile } from "@/app/services/file.service";
+import { RoomFile } from "@/app/types/files.types";
 
 export type PresentationListProps = {
-  files: IFile[];
+  files: RoomFile[];
 };

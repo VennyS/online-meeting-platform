@@ -1,4 +1,4 @@
-import { PresentationMode } from "@/app/hooks/usePresentation";
+import { PresentationMode } from "@/app/types/presentation.types";
 
 export type PDFViewerProps = {
   url: string;

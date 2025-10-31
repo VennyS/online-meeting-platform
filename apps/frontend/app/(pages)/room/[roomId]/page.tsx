@@ -9,7 +9,6 @@ import { LiveKitRoom } from "@livekit/components-react";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
-import { FocusProvider } from "@/app/providers/focus.provider";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
 import { BlacklistProvider } from "@/app/providers/blacklist.provider";
 import { WaitingHostProvider } from "@/app/providers/waiting.host.provider";
@@ -80,14 +79,12 @@ export default function MeetingRoom() {
                 <RecordingProvider socket={socket}>
                   <BlacklistProvider socket={socket}>
                     <WaitingHostProvider socket={socket}>
-                      <FocusProvider>
-                        <RoomLayoutProvider>
-                          <RoomContent
-                            roomId={roomId as string}
-                            roomName={roomName}
-                          />
-                        </RoomLayoutProvider>
-                      </FocusProvider>
+                      <RoomLayoutProvider>
+                        <RoomContent
+                          roomId={roomId as string}
+                          roomName={roomName}
+                        />
+                      </RoomLayoutProvider>
                     </WaitingHostProvider>
                   </BlacklistProvider>
                 </RecordingProvider>

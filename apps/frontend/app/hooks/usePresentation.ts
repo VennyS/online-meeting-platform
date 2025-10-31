@@ -1,34 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { RoomSocket } from "../providers/websocket.provider";
-import { Participant, Track } from "livekit-client";
-import { TrackReference } from "@livekit/components-core";
 import {
   useLocalParticipant,
   useRemoteParticipants,
 } from "@livekit/components-react";
-
-export type PresentationMode = "presentationWithCamera" | "presentationOnly";
-
-export type Presentation = {
-  id: string;
-  fileId: string;
-  presentationId: string;
-  url: string;
-  authorId: string;
-  page: number;
-  zoom: number;
-  scroll: { x: number; y: number };
-  mode: PresentationMode;
-  source: Track.Source;
-  participant: Participant;
-  local: boolean;
-  video?: TrackReference;
-};
-
-export type PresentationDto = Omit<
-  Presentation,
-  "id" | "source" | "participant" | "local" | "video"
->;
+import { Presentation, PresentationDto } from "../types/presentation.types";
+import { RoomSocket } from "../types/socket.types";
+import { Track } from "livekit-client";
 
 export interface PresentationProviderValue {
   presentations: Presentation[];

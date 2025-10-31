@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { RoomSocket } from "../providers/websocket.provider";
-import { Message } from "../components/ui/organisms/Chat/types";
+import { RoomSocket } from "../types/socket.types";
 import { useChat as useLivekitChat } from "@livekit/components-react";
 import { useUser } from "./useUser";
+import { Message } from "../types/chat.types";
 
 export interface ChatProviderValue {
   messages: Message[];

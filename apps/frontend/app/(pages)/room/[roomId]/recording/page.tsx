@@ -11,8 +11,8 @@ import {
 import React, { useEffect } from "react";
 import styles from "./page.module.css";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
-import { FocusProvider } from "@/app/providers/focus.provider";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
+import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
 
 const EGRESS_CREDENTIAL = "egress";
 
@@ -44,9 +44,9 @@ const RecordingPage = () => {
         className={styles.roomContainer}
       >
         <ParticipantsProvider socket={socket}>
-          <FocusProvider>
+          <RoomLayoutProvider>
             <RecordingPageContent roomShortId={roomShortId as string} />
-          </FocusProvider>
+          </RoomLayoutProvider>
         </ParticipantsProvider>
       </LiveKitRoom>
     </main>

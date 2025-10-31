@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { IRoom } from "@/app/types/room.types";
+import { Room } from "@/app/types/room.types";
 import { RoomWithStatus } from "../RoomList/types";
 
 export type RoomModalProps = {
   mode: "create" | "edit";
   initialData?: RoomWithStatus;
   onClose: () => void;
-  onUpdateRoom?: (room: IRoom) => void;
-  onCreateRoom?: (room: IRoom) => void;
+  onUpdateRoom?: (room: Room) => void;
+  onCreateRoom?: (room: Room) => void;
 };
 
 export const RoomSchema = z.object({
