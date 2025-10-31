@@ -21,13 +21,13 @@ import {
 } from "@livekit/components-core";
 import MicOffOutlinedIcon from "@mui/icons-material/MicOffOutlined";
 import { useFocus } from "@/app/providers/focus.provider";
-import { Presentation } from "@/app/hooks/useParticipantsWithPermissions";
 import { isPresentation } from "@/app/lib/isPresentations";
 import CenterFocusStrongOutlinedIcon from "@mui/icons-material/CenterFocusStrongOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
-import { useParticipantsContext } from "@/app/providers/participants.provider";
 import dynamic from "next/dynamic";
 import styles from "./ParticipantTile.module.css";
+import { usePresentationContext } from "@/app/providers/presentation.provider";
+import { Presentation } from "@/app/hooks/usePresentation";
 interface ParticipantTileProps extends HTMLAttributes<HTMLDivElement> {
   trackReference: TrackReferenceOrPlaceholder | Presentation;
   disableSpeakingIndicator?: boolean | undefined;
@@ -53,8 +53,8 @@ export const ParticipantTile: (
   const autoManageSubscription = useFeatureContext()?.autoSubscription;
   const isMobile = useMediaQuery("(max-width:600px)");
 
-  const { changePage, changeZoom, changeScroll, changePresentationMode } =
-    useParticipantsContext();
+  const { changePage, changeZoom, changeScroll, changeMode } =
+    usePresentationContext();
 
   const isSpeaking = useIsSpeaking(trackReference.participant);
   const { focusTrack, show, isFocused, setFocusTrack } = useFocus();
@@ -128,8 +128,7 @@ export const ParticipantTile: (
             }
             onChangePresentationMode={
               trackReference.local
-                ? (mode) =>
-                    changePresentationMode(trackReference.presentationId, mode)
+                ? (mode) => changeMode(trackReference.presentationId, mode)
                 : undefined
             }
           />

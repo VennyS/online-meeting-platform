@@ -5,6 +5,7 @@ import {
 } from "@livekit/components-react";
 import React from "react";
 import { ParticipantTile } from "../ParticipantTile/ParticipantTile";
+import { Presentation } from "@/app/hooks/usePresentation";
 
 export interface GridLayoutProps {
   tracks: (TrackReferenceOrPlaceholder | Presentation)[];

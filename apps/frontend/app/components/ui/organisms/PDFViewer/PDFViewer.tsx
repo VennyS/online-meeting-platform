@@ -40,7 +40,7 @@ const PDFViewer = ({
   onPageChange,
   onZoomChange,
   isAuthor = false,
-  scrollPosition = { x: 0, y: 0 },
+  scroll = { x: 0, y: 0 },
   onScrollChange,
   mode = "presentationWithCamera",
   onChangePresentationMode,
@@ -98,10 +98,10 @@ const PDFViewer = ({
   useEffect(() => {
     const container = pdfContainerRef.current;
     if (container) {
-      container.scrollLeft = scrollPosition.x;
-      container.scrollTop = scrollPosition.y;
+      container.scrollLeft = scroll.x;
+      container.scrollTop = scroll.y;
     }
-  }, [scrollPosition, currentPage, zoom]);
+  }, [scroll, currentPage, zoom]);
 
   useEffect(() => {
     if (!isAuthor) return;

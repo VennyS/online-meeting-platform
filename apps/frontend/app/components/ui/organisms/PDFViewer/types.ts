@@ -1,4 +1,4 @@
-import { PresentationMode } from "@/app/hooks/useParticipantsWithPermissions";
+import { PresentationMode } from "@/app/hooks/usePresentation";
 
 export type PDFViewerProps = {
   url: string;
@@ -8,7 +8,7 @@ export type PDFViewerProps = {
   isAuthor?: boolean;
   onPageChange?: (page: number) => void;
   onZoomChange?: (zoom: number) => void;
-  scrollPosition?: { x: number; y: number };
+  scroll?: { x: number; y: number };
   onScrollChange?: (position: { x: number; y: number }) => void;
   mode?: PresentationMode;
   onChangePresentationMode?: (mode: PresentationMode) => void;

@@ -1,29 +1,5 @@
-import { Track } from "livekit-client";
 import { Message } from "../components/ui/organisms/Chat/types";
-import { TrackReference } from "@livekit/components-react";
-
-export type PresentationMode = "presentationWithCamera" | "presentationOnly";
-
-export type Presentation = {
-  id: string;
-  fileId: string;
-  presentationId: string;
-  url: string;
-  authorId: string;
-  page: number;
-  zoom: number;
-  scroll: { x: number; y: number };
-  mode: PresentationMode;
-  source: Track.Source;
-  participant: Participant;
-  local: boolean;
-  video?: TrackReference;
-};
-
-export type PresentationDto = Omit<
-  Presentation,
-  "id" | "source" | "participant" | "local" | "video"
->;
+import { Presentation, PresentationDto } from "../hooks/usePresentation";
 
 export interface CreateRoomDto {
   ownerId: number;

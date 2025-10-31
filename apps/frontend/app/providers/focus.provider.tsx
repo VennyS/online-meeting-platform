@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { TrackReferenceOrPlaceholder } from "@livekit/components-react";
-import { Presentation } from "../hooks/useParticipantsWithPermissions";
 import { isPresentation } from "../lib/isPresentations";
 import { isTrackReferenceOrPlaceholder } from "../lib/isTrackReferenceOfPlaceholder";
 import { useRoomTracksWithPresentations } from "../hooks/useRoomTracksWithPresentations";
+import { Presentation } from "../hooks/usePresentation";
 
 type FocusTarget = TrackReferenceOrPlaceholder | Presentation | null;
 
