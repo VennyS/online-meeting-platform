@@ -26,6 +26,7 @@ import { GridLayout } from "../GridLayout/GridLayout";
 import { useRoomTracksWithPresentations } from "@/app/hooks/useRoomTracksWithPresentations";
 import { UserFilesModal } from "../UserFilesModal/UserFIlesModal";
 import { Typography } from "@mui/material";
+import { useRecordingContext } from "@/app/providers/recording.provider";
 
 export const RoomContent = ({
   roomId,
@@ -39,8 +40,9 @@ export const RoomContent = ({
   });
 
   const { user } = useUser();
-  const { openedRightPanel, overflowInfo, resetOverflowInfo, deleteFiles } =
-    useParticipantsContext();
+  const { overflowInfo, resetOverflowInfo, deleteFiles } =
+    useRecordingContext();
+
   const [files, setFiles] = useState<IFile[]>([]);
 
   const panels = [

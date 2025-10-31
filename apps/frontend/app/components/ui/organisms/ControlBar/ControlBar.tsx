@@ -29,8 +29,11 @@ import { CircularProgress, Menu, MenuItem, useMediaQuery } from "@mui/material";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
+import { useRecordingContext } from "@/app/providers/recording.provider";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
+  const { startRecording, stopRecording } = useRecordingContext();
+
   const {
     local: { permissions },
     openedRightPanel,
