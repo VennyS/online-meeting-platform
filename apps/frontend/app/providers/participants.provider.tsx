@@ -1,26 +1,25 @@
 import { ReactNode } from "react";
-import {
-  ParticipantsWithPermissions,
-  useParticipantsWithPermissions,
-} from "../hooks/useParticipantsWithPermissions";
 import { createContext, useContext } from "react";
+import { Socket } from "socket.io-client";
+import {
+  useParticipantsWithPermissions,
+  ParticipantsWithPermissions,
+} from "../hooks/useParticipantWithPermissions";
 
 const ParticipantsContext = createContext<ParticipantsWithPermissions | null>(
   null
 );
 
 interface ParticipantsProviderProps {
-  ws: WebSocket | null;
+  socket: Socket | null;
   children: ReactNode;
-  localUserId: number;
 }
 
 export function ParticipantsProvider({
-  ws,
+  socket,
   children,
-  localUserId,
 }: ParticipantsProviderProps) {
-  const participantsData = useParticipantsWithPermissions(ws, localUserId);
+  const participantsData = useParticipantsWithPermissions(socket);
 
   return (
     <ParticipantsContext.Provider value={participantsData}>
