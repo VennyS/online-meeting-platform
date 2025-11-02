@@ -4,9 +4,9 @@ import {
   removeAccessToken,
   saveAccessToken,
 } from "./app/services/auth-token.service";
+import { envConfig } from "./app/config/config";
 
-const REDIRECT_URL =
-  process.env.NEXT_PUBLIC_PLATFORM_URL ?? "https://ru.noimann.academy/";
+const REDIRECT_URL = envConfig.platformUrl;
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

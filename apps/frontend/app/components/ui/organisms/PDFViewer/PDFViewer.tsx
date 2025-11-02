@@ -3,7 +3,7 @@
 const base =
   typeof window !== "undefined"
     ? window.location.origin
-    : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost";
+    : envConfig.baseUrl || "http://localhost";
 
 if (!(URL as any).parse) {
   (URL as any).parse = (str: string) => new URL(str, base);
@@ -26,6 +26,7 @@ import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
 import ZoomInOutlinedIcon from "@mui/icons-material/ZoomInOutlined";
 import ZoomOutOutlinedIcon from "@mui/icons-material/ZoomOutOutlined";
 import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
+import { envConfig } from "@/app/config/config";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   `pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`,

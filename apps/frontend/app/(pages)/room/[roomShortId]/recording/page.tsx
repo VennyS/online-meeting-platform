@@ -13,6 +13,7 @@ import styles from "./page.module.css";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
+import { envConfig } from "@/app/config/config";
 
 const EGRESS_CREDENTIAL = "egress";
 
@@ -38,7 +39,7 @@ const RecordingPage = () => {
   return (
     <main className={styles.main}>
       <LiveKitRoom
-        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+        serverUrl={envConfig.livekitUrl}
         token={token!}
         connect
         className={styles.roomContainer}

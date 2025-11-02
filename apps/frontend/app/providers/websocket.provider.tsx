@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useEffect, useState } from "react";
-import { io } from "socket.io-client";
 import { RoomSocket } from "../types/socket.types";
+import { connectSocket } from "../config/connectSocket";
 
 interface WebSocketContextValue {
   socket: RoomSocket | null;
@@ -24,15 +24,7 @@ export const WebSocketProvider = ({
   const connect = (roomShortId: string, userId: number, username: string) => {
     if (socket) return;
 
-    const s = io("http://localhost:3001", {
-      path: "/ws",
-      transports: ["websocket"],
-      auth: {
-        roomShortId,
-        userId,
-        username,
-      },
-    });
+    const s = connectSocket(roomShortId, username, userId);
 
     s.on("connect", () => console.log("✅ Socket.IO connected"));
     s.on("disconnect", (reason) =>

@@ -11,6 +11,7 @@ import {
 import { usePathname } from "next/navigation";
 import { fileService } from "../services/file.service";
 import { RoomFile } from "../types/files.types";
+import { envConfig } from "../config/config";
 
 interface AuthContextType {
   user: IUser | null;
@@ -65,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } catch (error) {
         if (!isRoomPage) {
           removeAccessToken();
-          router.replace("https://ru.noimann.academy/");
+          router.replace(envConfig.platformUrl);
         }
       } finally {
         setLoading(false);
