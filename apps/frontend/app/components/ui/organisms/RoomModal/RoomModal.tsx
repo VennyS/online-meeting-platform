@@ -300,25 +300,48 @@ export default function RoomModal({
             helperText={errors.durationMinutes?.message}
             fullWidth
           />
-          <FormControlLabel
-            control={<Checkbox {...register("isPublic")} />}
-            label="По ссылке без авторизации"
-            sx={{ mt: "0px !important" }}
+          <Controller
+            name="isPublic"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} checked={field.value} />}
+                label="По ссылке без авторизации"
+              />
+            )}
           />
-          <FormControlLabel
-            control={<Checkbox {...register("showHistoryToNewbies")} />}
-            label="Показывать историю новым участникам"
-            sx={{ mt: "0px !important" }}
+
+          <Controller
+            name="showHistoryToNewbies"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} checked={field.value} />}
+                label="Показывать историю новым участникам"
+              />
+            )}
           />
-          <FormControlLabel
-            control={<Checkbox {...register("waitingRoomEnabled")} />}
-            label="Включить зал ожидания"
-            sx={{ mt: "0px !important" }}
+
+          <Controller
+            name="waitingRoomEnabled"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} checked={field.value} />}
+                label="Включить зал ожидания"
+              />
+            )}
           />
-          <FormControlLabel
-            control={<Checkbox {...register("allowEarlyJoin")} />}
-            label="Разрешить ранний вход"
-            sx={{ mt: "0px !important" }}
+
+          <Controller
+            name="allowEarlyJoin"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} checked={field.value} />}
+                label="Разрешить ранний вход"
+              />
+            )}
           />
           <TextField
             label="Пароль"
@@ -372,9 +395,15 @@ export default function RoomModal({
               )}
             />
           </FormControl>
-          <FormControlLabel
-            control={<Checkbox {...register("isConnectInstantly")} />}
-            label="Присоединиться сразу после создания"
+          <Controller
+            name="isConnectInstantly"
+            control={control}
+            render={({ field }) => (
+              <FormControlLabel
+                control={<Checkbox {...field} checked={field.value} />}
+                label="Присоединиться сразу после создания"
+              />
+            )}
           />
 
           <Stack spacing={1.5}>
