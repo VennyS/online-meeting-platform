@@ -12,7 +12,7 @@ export interface GuestServerEvents {
   }) => void;
   waiting_queue_updated: (data: { guests: WaitingGuest[] }) => void;
   new_guest_waiting: (data: { guest: WaitingGuest }) => void;
-  guest_approved: (data: { token: string }) => void;
+  guest_approved: (data: { token: string; guestId: number }) => void;
   guest_rejected: (data: {}) => void;
 }
 
