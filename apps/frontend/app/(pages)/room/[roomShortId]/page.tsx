@@ -16,28 +16,22 @@ import { RecordingProvider } from "@/app/providers/recording.provider";
 import { ChatProvider } from "@/app/providers/chat.provider";
 import { PresentationProvider } from "@/app/providers/presentation.provider";
 import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
+import { envConfig } from "@/app/config/config";
+import { LoadingPage } from "@/app/components/ui/organisms/LoadingPage/LoadingPage";
+import { useRoomGuard } from "@/app/hooks/useRoomGuard";
+import { usePrejoinRedirect } from "@/app/hooks/usePrejoinRedirect";
 
 export default function MeetingRoom() {
-  const { roomShortId } = useParams();
+  const { roomShortId } = useParams() as { roomShortId: string };
+  usePrejoinRedirect(roomShortId);
+  useRoomGuard(roomShortId);
   const [roomName, setRoomName] = useState<string>("");
   const { token, setToken, user } = useUser();
   const { socket, connect } = useWebSocket();
-  const router = useRouter();
 
   const { prequisites, isLoading } = usePrequisites();
 
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
-
-  useEffect(() => {
-    if (!token) {
-      router.replace(`/room/${roomShortId}/prejoin`);
-    }
-  }, [token, user, roomShortId, router]);
-
-  useEffect(() => {
-    if (!roomShortId || !user || !token) return;
-    connect(roomShortId as string, user.id, fullName);
-  }, [roomShortId, user]);
 
   useEffect(() => {
     if (!roomShortId || !user || user.isGuest) return;
@@ -50,6 +44,8 @@ export default function MeetingRoom() {
         );
         setToken(response.token);
         setRoomName(response.metadata.name);
+
+        connect(roomShortId as string, user.id, fullName);
       } catch (err) {
         console.error("Ошибка при получении токена для пользователя:", err);
       }
@@ -59,13 +55,13 @@ export default function MeetingRoom() {
   }, [roomShortId, user]);
 
   if (!token && user) {
-    return <div>Loading...</div>;
+    return <LoadingPage />;
   }
 
   return (
     <main className={styles.main}>
       <LiveKitRoom
-        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+        serverUrl={envConfig.livekitUrl}
         token={token!}
         connect={
           !!token &&
