@@ -41,7 +41,7 @@ export class RoomRepository {
     return this.prisma.room.findUnique({ where: { shortId } });
   }
 
-  exists(shortId: string) {
+  async exists(shortId: string) {
     return !this.findByShortId(shortId);
   }
 
