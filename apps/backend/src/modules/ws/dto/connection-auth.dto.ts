@@ -15,3 +15,13 @@ export class ConnectionAuthDto {
   @IsNotEmpty()
   username: string;
 }
+
+export class ConnectionAuthGuestDto {
+  @IsString()
+  @IsNotEmpty()
+  roomShortId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+}
