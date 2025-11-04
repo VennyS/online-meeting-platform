@@ -114,7 +114,12 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
+    try {
+      await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
+    } catch (e) {
+      this.logger.error('Error occuried while removing from blacklist', e);
+      return;
+    }
 
     await this.notifyAboutUpdatedBlacklist(roomShortId);
   }
