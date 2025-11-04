@@ -1,4 +1,6 @@
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   WebSocketGateway,
@@ -10,14 +12,17 @@ import {
   Connection,
   RoomMetadata,
 } from '../interfaces/room-metadata.interface';
-import { Logger } from '@nestjs/common';
+import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Mainservice } from '../services/main.service';
 import { RoomInfo } from '../interfaces/room.interface';
-import { TypedSocket } from '../interfaces/socket-data.interface';
+import type { TypedSocket } from '../interfaces/socket-data.interface';
 import { getClientIP } from 'src/common/utils/socket.utils';
 import { AnalyticsService } from '../services/analytics.service';
 import { LivekitService } from 'src/common/modules/livekit/livekit.service';
 import { InitService } from '../services/init.service';
+import { validate } from 'class-validator';
+import { plainToClass } from 'class-transformer';
+import { ConnectionAuthDto } from '../dto/connection-auth.dto';
 
 @WebSocketGateway({ path: '/ws', namespace: '/', cors: true })
 export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -37,13 +42,28 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(socket: TypedSocket) {
     this.init.markNotReady();
 
-    const { roomShortId, userId, username } = socket.handshake.auth;
-
-    if (!roomShortId || !userId || !username) {
-      this.logger.debug('Missed any of connection params');
+    if (!socket.handshake.auth) {
+      this.logger.debug('Auth object is missing in handshake');
       socket.disconnect(true);
       return;
     }
+
+    const connectionData = plainToClass(
+      ConnectionAuthDto,
+      socket.handshake.auth,
+    );
+    const errors = await validate(connectionData);
+
+    if (errors.length > 0) {
+      this.logger.debug('Invalid connection params', { errors });
+      socket.emit('connection_error', {
+        message: 'Invalid connection parameters',
+      });
+      socket.disconnect(true);
+      return;
+    }
+
+    const { roomShortId, userId, username } = connectionData;
 
     let roomInfo: RoomInfo | null;
 
