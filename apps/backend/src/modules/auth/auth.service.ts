@@ -15,12 +15,12 @@ export class AuthService {
   constructor(private readonly roomRepo: RoomRepository) {}
 
   async generateToken(
-    query: LivekitTokenQueryDto,
+    query: Pick<LivekitTokenQueryDto, 'name' | 'password'>,
     room: Room,
-    userId: number,
-    haveToken: boolean,
+    isNotGuest: boolean,
+    userId?: number,
   ): Promise<LivekitTokenResponseDto> {
-    if (!room.isPublic && !haveToken) {
+    if (!room.isPublic && !isNotGuest) {
       throw new UnauthorizedException(`Auth token required to join`);
     }
 
@@ -55,23 +55,21 @@ export class AuthService {
         query.password,
         room.passwordHash,
       );
+
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid password');
       }
     }
 
     if (!room.isPublic) {
-      const allowed = await this.roomRepo.findAllowedParticipant(
-        room.id,
-        userId,
-      );
+      const allowed = await this.roomRepo.isAllowed(room.id, userId!);
       if (!allowed) {
         throw new ForbiddenException('Not allowed in this room');
       }
     }
 
-    const role = isOwner ? 'owner' : 'member';
-    const isGuest = !haveToken && room.isPublic;
+    const role = isOwner ? 'owner' : 'participant';
+    const isGuest = !isNotGuest && room.isPublic;
 
     const livekitToken = await createLivekitToken(
       room.shortId,
