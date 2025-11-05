@@ -32,7 +32,7 @@ export class PresentationGateway
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     let presentations: Presentation[] = [];
 
@@ -46,7 +46,7 @@ export class PresentationGateway
       return;
     }
 
-    if (!presentations.length) return;
+    if (!presentations || presentations.length <= 0) return;
 
     const data = presentations.map((p) => ({
       fileId: p.fileId,

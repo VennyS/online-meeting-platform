@@ -30,7 +30,7 @@ export class WaitingHostGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     const { roomShortId, isHost } = socket.data;
 

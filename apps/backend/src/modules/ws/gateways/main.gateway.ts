@@ -12,7 +12,7 @@ import {
   Connection,
   RoomMetadata,
 } from '../interfaces/room-metadata.interface';
-import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Mainservice } from '../services/main.service';
 import { RoomInfo } from '../interfaces/room.interface';
 import type { TypedSocket } from '../interfaces/socket-data.interface';
@@ -40,7 +40,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    this.init.markNotReady();
+    this.init.markNotReady(socket.id);
 
     if (!socket.handshake.auth) {
       this.logger.debug('Auth object is missing in handshake');
@@ -122,7 +122,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
       message: 'Successfully connected to room',
     });
 
-    this.init.markReady();
+    this.init.markReady(socket.id);
 
     this.analyticsService.join(roomShortId, String(userId), username, ip);
 
@@ -139,6 +139,8 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (isEmpty) {
       this.analyticsService.saveAndClear(roomShortId);
     }
+
+    this.init.removeSocket(socket.id);
 
     this.logger.log(`User ${userId} left the room ${roomShortId}`);
   }
