@@ -84,11 +84,6 @@ export class RecordingEgressService {
   }
 
   async stopRecording(egressId: string) {
-    if (!this.egressClient) {
-      this.logger.error('EgressClient не инициализирован');
-      return;
-    }
-
     try {
       const result = await this.egressClient.stopEgress(egressId);
       this.logger.log(`Egress stopped, jobId: ${result.egressId}`);
