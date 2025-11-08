@@ -28,7 +28,7 @@ export class ChatGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     const { roomShortId } = socket.data;
 

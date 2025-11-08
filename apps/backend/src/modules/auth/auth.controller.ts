@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import type { Room } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { RoomByShortIdPipe } from 'src/common/pipes/room.pipe';
@@ -47,13 +53,11 @@ export class AuthController {
     @User('id') id: number | null,
   ): Promise<LivekitTokenResponseDto> {
     const userId = id ?? query.userId;
-    const haveToken = !!id;
-    return this.authService.generateToken(
-      query,
-      room,
-      userId as number,
-      haveToken,
-    );
+
+    if (!userId) throw new UnauthorizedException('Credentials required');
+
+    const isNotGuest = !!id;
+    return this.authService.generateToken(query, room, isNotGuest, userId);
   }
 
   @Get('proxycheck')

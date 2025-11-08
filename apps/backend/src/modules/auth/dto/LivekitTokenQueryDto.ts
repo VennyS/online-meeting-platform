@@ -1,4 +1,5 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class LivekitTokenQueryDto {
   @IsString()
@@ -14,6 +15,7 @@ export class LivekitTokenQueryDto {
   password?: string;
 
   @IsOptional()
-  @IsString()
-  userId?: string;
+  @Transform(({ value }) => (value ? Number(value) : undefined))
+  @IsNumber()
+  userId?: number;
 }

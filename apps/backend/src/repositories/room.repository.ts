@@ -41,7 +41,7 @@ export class RoomRepository {
     return this.prisma.room.findUnique({ where: { shortId } });
   }
 
-  exists(shortId: string) {
+  async exists(shortId: string) {
     return !this.findByShortId(shortId);
   }
 
@@ -100,10 +100,15 @@ export class RoomRepository {
       );
   }
 
-  findAllowedParticipant(roomId: number, userId: number) {
-    return this.prisma.allowedParticipant.findFirst({
-      where: { roomId, userId },
+  async isAllowed(roomId: number, userId: number): Promise<boolean> {
+    const participants = await this.prisma.allowedParticipant.findMany({
+      where: { roomId },
+      select: { userId: true },
     });
+
+    return (
+      participants.length === 0 || participants.some((p) => p.userId === userId)
+    );
   }
 
   async create(

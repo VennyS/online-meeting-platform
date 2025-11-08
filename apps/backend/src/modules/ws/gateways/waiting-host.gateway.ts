@@ -30,7 +30,7 @@ export class WaitingHostGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     const { roomShortId, isHost } = socket.data;
 
@@ -63,20 +63,20 @@ export class WaitingHostGateway implements OnGatewayConnection {
       return;
     }
 
-    const token = await createLivekitToken(
-      roomShortId,
-      String(data.guestId),
-      quest!.name,
-      true,
-      'guest',
-    );
-
     await this.waitingService.removeGuest(roomShortId, data.guestId);
     this.connectionService.removeGuest(data.guestId);
 
     await this.notifyHost(roomShortId);
 
     if (data.approved) {
+      const token = await createLivekitToken(
+        roomShortId,
+        String(data.guestId),
+        quest!.name,
+        true,
+        'guest',
+      );
+
       guestConnection.socket.emit('guest_approved', {
         token,
         guestId: data.guestId,

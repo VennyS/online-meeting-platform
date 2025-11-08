@@ -31,7 +31,7 @@ export class BlacklistGateway implements OnGatewayConnection {
   ) {}
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     const { isHost } = socket.data;
 
@@ -48,7 +48,7 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    if (blacklistedUsers.length === 0) {
+    if (!blacklistedUsers || blacklistedUsers.length === 0) {
       this.logger.debug('No blacklisted users found for this room');
       return;
     }
@@ -114,7 +114,12 @@ export class BlacklistGateway implements OnGatewayConnection {
       return;
     }
 
-    await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
+    try {
+      await this.blacklistService.removeFromBlacklist(roomShortId, data.ip);
+    } catch (e) {
+      this.logger.error('Error occuried while removing from blacklist', e);
+      return;
+    }
 
     await this.notifyAboutUpdatedBlacklist(roomShortId);
   }

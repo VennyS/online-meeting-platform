@@ -10,6 +10,9 @@ import { ConnectionService } from '../services/connection.service';
 import { WaitingService } from '../services/waiting.service';
 import { Logger } from '@nestjs/common';
 import { Guest } from 'src/common/modules/redis/redis.service';
+import { plainToClass } from 'class-transformer';
+import { ConnectionAuthGuestDto } from '../dto/connection-auth.dto';
+import { validate } from 'class-validator';
 
 @WebSocketGateway({ path: '/ws', namespace: '/waiting-room', cors: true })
 export class WaitingGuestGateway
@@ -25,13 +28,28 @@ export class WaitingGuestGateway
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    const { roomShortId, username } = socket.handshake.auth;
-
-    if (!roomShortId || !username) {
-      this.logger.debug('Missed any of connection params');
+    if (!socket.handshake.auth) {
+      this.logger.debug('Auth object is missing in handshake');
       socket.disconnect(true);
       return;
     }
+
+    const connectionData = plainToClass(
+      ConnectionAuthGuestDto,
+      socket.handshake.auth,
+    );
+    const errors = await validate(connectionData);
+
+    if (errors.length > 0) {
+      this.logger.debug('Invalid connection params', { errors });
+      socket.emit('connection_error', {
+        message: 'Invalid connection parameters',
+      });
+      socket.disconnect(true);
+      return;
+    }
+
+    const { roomShortId, username } = connectionData;
 
     const guestId = Math.floor(Math.random() * 1_000_000);
 
@@ -46,10 +64,11 @@ export class WaitingGuestGateway
       guests = await this.waitingService.getGuests(roomShortId);
     } catch (e) {
       this.logger.error('Error while adding guest and fetching', e);
+      socket.disconnect(true);
       return;
     }
 
-    if (guests.length <= 0) return;
+    if (!guests || guests.length <= 0) return;
 
     (this.server as any as { server: Server }).server
       .of('/')
@@ -63,7 +82,6 @@ export class WaitingGuestGateway
     const { userId, roomShortId } = socket.data;
 
     this.connectionService.removeGuest(userId);
-    this.waitingService.removeGuest(roomShortId, userId);
     this.waitingService.removeGuest(roomShortId, userId);
   }
 }

@@ -32,7 +32,7 @@ export class PresentationGateway
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     let presentations: Presentation[] = [];
 
@@ -46,7 +46,7 @@ export class PresentationGateway
       return;
     }
 
-    if (!presentations.length) return;
+    if (!presentations || presentations.length <= 0) return;
 
     const data = presentations.map((p) => ({
       fileId: p.fileId,
@@ -56,6 +56,7 @@ export class PresentationGateway
       currentPage: p.currentPage,
       zoom: p.zoom,
       scroll: p.scroll,
+      mode: p.mode,
     }));
 
     socket.emit('presentations_init', data);
@@ -120,7 +121,12 @@ export class PresentationGateway
       mode: data.mode || 'presentationWithCamera',
     };
 
-    await this.presentationService.set(roomShortId, presentation);
+    try {
+      await this.presentationService.set(roomShortId, presentation);
+    } catch (e) {
+      this.logger.error('Error while setting presentation', e);
+      return;
+    }
 
     this.server.to(`room-${roomShortId}`).emit('presentation_started', {
       fileId: presentation.fileId,
@@ -247,7 +253,7 @@ export class PresentationGateway
     @MessageBody() data: { presentationId: string },
     @ConnectedSocket() socket: TypedSocket,
   ) {
-    const { roomShortId, userId } = socket.data;
+    const { roomShortId } = socket.data;
 
     try {
       await this.presentationService.finishPresentation(

@@ -28,7 +28,7 @@ export class AdministrationGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(socket: TypedSocket) {
-    await this.init.waitForReady();
+    await this.init.waitForReady(socket.id);
 
     await this.initRoles(socket);
     await this.initPermissions(socket);
