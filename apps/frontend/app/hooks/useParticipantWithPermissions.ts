@@ -106,8 +106,6 @@ export function useParticipantsWithPermissions(
     };
 
     const handleRolesUpdate = (data: { roles: Record<string, RoomRole> }) => {
-      console.log("Received roles", data);
-
       const roles: Record<string, RoomRole> = {};
       for (const [id, role] of Object.entries(data.roles)) {
         roles[String(id)] = role;
