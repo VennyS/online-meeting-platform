@@ -12,26 +12,13 @@ module.exports = {
     "!<rootDir>/coverage/**",
   ],
   moduleNameMapper: {
-    // Handle CSS imports (with CSS modules)
-    // https://jestjs.io/docs/webpack#mocking-css-modules
-    "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
+    // ... твои существующие маппинги
 
-    // Handle CSS imports (without CSS modules)
-    "^.+\\.(css|sass|scss)$": "<rootDir>/__mocks__/styleMock.js",
+    // Это заменит все импорты @/path/to/file на <rootDir>/path/to/file
+    "^@/(.*)$": "<rootDir>/$1",
 
-    // Handle image imports
-    // https://jestjs.io/docs/webpack#handling-static-assets
-    "^.+\\.(png|jpg|jpeg|gif|webp|avif|ico|bmp|svg)$": `<rootDir>/__mocks__/fileMock.js`,
-
-    // Handle module aliases
-    "^@/components/(.*)$": "<rootDir>/components/$1",
-
-    // Handle @next/font
-    "@next/font/(.*)": `<rootDir>/__mocks__/nextFontMock.js`,
-    // Handle next/font
-    "next/font/(.*)": `<rootDir>/__mocks__/nextFontMock.js`,
-    // Disable server-only
-    "server-only": `<rootDir>/__mocks__/empty.js`,
+    // Если у тебя структура src/ (например, @/app/... → src/app/...), то так:
+    // "^@/(.*)$": "<rootDir>/src/$1",
   },
   // Add more setup options before each test is run
   // setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
