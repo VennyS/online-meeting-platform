@@ -19,8 +19,6 @@ export function useBlacklist(
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
 
   function addToBlackList(userId: string, username: string) {
-    console.log(socket);
-
     socket?.emit("add_to_blacklist", { userId, name: username });
   }
 
