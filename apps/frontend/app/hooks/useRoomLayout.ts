@@ -62,6 +62,12 @@ export function useRoomLayout(): RoomLayoutProviderValue {
   };
 
   useEffect(() => {
+    if (openedRightPanel === "chat") {
+      setUnreadCount(0);
+    }
+  }, [openedRightPanel]);
+
+  useEffect(() => {
     if (!room) return;
 
     const handleMessage = () => {
