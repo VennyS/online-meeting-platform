@@ -5,11 +5,14 @@ import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
 import { connectSocket } from "@/app/config/connectSocket";
+import { usePrejoinStatusContext } from "../providers/prejoin-status.provider";
 
 export function usePrejoin(roomShortId: string) {
   const router = useRouter();
   const { user, setUser, setToken, loading: userLoading } = useUser();
   const { prequisites, isLoading: preqLoading } = usePrequisites();
+  const { passedPrejoins, isPassed, markPrejoinPassed } =
+    usePrejoinStatusContext();
 
   const [guestName, setGuestName] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +24,12 @@ export function usePrejoin(roomShortId: string) {
     minutes: number;
     seconds: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!isPassed(roomShortId)) return;
+
+    router.replace(`/room/${roomShortId}`);
+  }, [passedPrejoins]);
 
   // 🕒 Таймер до старта встречи
   useEffect(() => {
@@ -49,6 +58,11 @@ export function usePrejoin(roomShortId: string) {
     return () => clearInterval(timer);
   }, [prequisites.startAt, prequisites.allowEarlyJoin]);
 
+  const redirectToRoom = () => {
+    markPrejoinPassed(roomShortId);
+    router.replace(`/room/${roomShortId}`);
+  };
+
   // 👑 Автовход владельца
   useEffect(() => {
     if (
@@ -64,7 +78,7 @@ export function usePrejoin(roomShortId: string) {
           const name = `${user.firstName} ${user.lastName}`;
           const { token } = await authService.getToken(roomShortId, name);
           setToken(token);
-          router.replace(`/room/${roomShortId}`);
+          redirectToRoom();
         } catch (e) {
           console.error("Autojoin error:", e);
         }
@@ -98,7 +112,7 @@ export function usePrejoin(roomShortId: string) {
           firstName: name,
           lastName: "",
         });
-        router.replace(`/room/${roomShortId}`);
+        redirectToRoom();
       });
 
       socket.on("guest_rejected", () => {
@@ -137,7 +151,7 @@ export function usePrejoin(roomShortId: string) {
           isGuest: true,
         });
 
-      router.replace(`/room/${roomShortId}`);
+      redirectToRoom();
     } catch (e: any) {
       setError(e.response?.status === 401 ? "Неверный пароль" : "Ошибка входа");
     } finally {

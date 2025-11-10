@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { usePrejoin } from "./usePrejoin";
 import { useUser } from "@/app/hooks/useUser";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
+import { usePrejoinStatusContext } from "../providers/prejoin-status.provider";
 import { useRouter } from "next/navigation";
 import { authService } from "@/app/services/auth.service";
 import { connectSocket } from "@/app/config/connectSocket";
@@ -9,18 +10,29 @@ import { mockHook } from "../lib/test.lib";
 
 jest.mock("@/app/hooks/useUser");
 jest.mock("@/app/providers/prequisites.provider");
+jest.mock("../providers/prejoin-status.provider");
 jest.mock("next/navigation");
 jest.mock("@/app/services/auth.service");
 jest.mock("@/app/config/connectSocket");
 
 describe("usePrejoin", () => {
   let routerReplace: jest.Mock;
+  let markPrejoinPassed: jest.Mock;
+  let isPassed: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     routerReplace = jest.fn();
+    markPrejoinPassed = jest.fn();
+    isPassed = jest.fn().mockReturnValue(false);
+
     mockHook(useRouter, { replace: routerReplace });
+    mockHook(usePrejoinStatusContext, {
+      passedPrejoins: new Set(),
+      isPassed,
+      markPrejoinPassed,
+    });
     mockHook(useUser, {
       user: null,
       setUser: jest.fn(),
@@ -64,6 +76,7 @@ describe("usePrejoin", () => {
     );
     expect(setToken).toHaveBeenCalledWith("abc123");
     expect(setUser).toHaveBeenCalled();
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
     expect(routerReplace).toHaveBeenCalledWith("/room/room1");
   });
 
@@ -94,6 +107,7 @@ describe("usePrejoin", () => {
 
     expect(result.current.error).toBe("Неверный пароль");
     expect(result.current.connecting).toBe(false);
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
     expect(routerReplace).not.toHaveBeenCalled();
   });
 
@@ -171,6 +185,7 @@ describe("usePrejoin", () => {
 
     expect(authService.getToken).toHaveBeenCalledWith("room1", "John Doe");
     expect(setToken).toHaveBeenCalledWith("owner-token");
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
     expect(routerReplace).toHaveBeenCalledWith("/room/room1");
   });
 
@@ -196,6 +211,7 @@ describe("usePrejoin", () => {
     renderHook(() => usePrejoin("room1"));
 
     expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
     expect(routerReplace).not.toHaveBeenCalled();
   });
 
@@ -221,6 +237,7 @@ describe("usePrejoin", () => {
     renderHook(() => usePrejoin("room1"));
 
     expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
     expect(routerReplace).not.toHaveBeenCalled();
   });
 
@@ -363,6 +380,7 @@ describe("usePrejoin", () => {
       lastName: "",
       isGuest: true,
     });
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
     expect(routerReplace).toHaveBeenCalledWith("/room/room1");
   });
 
@@ -397,5 +415,340 @@ describe("usePrejoin", () => {
 
     expect(result.current.error).toBe("Запрос отклонён");
     expect(result.current.connecting).toBe(false);
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("should handle waiting room connect error", async () => {
+    const mockSocket = {
+      on: jest.fn((event, callback) => {
+        if (event === "connect_error") {
+          setTimeout(() => callback(), 0);
+        }
+      }),
+    };
+
+    mockHook(usePrequisites, {
+      prequisites: { waitingRoomEnabled: true, passwordRequired: false },
+      isLoading: false,
+    });
+    (connectSocket as jest.Mock).mockReturnValue(mockSocket);
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      result.current.setGuestName("Guest");
+    });
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.error).toBe("Ошибка подключения");
+    expect(result.current.connecting).toBe(false);
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("should use existing user name when user is logged in", async () => {
+    const setToken = jest.fn();
+    const setUser = jest.fn();
+    const user = {
+      id: 1,
+      firstName: "John",
+      lastName: "Doe",
+      isGuest: false,
+    } as any;
+
+    mockHook(useUser, {
+      user,
+      setUser,
+      setToken,
+      loading: false,
+    });
+
+    (authService.getToken as jest.Mock).mockResolvedValue({ token: "abc123" });
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(authService.getToken).toHaveBeenCalledWith(
+      "room1",
+      "John Doe",
+      "",
+      1
+    );
+    expect(setToken).toHaveBeenCalledWith("abc123");
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
+    expect(routerReplace).toHaveBeenCalledWith("/room/room1");
+  });
+
+  it("should not join when no name provided", async () => {
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(result.current.connecting).toBe(false);
+  });
+
+  it("should not join when password required but not provided", async () => {
+    mockHook(usePrequisites, {
+      prequisites: { passwordRequired: true, waitingRoomEnabled: false },
+      isLoading: false,
+    });
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      result.current.setGuestName("Guest");
+    });
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+    expect(result.current.connecting).toBe(false);
+  });
+
+  it("should handle generic join error", async () => {
+    const setToken = jest.fn();
+    const setUser = jest.fn();
+
+    mockHook(useUser, {
+      user: null,
+      setUser,
+      setToken,
+      loading: false,
+    });
+
+    (authService.getToken as jest.Mock).mockRejectedValue(
+      new Error("Network error")
+    );
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      result.current.setGuestName("Guest");
+    });
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(result.current.error).toBe("Ошибка входа");
+    expect(result.current.connecting).toBe(false);
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("should clear countdown when meeting start time is reached", () => {
+    const pastDate = new Date(Date.now() - 1000).toISOString();
+
+    mockHook(usePrequisites, {
+      prequisites: { startAt: pastDate, allowEarlyJoin: false },
+      isLoading: false,
+    });
+
+    jest.useFakeTimers();
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+
+    expect(result.current.countdown).toBeNull();
+
+    jest.useRealTimers();
+  });
+
+  it("should not autojoin when user is guest", async () => {
+    const user = {
+      id: 1,
+      firstName: "Guest",
+      lastName: "User",
+      isGuest: true,
+    } as any;
+
+    mockHook(useUser, {
+      user,
+      setUser: jest.fn(),
+      setToken: jest.fn(),
+      loading: false,
+    });
+
+    mockHook(usePrequisites, {
+      prequisites: { isOwner: true, isFinished: false, cancelled: false },
+      isLoading: false,
+    });
+
+    renderHook(() => usePrejoin("room1"));
+
+    expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("should not autojoin when user is not loaded", async () => {
+    mockHook(useUser, {
+      user: null,
+      setUser: jest.fn(),
+      setToken: jest.fn(),
+      loading: true,
+    });
+
+    mockHook(usePrequisites, {
+      prequisites: { isOwner: true, isFinished: false, cancelled: false },
+      isLoading: false,
+    });
+
+    renderHook(() => usePrejoin("room1"));
+
+    expect(authService.getToken).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).not.toHaveBeenCalled();
+    expect(routerReplace).not.toHaveBeenCalled();
+  });
+
+  it("should set user data when joining as guest", async () => {
+    const setToken = jest.fn();
+    const setUser = jest.fn();
+
+    mockHook(useUser, {
+      user: null,
+      setUser,
+      setToken,
+      loading: false,
+    });
+
+    (authService.getToken as jest.Mock).mockResolvedValue({ token: "abc123" });
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      result.current.setGuestName("New Guest");
+    });
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(setUser).toHaveBeenCalledWith({
+      id: expect.any(Number),
+      firstName: "New Guest",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      role: "guest",
+      roleId: 0,
+      emailVerified: false,
+      profileImage: "",
+      isGuest: true,
+    });
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
+    expect(routerReplace).toHaveBeenCalledWith("/room/room1");
+  });
+
+  it("should not set user data when user already exists", async () => {
+    const setToken = jest.fn();
+    const setUser = jest.fn();
+    const user = {
+      id: 1,
+      firstName: "Existing",
+      lastName: "User",
+      isGuest: false,
+    } as any;
+
+    mockHook(useUser, {
+      user,
+      setUser,
+      setToken,
+      loading: false,
+    });
+
+    (authService.getToken as jest.Mock).mockResolvedValue({ token: "abc123" });
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(setUser).not.toHaveBeenCalled();
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
+    expect(routerReplace).toHaveBeenCalledWith("/room/room1");
+  });
+
+  it("should clear error when handleJoin is called", async () => {
+    const setToken = jest.fn();
+    const setUser = jest.fn();
+
+    mockHook(useUser, {
+      user: null,
+      setUser,
+      setToken,
+      loading: false,
+    });
+
+    (authService.getToken as jest.Mock).mockResolvedValue({ token: "abc123" });
+
+    const { result } = renderHook(() => usePrejoin("room1"));
+
+    act(() => {
+      result.current.setGuestName("Guest");
+    });
+
+    // Сначала устанавливаем ошибку через неудачный запрос
+    (authService.getToken as jest.Mock).mockRejectedValueOnce(
+      new Error("Network error")
+    );
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    expect(result.current.error).toBe("Ошибка входа");
+
+    // Теперь делаем успешный запрос
+    (authService.getToken as jest.Mock).mockResolvedValue({ token: "abc123" });
+
+    await act(async () => {
+      await result.current.handleJoin();
+    });
+
+    // Ошибка должна очиститься при новом вызове handleJoin
+    expect(result.current.error).toBe("");
+    expect(markPrejoinPassed).toHaveBeenCalledWith("room1");
+    expect(routerReplace).toHaveBeenCalledWith("/room/room1");
+  });
+
+  it("should redirect to room when prejoin already passed", () => {
+    isPassed.mockReturnValue(true);
+
+    renderHook(() => usePrejoin("room1"));
+
+    expect(routerReplace).toHaveBeenCalledWith("/room/room1");
+  });
+
+  it("should not redirect to room when prejoin not passed", () => {
+    isPassed.mockReturnValue(false);
+
+    renderHook(() => usePrejoin("room1"));
+
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 });
