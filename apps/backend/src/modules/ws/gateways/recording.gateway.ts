@@ -55,9 +55,7 @@ export class RecordingGateway implements OnGatewayDisconnect {
       return;
     }
 
-    this.server.sockets
-      .to(`room-${roomShortId}`)
-      .emit('recording_started', egressId);
+    this.server.to(`room-${roomShortId}`).emit('recording_started', egressId);
   }
 
   @SubscribeMessage('recording_finished')
@@ -78,7 +76,7 @@ export class RecordingGateway implements OnGatewayDisconnect {
       return;
     }
 
-    this.server.sockets
+    this.server
       .to(roomShortId)
       .emit('recording_finished', { egressId: data.egressId });
   }

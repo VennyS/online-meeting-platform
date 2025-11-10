@@ -62,7 +62,7 @@ export class RoomService {
 
     const passwordHash = createRoomDto.password
       ? await bcrypt.hash(createRoomDto.password, 10)
-      : null;
+      : undefined;
 
     return await this.roomRepo.create({
       ...createRoomDto,

@@ -112,7 +112,7 @@ export class RoomRepository {
   }
 
   async create(
-    newRoom: CreateRoomDto & { shortId: string; passwordHash: string },
+    newRoom: CreateRoomDto & { shortId: string; passwordHash?: string },
   ): Promise<GetDto> {
     const room = await this.prisma.room.create({
       data: {
