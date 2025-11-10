@@ -2,24 +2,18 @@
 
 import { useUser } from "@/app/hooks/useUser";
 import { authService } from "@/app/services/auth.service";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 import { LiveKitRoom } from "@livekit/components-react";
-import { ParticipantsProvider } from "@/app/providers/participants.provider";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
 import { useWebSocket } from "@/app/hooks/useWebSocket";
 import { usePrequisites } from "@/app/providers/prequisites.provider";
-import { BlacklistProvider } from "@/app/providers/blacklist.provider";
-import { WaitingHostProvider } from "@/app/providers/waiting.host.provider";
-import { RecordingProvider } from "@/app/providers/recording.provider";
-import { ChatProvider } from "@/app/providers/chat.provider";
-import { PresentationProvider } from "@/app/providers/presentation.provider";
-import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
 import { envConfig } from "@/app/config/config";
 import { LoadingPage } from "@/app/components/ui/organisms/LoadingPage/LoadingPage";
 import { useRoomGuard } from "@/app/hooks/useRoomGuard";
 import { usePrejoinRedirect } from "@/app/hooks/usePrejoinRedirect";
+import { RoomProviders } from "@/app/components/ui/organisms/RoomProviders/RoomProviders";
 
 export default function MeetingRoom() {
   const { roomShortId } = useParams() as { roomShortId: string };
@@ -72,24 +66,9 @@ export default function MeetingRoom() {
         className={styles.roomContainer}
       >
         {user && (
-          <ParticipantsProvider socket={socket}>
-            <PresentationProvider socket={socket}>
-              <ChatProvider socket={socket}>
-                <RecordingProvider socket={socket}>
-                  <BlacklistProvider socket={socket}>
-                    <WaitingHostProvider socket={socket}>
-                      <RoomLayoutProvider>
-                        <RoomContent
-                          roomShortId={roomShortId as string}
-                          roomName={roomName}
-                        />
-                      </RoomLayoutProvider>
-                    </WaitingHostProvider>
-                  </BlacklistProvider>
-                </RecordingProvider>
-              </ChatProvider>
-            </PresentationProvider>
-          </ParticipantsProvider>
+          <RoomProviders socket={socket}>
+            <RoomContent roomShortId={roomShortId} roomName={roomName} />
+          </RoomProviders>
         )}
       </LiveKitRoom>
     </main>

@@ -11,9 +11,8 @@ import {
 import React, { useEffect } from "react";
 import styles from "./page.module.css";
 import { RoomContent } from "@/app/components/ui/organisms/RoomContent/RoomContent";
-import { ParticipantsProvider } from "@/app/providers/participants.provider";
-import { RoomLayoutProvider } from "@/app/providers/room-layout.provider";
 import { envConfig } from "@/app/config/config";
+import { RoomProviders } from "@/app/components/ui/organisms/RoomProviders/RoomProviders";
 
 const EGRESS_CREDENTIAL = "egress";
 
@@ -21,7 +20,7 @@ const RecordingPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("livekitToken");
-  const { roomShortId } = useParams();
+  const { roomShortId } = useParams() as { roomShortId: string };
   const { socket, connect } = useWebSocket();
 
   const egressId = 0;
@@ -44,11 +43,9 @@ const RecordingPage = () => {
         connect
         className={styles.roomContainer}
       >
-        <ParticipantsProvider socket={socket}>
-          <RoomLayoutProvider>
-            <RecordingPageContent roomShortId={roomShortId as string} />
-          </RoomLayoutProvider>
-        </ParticipantsProvider>
+        <RoomProviders socket={socket}>
+          <RecordingPageContent roomShortId={roomShortId} />
+        </RoomProviders>
       </LiveKitRoom>
     </main>
   );
