@@ -36,14 +36,18 @@ export class RecordingService {
   async stopRecording(userId: number): Promise<void>;
 
   async stopRecording(id: string | number): Promise<void> {
-    if (typeof id === 'string') {
-      // egressId
-      await this.recording.stopRecording(id);
-    } else {
-      // userId
-      const egress = await this.redis.getEgressDataByUserId(id);
-      if (!egress) return;
-      await this.recording.stopRecording(egress.egressId);
+    try {
+      if (typeof id === 'string') {
+        // egressId
+        await this.recording.stopRecording(id);
+      } else {
+        // userId
+        const egress = await this.redis.getEgressDataByUserId(id);
+        if (!egress) return;
+        await this.recording.stopRecording(egress.egressId);
+      }
+    } catch (e) {
+      this.logger.error(e);
     }
   }
 }

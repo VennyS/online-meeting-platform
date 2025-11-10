@@ -24,7 +24,14 @@ import {
 import { RoomEvent, Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
-import { CircularProgress, Menu, MenuItem, useMediaQuery } from "@mui/material";
+import {
+  Alert,
+  CircularProgress,
+  Menu,
+  MenuItem,
+  Snackbar,
+  useMediaQuery,
+} from "@mui/material";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/app/hooks/useUser";
@@ -38,7 +45,13 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
     useRoomLayoutContext();
 
   const { waitingGuests } = useWaitingHostContext();
-  const { startRecording, stopRecording } = useRecordingContext();
+  const {
+    isRecording,
+    recordingPending,
+    recordingStatusInfo,
+    handleRecordingClick,
+    resetStatus,
+  } = useRecordingContext();
 
   const {
     local: { permissions },
@@ -48,30 +61,6 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const router = useRouter();
 
   const isMobile = useMediaQuery("(max-width:540px)");
-
-  const room = useRoomContext();
-  const [isRecording, setIsRecording] = useState(room.isRecording);
-  const [recordingPending, setRecordingPending] = useState(false);
-
-  useEffect(() => {
-    if (!room) return;
-
-    const handleStatus = (recording: boolean) => {
-      setRecordingPending(false);
-      setIsRecording(recording);
-    };
-
-    room.on(RoomEvent.RecordingStatusChanged, handleStatus);
-
-    return () => {
-      room.off(RoomEvent.RecordingStatusChanged, handleStatus);
-    };
-  }, [room]);
-
-  const handleRecordingClick = () => {
-    setRecordingPending(!isRecording);
-    isRecording ? stopRecording() : startRecording();
-  };
 
   const {
     buttonProps: {
@@ -301,6 +290,16 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
             </Menu>
           </>
         )}
+        <Snackbar
+          open={!!recordingStatusInfo}
+          autoHideDuration={6000}
+          onClose={resetStatus}
+          anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        >
+          <Alert onClose={resetStatus} severity={recordingStatusInfo?.severity}>
+            {recordingStatusInfo?.text}
+          </Alert>
+        </Snackbar>
         <IconButton
           title="Выйти из комнаты"
           onClick={onDisconnectButtonClickWrapped}

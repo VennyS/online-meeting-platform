@@ -104,6 +104,7 @@ export interface RecordingServerEvents {
     constraint: number;
     causedById: number;
   }) => void;
+  recording_error: () => void;
 }
 
 export interface RecordingClientEvents {
