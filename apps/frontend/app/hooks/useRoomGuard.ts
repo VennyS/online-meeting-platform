@@ -12,7 +12,7 @@ export function useRoomGuard(roomShortId: string) {
   const { prequisites, isLoading: isPreqLoading } = usePrequisites();
 
   useEffect(() => {
-    if (isPreqLoading && isUserLoading) return;
+    if (isPreqLoading || isUserLoading) return;
 
     if (prequisites.isBlackListed) {
       router.replace("/404");
