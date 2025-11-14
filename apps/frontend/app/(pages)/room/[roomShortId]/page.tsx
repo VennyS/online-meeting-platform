@@ -28,7 +28,9 @@ export default function MeetingRoom() {
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
 
   useEffect(() => {
-    if (!roomShortId || !user || user.isGuest) return;
+    if (!roomShortId || !user) return;
+
+    connect(roomShortId as string, user.id, fullName);
 
     const fetchToken = async () => {
       try {
@@ -38,14 +40,14 @@ export default function MeetingRoom() {
         );
         setToken(response.token);
         setRoomName(response.metadata.name);
-
-        connect(roomShortId as string, user.id, fullName);
       } catch (err) {
         console.error("Ошибка при получении токена для пользователя:", err);
       }
     };
 
-    fetchToken();
+    if (!token) {
+      fetchToken();
+    }
   }, [roomShortId, user]);
 
   if (!token && user) {
