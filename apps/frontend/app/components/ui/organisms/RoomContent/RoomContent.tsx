@@ -27,12 +27,15 @@ import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 import { useRecordingContext } from "@/app/providers/recording.provider";
 import { RoomFile } from "@/app/types/files.types";
 import { Panel } from "@/app/types/room-layout.types";
+import { useDisconnect } from "@/app/hooks/useDisconnect";
 
 export const RoomContent = ({
   roomShortId,
   roomName,
   hideControls = false,
 }: RoomContentProps) => {
+  useDisconnect(roomShortId);
+
   const tracks = useRoomTracksWithPresentations({
     includeCamera: true,
     includeScreen: true,

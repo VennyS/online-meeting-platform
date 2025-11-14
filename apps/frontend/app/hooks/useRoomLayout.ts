@@ -77,9 +77,7 @@ export function useRoomLayout(): RoomLayoutProviderValue {
     };
 
     room.on(RoomEvent.DataReceived, handleMessage);
-    room.on(RoomEvent.Disconnected, () => {
-      // router.replace("/404");
-    });
+
     return () => {
       room.off(RoomEvent.DataReceived, handleMessage);
     };

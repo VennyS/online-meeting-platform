@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import IconButton from "@mui/material/IconButton";
 import MicOutlinedIcon from "@mui/icons-material/MicOutlined";
 import MicOffOutlinedIcon from "@mui/icons-material/MicOffOutlined";
@@ -16,12 +16,8 @@ import CommentOutlinedIcon from "@mui/icons-material/CommentOutlined";
 import CommentsDisabledOutlinedIcon from "@mui/icons-material/CommentsDisabledOutlined";
 import CallEndOutlinedIcon from "@mui/icons-material/CallEndOutlined";
 import styles from "./ControlBar.module.css";
-import {
-  useDisconnectButton,
-  useRoomContext,
-  useTrackToggle,
-} from "@livekit/components-react";
-import { RoomEvent, Track } from "livekit-client";
+import { useDisconnectButton, useTrackToggle } from "@livekit/components-react";
+import { Track } from "livekit-client";
 import { useParticipantsContext } from "@/app/providers/participants.provider";
 import Badge from "@mui/material/Badge";
 import {
@@ -33,14 +29,15 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
-import { useRouter } from "next/navigation";
-import { useUser } from "@/app/hooks/useUser";
+import { useParams } from "next/navigation";
 import { useRecordingContext } from "@/app/providers/recording.provider";
 import { useWaitingHostContext } from "@/app/providers/waiting.host.provider";
 import { useRoomLayoutContext } from "@/app/providers/room-layout.provider";
 import { Panel } from "@/app/types/room-layout.types";
 
 const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
+  const { roomShortId } = useParams() as { roomShortId: string };
+
   const { openedRightPanel, unreadCount, handleChangeOpenPanel } =
     useRoomLayoutContext();
 
@@ -56,27 +53,16 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
   const {
     local: { permissions },
   } = useParticipantsContext();
-  const { user } = useUser();
-
-  const router = useRouter();
 
   const isMobile = useMediaQuery("(max-width:540px)");
 
+  // redirect logic described in useDisconnect hook
   const {
     buttonProps: {
       onClick: onDisconnectButtonClick,
       disabled: disconnectButtonDisalbed,
     },
   } = useDisconnectButton({ stopTracks: true });
-
-  const onDisconnectButtonClickWrapped = () => {
-    onDisconnectButtonClick();
-    if (user && !user.isGuest) {
-      router.push("/");
-      return;
-    }
-    router.replace("/farewell");
-  };
 
   const {
     toggle: microToggle,
@@ -302,7 +288,7 @@ const ControlBar = ({ haveFiles }: { haveFiles: boolean }) => {
         </Snackbar>
         <IconButton
           title="Выйти из комнаты"
-          onClick={onDisconnectButtonClickWrapped}
+          onClick={onDisconnectButtonClick}
           disabled={disconnectButtonDisalbed}
           sx={{
             bgcolor: "error.main",
